@@ -1,18 +1,25 @@
 import sys
+import os
+from PyQt6.QtWidgets import QApplication
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6 import uic
-
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        uic.loadUi("src/ui/test.ui", self)
-        self.setMinimumSize(200, 200)
+sys.path.append(os.path.dirname(__file__))
+from gui.main_window import MainWindow
 
 
-app = QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec()
+def main():
+    """Главная функция приложения"""
+    app = QApplication(sys.argv)
+    app.setApplicationName("Умный Органайзер")
+    app.setApplicationVersion("1.0")
+
+    window = MainWindow()
+    window.show()
+
+    print("Умный Органайзер запущен!")
+    print("Использовать debug_console.py для создания тестовых данных")
+
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

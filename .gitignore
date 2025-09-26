@@ -1,0 +1,21 @@
+# Виртуальное окружение
+venv/
+env/
+.venv/
+
+# Кеш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyCharm
+.idea/
+.DS_Store
+
+# Логи и базы данных
+*.log
+*.sqlite3
+
+# Файлы с чувствительными данными (пароли, ключи API)
+.env
+secrets.py

@@ -1,14 +1,15 @@
 import sys
 
-from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6 import uic
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("My App")
-        self.setFixedSize(QSize(400, 300))
+
+        uic.loadUi("src/ui/test.ui", self)
+        self.setMinimumSize(200, 200)
 
 
 app = QApplication(sys.argv)

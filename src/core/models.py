@@ -102,7 +102,9 @@ class Task:
                  is_completed: bool = False,
                  task_id: Optional[int] = None,
                  due_date: Optional[datetime] = None,
-                 note_id: Optional[int] = None):
+                 note_id: Optional[int] = None,
+                 created_date: Optional[datetime] = None,
+                 updated_date: Optional[datetime] = None):
         """
         Инициализация задачи
 
@@ -112,24 +114,32 @@ class Task:
             task_id: Уникальный идентификатор
             due_date: Срок выполнения
             note_id: ID родительской заметки
+            created_date: Дата создания
+            updated_date: Дата обновления
         """
         self.id = task_id
         self.description = description
         self.is_completed = is_completed
         self.due_date = due_date
         self.note_id = note_id
-        self.created_date = datetime.now()
-        self.note_title = None  # Для отображения контекста
+        self.created_date = created_date if created_date else datetime.now()
+        self.updated_date = updated_date if updated_date else datetime.now()
+        self.note_title = None  # Для отображения контекста в виджетах
 
     def __str__(self) -> str:
         """Строковое представление задачи"""
-        status = "✓" if self.is_completed else "☐"
+        status = "✅" if self.is_completed else "⭕"
         due_info = f" (до {self.due_date.strftime('%d.%m.%Y')})" if self.due_date else ""
         return f"Task({status} '{self.description}'{due_info})"
+
+    def __repr__(self) -> str:
+        """Представление для отладки"""
+        return f"Task(id={self.id}, note_id={self.note_id}, desc='{self.description[:20]}...', completed={self.is_completed})"
 
     def toggle_completion(self) -> None:
         """Переключает статус выполнения задачи"""
         self.is_completed = not self.is_completed
+        self.updated_date = datetime.now()
 
 
 class WebBookmark:

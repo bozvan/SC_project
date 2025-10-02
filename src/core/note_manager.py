@@ -3,6 +3,7 @@ from datetime import datetime
 from .models import Note, Tag
 from .database_manager import DatabaseManager
 from .tag_manager import TagManager
+from .task_manager import TaskManager
 
 
 class NoteManager:
@@ -11,6 +12,7 @@ class NoteManager:
     def __init__(self, db_manager: DatabaseManager, tag_manager: TagManager):
         self.db = db_manager
         self.tag_manager = tag_manager
+        self.task_manager = TaskManager(db_manager)
 
         # Выполняем миграцию при инициализации
         self.db.migrate_database()

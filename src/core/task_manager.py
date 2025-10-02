@@ -1,6 +1,6 @@
 import sqlite3
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from .models import Task
 from .database_manager import DatabaseManager
 
@@ -16,16 +16,11 @@ class TaskManager:
             db_manager: Экземпляр DatabaseManager для работы с БД
         """
         self.db = db_manager
-        self._init_db()
-
-    def _init_db(self):
-        """Инициализация таблицы задач (уже выполнена в DatabaseManager)"""
-        # Таблица создается в DatabaseManager._init_db()
         print("✅ Менеджер задач инициализирован")
 
-    def create(self, note_id: int, description: str, due_date: Optional[datetime] = None) -> Optional[Task]:
+    def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None) -> Optional[Task]:
         """
-        Создает новую задачу
+        Создает новую задачу для указанной заметки
 
         Args:
             note_id: ID заметки, к которой привязана задача
@@ -46,14 +41,16 @@ class TaskManager:
                 cursor = conn.cursor()
 
                 # Проверяем существование заметки
-                cursor.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,))
-                if not cursor.fetchone():
+                cursor.execute("SELECT id, title FROM notes WHERE id = ?", (note_id,))
+                note_result = cursor.fetchone()
+                if not note_result:
                     print(f"❌ Заметка с ID {note_id} не существует")
                     return None
 
                 # Вставляем задачу
                 cursor.execute(
-                    "INSERT INTO tasks (note_id, description, due_date) VALUES (?, ?, ?)",
+                    """INSERT INTO tasks (note_id, description, due_date, created_at, updated_at) 
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
                     (note_id, description, due_date.isoformat() if due_date else None)
                 )
                 task_id = cursor.lastrowid
@@ -64,9 +61,11 @@ class TaskManager:
                         description=description,
                         is_completed=False,
                         task_id=task_id,
-                        due_date=due_date
+                        due_date=due_date,
+                        note_id=note_id
                     )
-                    print(f"✅ Задача создана с ID: {task_id}")
+                    task.note_title = note_result[1]  # Добавляем заголовок заметки
+                    print(f"✅ Задача создана: {task}")
                     return task
                 else:
                     print("❌ Ошибка: не удалось получить ID созданной задачи")
@@ -76,7 +75,7 @@ class TaskManager:
             print(f"❌ Ошибка при создании задачи: {e}")
             return None
 
-    def get(self, task_id: int) -> Optional[Task]:
+    def get_task(self, task_id: int) -> Optional[Task]:
         """
         Возвращает задачу по ID
 
@@ -90,26 +89,34 @@ class TaskManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "SELECT id, note_id, description, is_completed, due_date, created_at FROM tasks WHERE id = ?",
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.id = ?""",
                     (task_id,)
                 )
                 result = cursor.fetchone()
 
                 if result:
-                    task_id, note_id, description, is_completed, due_date_str, created_at = result
+                    (task_id, note_id, description, is_completed, due_date_str,
+                     created_at, updated_at, note_title) = result
 
                     # Преобразуем строки в datetime
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        updated_date=updated_date
                     )
-                    task.created_date = created_date
-                    task.note_id = note_id  # Добавляем note_id для связи
+                    task.note_title = note_title
 
                     return task
                 else:
@@ -134,31 +141,34 @@ class TaskManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """
-                    SELECT id, description, is_completed, due_date, created_at 
-                    FROM tasks 
-                    WHERE note_id = ? 
-                    ORDER BY created_at
-                    """,
+                    """SELECT t.id, t.description, t.is_completed, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.note_id = ? 
+                    ORDER BY t.is_completed, t.due_date, t.created_at""",
                     (note_id,)
                 )
                 results = cursor.fetchall()
 
                 tasks = []
-                for task_id, description, is_completed, due_date_str, created_at in results:
+                for (task_id, description, is_completed, due_date_str,
+                     created_at, updated_at, note_title) in results:
                     # Преобразуем строки в datetime
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        updated_date=updated_date
                     )
-                    task.created_date = created_date
-                    task.note_id = note_id
-
+                    task.note_title = note_title
                     tasks.append(task)
 
                 print(f"✅ Загружено задач для заметки {note_id}: {len(tasks)}")
@@ -168,8 +178,8 @@ class TaskManager:
             print(f"❌ Ошибка при получении задач для заметки {note_id}: {e}")
             return []
 
-    def update(self, task_id: int, description: Optional[str] = None,
-               is_completed: Optional[bool] = None, due_date: Optional[datetime] = None) -> bool:
+    def update_task(self, task_id: int, description: Optional[str] = None,
+                    is_completed: Optional[bool] = None, due_date: Optional[datetime] = None) -> bool:
         """
         Обновляет данные задачи
 
@@ -183,7 +193,7 @@ class TaskManager:
             bool: True если обновление успешно
         """
         # Проверяем существование задачи
-        existing_task = self.get(task_id)
+        existing_task = self.get_task(task_id)
         if not existing_task:
             return False
 
@@ -228,7 +238,7 @@ class TaskManager:
             print(f"❌ Ошибка при обновлении задачи с ID {task_id}: {e}")
             return False
 
-    def delete(self, task_id: int) -> bool:
+    def delete_task(self, task_id: int) -> bool:
         """
         Удаляет задачу
 
@@ -239,7 +249,7 @@ class TaskManager:
             bool: True если удаление успешно
         """
         # Проверяем существование задачи
-        existing_task = self.get(task_id)
+        existing_task = self.get_task(task_id)
         if not existing_task:
             return False
 
@@ -260,7 +270,7 @@ class TaskManager:
             print(f"❌ Ошибка при удалении задачи с ID {task_id}: {e}")
             return False
 
-    def toggle_completion(self, task_id: int) -> Optional[Task]:
+    def toggle_task_completion(self, task_id: int) -> Optional[Task]:
         """
         Переключает статус выполнения задачи
 
@@ -270,27 +280,74 @@ class TaskManager:
         Returns:
             Task: Обновленная задача или None при ошибке
         """
-        task = self.get(task_id)
+        task = self.get_task(task_id)
         if not task:
             return None
 
         new_status = not task.is_completed
-        success = self.update(task_id, is_completed=new_status)
+        success = self.update_task(task_id, is_completed=new_status)
 
         if success:
             task.is_completed = new_status
+            task.updated_date = datetime.now()
             status_text = "выполнена" if new_status else "не выполнена"
             print(f"✅ Задача '{task.description}' помечена как {status_text}")
             return task
         else:
             return None
 
-    def get_upcoming_tasks(self, days: int = 7) -> List[Task]:
+    def get_all_incomplete_tasks(self) -> List[Task]:
+        """
+        Возвращает все невыполненные задачи из всех заметок
+
+        Returns:
+            List[Task]: Список невыполненных задач
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.is_completed = FALSE
+                    ORDER BY t.due_date, t.created_at""",
+                )
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, due_date_str,
+                     created_at, updated_at, note_title) in results:
+                    due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        updated_date=updated_date
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                print(f"✅ Найдено невыполненных задач: {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении невыполненных задач: {e}")
+            return []
+
+    def get_upcoming_tasks(self, days_ahead: int = 7) -> List[Task]:
         """
         Возвращает предстоящие задачи с дедлайнами
 
         Args:
-            days: Количество дней вперед для поиска
+            days_ahead: Количество дней вперед для поиска
 
         Returns:
             List[Task]: Список предстоящих задач
@@ -299,40 +356,40 @@ class TaskManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Задачи с дедлайном в ближайшие `days` дней, не выполненные
+                # Задачи с дедлайном в ближайшие `days_ahead` дней, не выполненные
                 cursor.execute(
-                    """
-                    SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, t.created_at,
-                           n.title as note_title
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                              t.created_at, t.updated_at, n.title
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.due_date IS NOT NULL 
-                    AND t.due_date <= date('now', ? || ' days')
+                    AND date(t.due_date) BETWEEN date('now') AND date('now', ? || ' days')
                     AND t.is_completed = FALSE
-                    ORDER BY t.due_date ASC
-                    """,
-                    (f"+{days}",)
+                    ORDER BY t.due_date ASC, t.created_at ASC""",
+                    (f"+{days_ahead}",)
                 )
                 results = cursor.fetchall()
 
                 tasks = []
-                for task_id, note_id, description, is_completed, due_date_str, created_at, note_title in results:
+                for (task_id, note_id, description, is_completed, due_date_str,
+                     created_at, updated_at, note_title) in results:
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        updated_date=updated_date
                     )
-                    task.created_date = created_date
-                    task.note_id = note_id
-                    task.note_title = note_title  # Добавляем заголовок заметки для контекста
-
+                    task.note_title = note_title
                     tasks.append(task)
 
-                print(f"✅ Найдено предстоящих задач: {len(tasks)}")
+                print(f"✅ Найдено предстоящих задач (на {days_ahead} дней): {len(tasks)}")
                 return tasks
 
         except Exception as e:
@@ -355,29 +412,51 @@ class TaskManager:
 
                 if note_id:
                     cursor.execute(
-                        "SELECT id, description, is_completed, due_date, created_at FROM tasks WHERE note_id = ? AND is_completed = TRUE ORDER BY updated_at DESC",
+                        """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                                  t.created_at, t.updated_at, n.title
+                        FROM tasks t
+                        JOIN notes n ON t.note_id = n.id
+                        WHERE t.note_id = ? AND t.is_completed = TRUE 
+                        ORDER BY t.updated_at DESC""",
                         (note_id,)
                     )
                 else:
                     cursor.execute(
-                        "SELECT id, description, is_completed, due_date, created_at FROM tasks WHERE is_completed = TRUE ORDER BY updated_at DESC"
+                        """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                                  t.created_at, t.updated_at, n.title
+                        FROM tasks t
+                        JOIN notes n ON t.note_id = n.id
+                        WHERE t.is_completed = TRUE 
+                        ORDER BY t.updated_at DESC"""
                     )
 
                 results = cursor.fetchall()
 
                 tasks = []
-                for task_id, description, is_completed, due_date_str, created_at in results:
+                for result in results:
+                    # Безопасная распаковка с проверкой количества полей
+                    if len(result) == 8:
+                        (task_id, note_id, description, is_completed, due_date_str,
+                         created_at, updated_at, note_title) = result
+                    else:
+                        # Альтернативная распаковка если полей меньше
+                        task_id, note_id, description, is_completed, due_date_str, created_at, updated_at = result[:7]
+                        note_title = "Unknown"  # Значение по умолчанию
+
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        updated_date=updated_date
                     )
-                    task.created_date = created_date
-
+                    task.note_title = note_title
                     tasks.append(task)
 
                 print(f"✅ Найдено выполненных задач: {len(tasks)}")

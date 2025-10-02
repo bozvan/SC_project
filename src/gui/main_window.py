@@ -27,67 +27,112 @@ class NotesListWidget:
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
-    """Главное окно приложения"""
-
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.setup_managers()
         self.setup_connections()
         self.load_notes()
-
         self.current_note_id = None
 
     def setup_managers(self):
-        """Инициализация менеджеров базы данных"""
         db_path = "smart_organizer.db"
         self.db_manager = DatabaseManager(db_path)
         self.tag_manager = TagManager(self.db_manager)
         self.note_manager = NoteManager(self.db_manager, self.tag_manager)
-
-        # Обертка для списка заметок
-        self.notes_list_widget = NotesListWidget(self.notes_list)
-
-        print("Менеджеры базы данных инициализированы")
+        print("✅ Менеджеры базы данных инициализированы")
 
     def setup_connections(self):
-        """Настройка соединений сигналов и слотов"""
-        # Кнопки
         self.new_note_btn.clicked.connect(self.on_new_note)
         self.delete_note_btn.clicked.connect(self.on_delete_note)
         self.save_btn.clicked.connect(self.on_save_note)
         self.cancel_btn.clicked.connect(self.on_cancel_edit)
         self.search_button.clicked.connect(self.on_search_clicked)
 
-        # Поиск
         self.search_input.textChanged.connect(self.on_search_changed)
-
-        # Список заметок
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 
-        # Редактор
         self.title_input.textChanged.connect(self.on_note_modified)
         self.content_editor.textChanged.connect(self.on_note_modified)
         self.tags_input.textChanged.connect(self.on_note_modified)
 
-        # Меню
         self.actionNewNote.triggered.connect(self.on_new_note)
         self.actionRefresh.triggered.connect(self.load_notes)
         self.actionExit.triggered.connect(self.close)
 
-    def load_notes(self, search_text=""):
-        """Загружает заметки из базы данных"""
-        try:
-            if search_text:
-                notes = self.note_manager.search(search_text)
-            else:
-                notes = self.note_manager.get_all()
+    def parse_search_query(self, query):
+        """
+        Парсит поисковый запрос и извлекает текст и теги
+        Форматы:
+        - "текст" - поиск по тексту
+        - "#тег" - поиск по тегу
+        - "текст #тег" - комбинированный поиск
+        """
+        if not query.strip():
+            return "", []
 
-            self.notes_list_widget.load_notes(notes)
-            print(f"Загружено заметок: {len(notes)}")
+        words = query.strip().split()
+        text_parts = []
+        tags = []
+
+        for word in words:
+            if word.startswith('#') and len(word) > 1:
+                # Это тег - приводим к нижнему регистру для поиска
+                tag_name = word[1:]  # Убираем #
+                tags.append(tag_name.lower())
+            else:
+                # Это текст для поиска - сохраняем как есть, но поиск будет без учета регистра
+                text_parts.append(word)
+
+        search_text = " ".join(text_parts)
+        return search_text, tags
+
+    def load_notes(self, search_query=""):
+        """Загружает заметки с учетом поискового запроса"""
+        try:
+            search_text, tags = self.parse_search_query(search_query)
+
+            if tags and search_text:
+                # Комбинированный поиск: текст + теги
+                notes = self.note_manager.search_by_text_and_tags(search_text, tags)
+                print(f"🔍 Комбинированный поиск: '{search_text}' + теги {tags}")
+            elif tags:
+                # Поиск только по тегам
+                notes = self.note_manager.search_by_tags(tags)
+                print(f"🏷️ Поиск по тегам: {tags}")
+            elif search_text:
+                # Поиск только по тексту
+                notes = self.note_manager.search(search_text)
+                print(f"📝 Поиск по тексту: '{search_text}'")
+            else:
+                # Показать все заметки
+                notes = self.note_manager.get_all()
+                print("📚 Показаны все заметки")
+
+            self.display_notes(notes)
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметки: {e}")
+            print(f"❌ Ошибка загрузки заметок: {e}")
+
+    def display_notes(self, notes):
+        """Отображает список заметок"""
+        self.notes_list.clear()
+
+        for note in notes:
+            item = QListWidgetItem(note.title)
+            item.setData(Qt.ItemDataRole.UserRole, note.id)
+
+            # Добавляем информацию о тегах в подсказку
+            if note.tags:
+                tags_str = ", ".join([tag.name for tag in note.tags])
+                item.setToolTip(f"Теги: {tags_str}\nСоздана: {note.created_date.strftime('%d.%m.%Y')}")
+            else:
+                item.setToolTip(f"Создана: {note.created_date.strftime('%d.%m.%Y')}")
+
+            self.notes_list.addItem(item)
+
+        print(f"✅ Отображено заметок: {len(notes)}")
 
     def on_search_changed(self, text):
         """Обработчик изменения текста поиска"""
@@ -161,21 +206,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             content = self.content_editor.toPlainText()
             tags_text = self.tags_input.text().strip()
-            tags = [tag.strip() for tag in tags_text.split(",")] if tags_text else []
-            tags = [tag for tag in tags if tag]  # Убираем пустые
+            tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+            tags = [tag for tag in tags if tag]
 
             if self.current_note_id:
-                # Обновление существующей заметки
-                success = self.note_manager.update(
-                    self.current_note_id, title, content, tags
-                )
+                success = self.note_manager.update(self.current_note_id, title, content, tags)
                 if success:
                     QMessageBox.information(self, "Успех", "Заметка обновлена!")
                     self.load_notes(self.search_input.text())
                 else:
                     QMessageBox.critical(self, "Ошибка", "Не удалось обновить заметку")
             else:
-                # Создание новой заметки
                 note = self.note_manager.create(title, content, tags)
                 if note:
                     QMessageBox.information(self, "Успех", f"Заметка создана! ID: {note.id}")
@@ -193,12 +234,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_cancel_edit(self):
         """Отмена редактирования"""
         if self.current_note_id:
-            # Перезагружаем текущую заметку
             note = self.note_manager.get(self.current_note_id)
             if note:
                 self.display_note(note)
         else:
-            # Очищаем редактор для новой заметки
             self.title_input.clear()
             self.content_editor.clear()
             self.tags_input.clear()
@@ -214,9 +253,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         reply = QMessageBox.question(
-            self,
-            "Подтверждение удаления",
-            "Вы уверены, что хотите удалить эту заметку?",
+            self, "Подтверждение удаления", "Вы уверены, что хотите удалить эту заметку?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
 

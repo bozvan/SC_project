@@ -15,7 +15,7 @@ from core.models import Note, Tag
 class DebugConsole:
     """Консольный интерфейс для тестирования функциональности органайзера"""
 
-    def __init__(self, db_path="smart_organizer_debug.db"):
+    def __init__(self, db_path="smart_organizer.db"):
         """Инициализация консоли с менеджерами"""
         self.db = DatabaseManager(db_path)
         self.tag_manager = TagManager(self.db)

@@ -253,7 +253,7 @@ class NoteManager:
         Ищет заметки по тексту и/или тегам
 
         Args:
-            search_text: Текст для поиска в заголовке и содержимом
+            search_text: Текст для поиска в заголовке и содержимом (без учета регистра)
             tag_names: Список тегов для фильтрации (ВСЕ теги должны присутствовать)
 
         Returns:
@@ -271,10 +271,10 @@ class NoteManager:
                 """
                 params = []
 
-                # Добавляем условие для текстового поиска
+                # Добавляем условие для текстового поиска (без учета регистра)
                 if search_text.strip():
                     search_pattern = f"%{search_text.strip()}%"
-                    query += " AND (n.title LIKE ? OR n.content LIKE ?)"
+                    query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?))"
                     params.extend([search_pattern, search_pattern])
 
                 # Добавляем условие для тегов (ВСЕ указанные теги должны присутствовать)
@@ -309,7 +309,7 @@ class NoteManager:
 
                     # Создаем объект Note
                     note = Note(
-                        title=title,
+                        title=title,  # Сохраняем оригинальный регистр
                         content=content or "",
                         note_id=note_id,
                         created_date=created_date,
@@ -320,7 +320,7 @@ class NoteManager:
 
                 print(f"Найдено заметок: {len(notes)}")
                 if search_text:
-                    print(f"Поисковый запрос: '{search_text}'")
+                    print(f"Поисковый запрос (без учета регистра): '{search_text}'")
                 if tag_names:
                     print(f"Теги для фильтрации (ВСЕ должны быть): {tag_names}")
 
@@ -396,3 +396,28 @@ class NoteManager:
         except Exception as e:
             print(f"Ошибка при добавлении тега к заметке: {e}")
             return False
+
+    def search_by_tags(self, tag_names: List[str]) -> List[Note]:
+        """
+        Ищет заметки только по тегам
+
+        Args:
+            tag_names: Список тегов для фильтрации
+
+        Returns:
+            List[Note]: Список найденных заметок
+        """
+        return self.search("", tag_names)
+
+    def search_by_text_and_tags(self, search_text: str, tag_names: List[str]) -> List[Note]:
+        """
+        Ищет заметки по тексту и тегам одновременно
+
+        Args:
+            search_text: Текст для поиска
+            tag_names: Список тегов для фильтрации
+
+        Returns:
+            List[Note]: Список найденных заметок
+        """
+        return self.search(search_text, tag_names)

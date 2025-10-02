@@ -1,6 +1,6 @@
 from typing import List, Optional
 from datetime import datetime
-from .models import Note
+from .models import Note, Tag
 from .database_manager import DatabaseManager
 from .tag_manager import TagManager
 
@@ -15,33 +15,25 @@ class NoteManager:
         # Выполняем миграцию при инициализации
         self.db.migrate_database()
 
-    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "html") -> Optional[Note]:
-        # content_type по умолчанию "html" вместо "plain"
+    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "html") -> \
+    Optional[Note]:
         """
-        Создает новую заметку с возможностью привязки тегов
-
-        Args:
-            title: Заголовок заметки
-            content: Содержимое заметки
-            tags: Список имен тегов (строк)
-            content_type: Тип содержимого - "plain" или "html"
-
-        Returns:
-            Note: Созданный объект заметки или None при ошибке
+        Создает новую заметку с ОДНИМ соединением к БД
         """
         if not title or not title.strip():
-            print("Ошибка: заголовок заметки не может быть пустым")
+            print("❌ Ошибка: заголовок заметки не может быть пустым")
             return None
 
         # Валидация content_type
         if content_type not in ["plain", "html"]:
-            print(f"⚠️  Неподдерживаемый content_type: {content_type}. Используется 'plain'")
-            content_type = "plain"
+            print(f"⚠️  Неподдерживаемый content_type: {content_type}. Используется 'html'")
+            content_type = "html"
 
         title = title.strip()
         content = content.strip() if content else ""
 
         try:
+            # Используем ОДНО соединение для всех операций
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
@@ -53,15 +45,14 @@ class NoteManager:
                 note_id = cursor.lastrowid
 
                 if not note_id:
-                    print("Ошибка: не удалось получить ID созданной заметки")
+                    print("❌ Ошибка: не удалось получить ID созданной заметки")
                     return None
 
-                # Обрабатываем теги, если они указаны
+                # Обрабатываем теги в ТОМ ЖЕ соединении
                 tag_objects = []
                 if tags:
                     for tag_name in tags:
-                        # Получаем или создаем тег
-                        tag = self.tag_manager.get_or_create(tag_name)
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag:
                             # Связываем заметку с тегом
                             cursor.execute(
@@ -152,17 +143,7 @@ class NoteManager:
                content: Optional[str] = None, tags: Optional[List[str]] = None,
                content_type: Optional[str] = None) -> bool:
         """
-        Обновляет данные заметки
-
-        Args:
-            note_id: ID заметки для обновления
-            title: Новый заголовок (если None - не изменяется)
-            content: Новое содержимое (если None - не изменяется)
-            tags: Новый список тегов (если None - не изменяется)
-            content_type: Новый тип содержимого (если None - не изменяется)
-
-        Returns:
-            bool: True если обновление успешно
+        Обновляет данные заметки с ОДНИМ соединением к БД
         """
         # Проверяем, существует ли заметка
         existing_note = self.get(note_id)
@@ -176,6 +157,7 @@ class NoteManager:
             content_type = None
 
         try:
+            # Используем ОДНО соединение для всех операций
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
@@ -203,14 +185,15 @@ class NoteManager:
                     update_query = f"UPDATE notes SET {', '.join(update_fields)} WHERE id = ?"
                     cursor.execute(update_query, update_values)
 
-                # Обновляем теги, если они указаны
+                # Обновляем теги в ТОМ ЖЕ соединении
                 if tags is not None:
                     # Удаляем старые связи
                     cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
 
                     # Добавляем новые связи
                     for tag_name in tags:
-                        tag = self.tag_manager.get_or_create(tag_name)
+                        # Используем существующий TagManager но с текущим соединением
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag and tag.id:
                             cursor.execute(
                                 "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
@@ -230,6 +213,38 @@ class NoteManager:
         except Exception as e:
             print(f"❌ Ошибка при обновлении заметки с ID {note_id}: {e}")
             return False
+
+    def _get_or_create_tag_with_connection(self, cursor, tag_name: str) -> Optional[Tag]:
+        """
+        Вспомогательный метод для получения или создания тега с использованием существующего курсора
+        """
+        if not tag_name or not tag_name.strip():
+            return None
+
+        normalized_name = tag_name.strip().lower()
+
+        try:
+            # Сначала ищем существующий тег
+            cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+            result = cursor.fetchone()
+
+            if result:
+                tag_id, name = result
+                return Tag(name=name, tag_id=tag_id)
+            else:
+                # Создаем новый тег
+                cursor.execute("INSERT INTO tags (name) VALUES (?)", (normalized_name,))
+                tag_id = cursor.lastrowid
+                if tag_id:
+                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id}")
+                    return Tag(name=normalized_name, tag_id=tag_id)
+                else:
+                    print(f"❌ Ошибка при создании тега '{normalized_name}'")
+                    return None
+
+        except Exception as e:
+            print(f"❌ Ошибка при работе с тегом '{tag_name}': {e}")
+            return None
 
     def delete(self, note_id: int) -> bool:
         """

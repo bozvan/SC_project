@@ -18,44 +18,41 @@ class TagManager:
     def create(self, name: str) -> Optional[Tag]:
         """
         Создает новый тег в БД (с проверкой на дубликаты)
-
-        Args:
-            name: Название тега
-
-        Returns:
-            Tag: Созданный объект тега или None при ошибке
+        Использует отдельное соединение для случаев, когда вызывается отдельно
         """
         if not name or not name.strip():
-            print("Ошибка: имя тега не может быть пустым")
+            print("❌ Ошибка: имя тега не может быть пустым")
             return None
 
         normalized_name = name.strip().lower()
 
-        # Проверяем, существует ли тег с таким именем
-        existing_tag = self.get_by_name(normalized_name)
-        if existing_tag:
-            print(f"Тег '{normalized_name}' уже существует (ID: {existing_tag.id})")
-            return existing_tag
-
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO tags (name) VALUES (?)",
-                    (normalized_name,)
-                )
+
+                # Проверяем, существует ли тег с таким именем
+                cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+                existing_tag = cursor.fetchone()
+
+                if existing_tag:
+                    tag_id, tag_name = existing_tag
+                    print(f"✅ Тег '{tag_name}' уже существует (ID: {tag_id})")
+                    return Tag(name=tag_name, tag_id=tag_id)
+
+                # Создаем новый тег
+                cursor.execute("INSERT INTO tags (name) VALUES (?)", (normalized_name,))
                 conn.commit()
                 tag_id = cursor.lastrowid
 
                 if tag_id:
-                    print(f"Тег '{normalized_name}' создан с ID: {tag_id}")
+                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id}")
                     return Tag(name=normalized_name, tag_id=tag_id)
                 else:
-                    print("Ошибка: не удалось получить ID созданного тега")
+                    print("❌ Ошибка: не удалось получить ID созданного тега")
                     return None
 
         except Exception as e:
-            print(f"Ошибка при создании тега '{name}': {e}")
+            print(f"❌ Ошибка при создании тега '{name}': {e}")
             return None
 
     def get(self, tag_id: int) -> Optional[Tag]:

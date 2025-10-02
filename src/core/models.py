@@ -101,7 +101,8 @@ class Task:
                  description: str,
                  is_completed: bool = False,
                  task_id: Optional[int] = None,
-                 due_date: Optional[datetime] = None):
+                 due_date: Optional[datetime] = None,
+                 note_id: Optional[int] = None):
         """
         Инициализация задачи
 
@@ -110,17 +111,21 @@ class Task:
             is_completed: Статус выполнения
             task_id: Уникальный идентификатор
             due_date: Срок выполнения
+            note_id: ID родительской заметки
         """
         self.id = task_id
         self.description = description
         self.is_completed = is_completed
         self.due_date = due_date
+        self.note_id = note_id
         self.created_date = datetime.now()
+        self.note_title = None  # Для отображения контекста
 
     def __str__(self) -> str:
         """Строковое представление задачи"""
         status = "✓" if self.is_completed else "☐"
-        return f"Task({status} '{self.description}')"
+        due_info = f" (до {self.due_date.strftime('%d.%m.%Y')})" if self.due_date else ""
+        return f"Task({status} '{self.description}'{due_info})"
 
     def toggle_completion(self) -> None:
         """Переключает статус выполнения задачи"""

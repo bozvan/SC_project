@@ -47,6 +47,19 @@ class DatabaseManager:
                 FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE,
                 FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
             )
+            """,
+            # НОВАЯ ТАБЛИЦА: Задачи
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                note_id INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                is_completed BOOLEAN DEFAULT FALSE,
+                due_date DATETIME NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
+            )
             """
         ]
 

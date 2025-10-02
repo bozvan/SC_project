@@ -555,6 +555,37 @@ class DebugConsole:
         else:
             print("❌ Ошибка при изменении типа содержимого!")
 
+    def create_html_note(self):
+        """Создание HTML заметки через консоль"""
+        print("\n🗒️  СОЗДАНИЕ HTML ЗАМЕТКИ")
+        print("-" * 30)
+
+        try:
+            title = self.safe_input("Введите заголовок: ")
+            if not title:
+                print("❌ Заголовок не может быть пустым!")
+                return
+
+            print("Введите HTML содержимое (пустая строка + Enter для завершения, :q для выхода):")
+            content = self.safe_multiline_input("")
+            if content is None:
+                return
+
+            tags_input = self.safe_input("Введите теги (через запятую, пусто - без тегов): ")
+            tags = [tag.strip() for tag in tags_input.split(",")] if tags_input else []
+            tags = [tag for tag in tags if tag]
+
+            # Создаем заметку с HTML контентом
+            note = self.note_manager.create(title, content, tags, "html")
+            if note:
+                print(f"✅ HTML заметка создана успешно! ID: {note.id}")
+                self.print_note_details(note)
+            else:
+                print("❌ Ошибка при создании HTML заметки!")
+
+        except KeyboardInterrupt:
+            print("\n❌ Создание HTML заметки отменено пользователем")
+
     # Добавляем новые пункты в меню (в метод display_menu)
     def display_menu(self):
         """Отображает главное меню"""
@@ -572,6 +603,7 @@ class DebugConsole:
         print("9. Управление тегами")
         print("10. Статистика")
         print("11. Выход")
+        print("12. create_html_note")
         print("-" * 50)
 
     # Обновляем метод run для обработки новых пунктов меню
@@ -585,7 +617,7 @@ class DebugConsole:
             self.display_menu()
 
             try:
-                choice = self.safe_input("Выберите действие (1-11): ")
+                choice = self.safe_input("Выберите действие (1-12): ")
 
                 if choice == "1":
                     self.create_note()
@@ -607,6 +639,8 @@ class DebugConsole:
                     self.manage_tags()
                 elif choice == "10":
                     self.show_statistics()
+                elif choice == "12":
+                    self.create_html_note()
                 elif choice == "11":
                     print("👋 До свидания!")
                     self.is_running = False

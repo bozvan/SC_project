@@ -1,5 +1,6 @@
 import sys
 import os
+import faulthandler
 from PyQt6.QtWidgets import QApplication
 
 sys.path.append(os.path.dirname(__file__))
@@ -22,4 +23,5 @@ def main():
 
 
 if __name__ == "__main__":
+    faulthandler.enable()  # start @ the beginning
     main()

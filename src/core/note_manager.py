@@ -15,8 +15,8 @@ class NoteManager:
         # Выполняем миграцию при инициализации
         self.db.migrate_database()
 
-    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "plain") -> \
-    Optional[Note]:
+    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "html") -> Optional[Note]:
+        # content_type по умолчанию "html" вместо "plain"
         """
         Создает новую заметку с возможностью привязки тегов
 

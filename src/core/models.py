@@ -10,31 +10,35 @@ class Note:
                  content: str = "",
                  note_id: Optional[int] = None,
                  created_date: Optional[datetime] = None,
-                 modified_date: Optional[datetime] = None):
+                 modified_date: Optional[datetime] = None,
+                 content_type: str = "plain"):
         """
         Инициализация заметки
 
         Args:
             title: Заголовок заметки
             content: Содержимое заметки
-            note_id: Уникальный идентификатор (если None - новая заметка)
+            note_id: Уникальный идентификатор
             created_date: Дата создания
             modified_date: Дата последнего изменения
+            content_type: Тип содержимого - "plain" или "html"
         """
         self.id = note_id
         self.title = title
         self.content = content
         self.created_date = created_date if created_date else datetime.now()
         self.modified_date = modified_date if modified_date else datetime.now()
+        self.content_type = content_type  # "plain" или "html"
         self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:
         """Строковое представление заметки"""
-        return f"Note(id={self.id}, title='{self.title}', created={self.created_date.strftime('%Y-%m-%d %H:%M')})"
+        content_type_str = f" ({self.content_type})" if self.content_type != "plain" else ""
+        return f"Note(id={self.id}, title='{self.title}'{content_type_str}, created={self.created_date.strftime('%Y-%m-%d %H:%M')})"
 
     def __repr__(self) -> str:
         """Представление для отладки"""
-        return f"Note(id={self.id}, title='{self.title}', content='{self.content[:50]}...')"
+        return f"Note(id={self.id}, title='{self.title}', content_type='{self.content_type}', content='{self.content[:50]}...')"
 
     def add_tag(self, tag: 'Tag') -> None:
         """Добавляет тег к заметке"""
@@ -50,6 +54,10 @@ class Note:
         """Обновляет дату изменения"""
         self.modified_date = datetime.now()
 
+    def is_html(self) -> bool:
+        """Проверяет, является ли содержимое HTML"""
+        return self.content_type == "html"
+
 
 class Tag:
     """Класс, представляющий тег"""
@@ -60,7 +68,7 @@ class Tag:
 
         Args:
             name: Название тега
-            tag_id: Уникальный идентификатор (если None - новый тег)
+            tag_id: Уникальный идентификатор
         """
         self.id = tag_id
         self.name = name.strip().lower()  # Нормализуем имя тега
@@ -120,10 +128,10 @@ class Task:
 
 
 class WebBookmark:
-    """Класс, представляющий веб-закладку (для будущего использования)"""
+    """Класс, представляющий веб-закладку"""
 
     def __init__(self,
-                 url: str = None,
+                 url: str,
                  title: str = "",
                  description: str = "",
                  bookmark_id: Optional[int] = None):

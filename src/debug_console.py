@@ -466,35 +466,148 @@ class DebugConsole:
             for tag_name, count in tag_stats[:5]:
                 print(f"  {tag_name}: {count} заметок")
 
+    # debug_console.py (добавляем в класс DebugConsole)
+    def create_note_with_content_type(self):
+        """Создание заметки с указанием типа содержимого"""
+        print("\n🗒️  СОЗДАНИЕ ЗАМЕТКИ С ТИПОМ СОДЕРЖИМОГО")
+        print("-" * 40)
+
+        try:
+            title = self.safe_input("Введите заголовок: ")
+            if not title:
+                print("❌ Заголовок не может быть пустым!")
+                return
+
+            print("Выберите тип содержимого:")
+            print("1. Обычный текст (plain)")
+            print("2. HTML текст")
+            content_choice = self.safe_input("Ваш выбор (1-2): ")
+
+            content_type = "plain"
+            if content_choice == "2":
+                content_type = "html"
+                print("📝 Режим HTML. Вы можете вводить HTML-разметку.")
+
+            content = self.safe_multiline_input(
+                "Введите содержимое (пустая строка + Enter для завершения, :q для выхода):"
+            )
+            if content is None:
+                return
+
+            tags_input = self.safe_input("Введите теги (через запятую, пусто - без тегов): ")
+            tags = [tag.strip() for tag in tags_input.split(",")] if tags_input else []
+            tags = [tag for tag in tags if tag]
+
+            note = self.note_manager.create(title, content, tags, content_type)
+            if note:
+                print(f"✅ Заметка создана успешно! ID: {note.id}, Тип: {note.content_type}")
+                self.print_note_details(note)
+            else:
+                print("❌ Ошибка при создании заметки!")
+
+        except KeyboardInterrupt:
+            print("\n❌ Создание заметки отменено пользователем")
+
+    def update_note_content_type(self):
+        """Изменение типа содержимого существующей заметки"""
+        print("\n✏️  ИЗМЕНЕНИЕ ТИПА СОДЕРЖИМОГО ЗАМЕТКИ")
+        print("-" * 40)
+
+        try:
+            note_id_input = self.safe_input("Введите ID заметки: ")
+            if not note_id_input:
+                print("❌ ID не может быть пустым!")
+                return
+
+            note_id = int(note_id_input)
+        except ValueError:
+            print("❌ Неверный формат ID!")
+            return
+
+        note = self.note_manager.get(note_id)
+        if not note:
+            print(f"❌ Заметка с ID {note_id} не найдена!")
+            return
+
+        print(f"\nТекущая заметка: {note.title}")
+        print(f"Текущий тип содержимого: {note.content_type}")
+
+        print("\nВыберите новый тип содержимого:")
+        print("1. Обычный текст (plain)")
+        print("2. HTML текст")
+        content_choice = self.safe_input("Ваш выбор (1-2): ")
+
+        new_content_type = note.content_type  # По умолчанию оставляем текущий
+
+        if content_choice == "1":
+            new_content_type = "plain"
+        elif content_choice == "2":
+            new_content_type = "html"
+        else:
+            print("❌ Неверный выбор!")
+            return
+
+        success = self.note_manager.update(note_id, content_type=new_content_type)
+        if success:
+            print(f"✅ Тип содержимого изменен на: {new_content_type}")
+            updated_note = self.note_manager.get(note_id)
+            self.print_note_details(updated_note)
+        else:
+            print("❌ Ошибка при изменении типа содержимого!")
+
+    # Добавляем новые пункты в меню (в метод display_menu)
+    def display_menu(self):
+        """Отображает главное меню"""
+        print("\n" + "=" * 50)
+        print("          УМНЫЙ ОРГАНАЙЗЕР - DEBUG CONSOLE")
+        print("=" * 50)
+        print("1. Создать заметку")
+        print("2. Создать заметку с указанием типа содержимого")
+        print("3. Показать все заметки")
+        print("4. Найти заметки")
+        print("5. Показать заметку по ID")
+        print("6. Обновить заметку")
+        print("7. Изменить тип содержимого заметки")
+        print("8. Удалить заметку")
+        print("9. Управление тегами")
+        print("10. Статистика")
+        print("11. Выход")
+        print("-" * 50)
+
+    # Обновляем метод run для обработки новых пунктов меню
     def run(self):
         """Запускает главный цикл приложения"""
         print("🚀 Запуск Debug Console...")
-        print("База данных инициализирована!")
+        print("✅ База данных инициализирована!")
 
         while self.is_running:
             self.clear_screen()
             self.display_menu()
 
             try:
-                choice = self.safe_input("Выберите действие (1-9): ")
+                choice = self.safe_input("Выберите действие (1-11): ")
 
                 if choice == "1":
                     self.create_note()
                 elif choice == "2":
-                    self.show_all_notes()
+                    self.create_note_with_content_type()
                 elif choice == "3":
-                    self.search_notes()
+                    self.show_all_notes()
                 elif choice == "4":
-                    self.show_note_by_id()
+                    self.search_notes()
                 elif choice == "5":
-                    self.update_note()
+                    self.show_note_by_id()
                 elif choice == "6":
-                    self.delete_note()
+                    self.update_note()
                 elif choice == "7":
-                    self.manage_tags()
+                    self.update_note_content_type()
                 elif choice == "8":
-                    self.show_statistics()
+                    self.delete_note()
                 elif choice == "9":
+                    self.manage_tags()
+                elif choice == "10":
+                    self.show_statistics()
+                elif choice == "11":
                     print("👋 До свидания!")
                     self.is_running = False
                     break
@@ -512,7 +625,6 @@ class DebugConsole:
                 print(f"\n❌ Произошла ошибка: {e}")
                 self.wait_for_enter()
 
-        # Закрываем соединения при выходе
         self.db.close()
 
 

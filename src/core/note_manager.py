@@ -9,17 +9,14 @@ class NoteManager:
     """Менеджер для работы с заметками в базе данных"""
 
     def __init__(self, db_manager: DatabaseManager, tag_manager: TagManager):
-        """
-        Инициализация менеджера заметок
-
-        Args:
-            db_manager: Экземпляр DatabaseManager для работы с БД
-            tag_manager: Экземпляр TagManager для работы с тегами
-        """
         self.db = db_manager
         self.tag_manager = tag_manager
 
-    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None) -> Optional[Note]:
+        # Выполняем миграцию при инициализации
+        self.db.migrate_database()
+
+    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "plain") -> \
+    Optional[Note]:
         """
         Создает новую заметку с возможностью привязки тегов
 
@@ -27,6 +24,7 @@ class NoteManager:
             title: Заголовок заметки
             content: Содержимое заметки
             tags: Список имен тегов (строк)
+            content_type: Тип содержимого - "plain" или "html"
 
         Returns:
             Note: Созданный объект заметки или None при ошибке
@@ -34,6 +32,11 @@ class NoteManager:
         if not title or not title.strip():
             print("Ошибка: заголовок заметки не может быть пустым")
             return None
+
+        # Валидация content_type
+        if content_type not in ["plain", "html"]:
+            print(f"⚠️  Неподдерживаемый content_type: {content_type}. Используется 'plain'")
+            content_type = "plain"
 
         title = title.strip()
         content = content.strip() if content else ""
@@ -44,8 +47,8 @@ class NoteManager:
 
                 # Вставляем заметку в таблицу notes
                 cursor.execute(
-                    "INSERT INTO notes (title, content) VALUES (?, ?)",
-                    (title, content)
+                    "INSERT INTO notes (title, content, content_type) VALUES (?, ?, ?)",
+                    (title, content, content_type)
                 )
                 note_id = cursor.lastrowid
 
@@ -75,18 +78,19 @@ class NoteManager:
                     content=content,
                     note_id=note_id,
                     created_date=datetime.now(),
-                    modified_date=datetime.now()
+                    modified_date=datetime.now(),
+                    content_type=content_type
                 )
                 note.tags = tag_objects
 
-                print(f"Заметка '{title}' создана с ID: {note_id}")
+                print(f"✅ Заметка '{title}' создана с ID: {note_id} (тип: {content_type})")
                 if tag_objects:
-                    print(f"Привязаны теги: {[tag.name for tag in tag_objects]}")
+                    print(f"   Привязаны теги: {[tag.name for tag in tag_objects]}")
 
                 return note
 
         except Exception as e:
-            print(f"Ошибка при создании заметки '{title}': {e}")
+            print(f"❌ Ошибка при создании заметки '{title}': {e}")
             return None
 
     def get(self, note_id: int) -> Optional[Note]:
@@ -105,16 +109,16 @@ class NoteManager:
 
                 # Получаем данные заметки
                 cursor.execute(
-                    "SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?",
+                    "SELECT id, title, content, content_type, created_at, updated_at FROM notes WHERE id = ?",
                     (note_id,)
                 )
                 result = cursor.fetchone()
 
                 if not result:
-                    print(f"Заметка с ID {note_id} не найдена")
+                    print(f"❌ Заметка с ID {note_id} не найдена")
                     return None
 
-                note_id, title, content, created_at, updated_at = result
+                note_id, title, content, content_type, created_at, updated_at = result
 
                 # Получаем теги для этой заметки
                 tag_objects = self.tag_manager.get_tags_for_note(note_id)
@@ -123,24 +127,30 @@ class NoteManager:
                 created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
                 modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
+                # Если content_type не установлен, используем по умолчанию "plain"
+                if content_type is None:
+                    content_type = "plain"
+
                 # Создаем объект Note
                 note = Note(
                     title=title,
                     content=content or "",
                     note_id=note_id,
                     created_date=created_date,
-                    modified_date=modified_date
+                    modified_date=modified_date,
+                    content_type=content_type
                 )
                 note.tags = tag_objects
 
                 return note
 
         except Exception as e:
-            print(f"Ошибка при получении заметки с ID {note_id}: {e}")
+            print(f"❌ Ошибка при получении заметки с ID {note_id}: {e}")
             return None
 
     def update(self, note_id: int, title: Optional[str] = None,
-               content: Optional[str] = None, tags: Optional[List[str]] = None) -> bool:
+               content: Optional[str] = None, tags: Optional[List[str]] = None,
+               content_type: Optional[str] = None) -> bool:
         """
         Обновляет данные заметки
 
@@ -149,6 +159,7 @@ class NoteManager:
             title: Новый заголовок (если None - не изменяется)
             content: Новое содержимое (если None - не изменяется)
             tags: Новый список тегов (если None - не изменяется)
+            content_type: Новый тип содержимого (если None - не изменяется)
 
         Returns:
             bool: True если обновление успешно
@@ -156,8 +167,13 @@ class NoteManager:
         # Проверяем, существует ли заметка
         existing_note = self.get(note_id)
         if not existing_note:
-            print(f"Заметка с ID {note_id} не существует")
+            print(f"❌ Заметка с ID {note_id} не существует")
             return False
+
+        # Валидация content_type
+        if content_type is not None and content_type not in ["plain", "html"]:
+            print(f"⚠️  Неподдерживаемый content_type: {content_type}. Изменение не применено.")
+            content_type = None
 
         try:
             with self.db._get_connection() as conn:
@@ -174,6 +190,10 @@ class NoteManager:
                 if content is not None:
                     update_fields.append("content = ?")
                     update_values.append(content.strip() if content else "")
+
+                if content_type is not None:
+                    update_fields.append("content_type = ?")
+                    update_values.append(content_type)
 
                 # Всегда обновляем updated_at
                 update_fields.append("updated_at = CURRENT_TIMESTAMP")
@@ -199,14 +219,16 @@ class NoteManager:
 
                 conn.commit()
 
-                print(f"Заметка с ID {note_id} успешно обновлена")
+                print(f"✅ Заметка с ID {note_id} успешно обновлена")
+                if content_type is not None:
+                    print(f"   Тип содержимого изменен на: {content_type}")
                 if tags is not None:
-                    print(f"Обновлены теги: {tags}")
+                    print(f"   Обновлены теги: {tags}")
 
                 return True
 
         except Exception as e:
-            print(f"Ошибка при обновлении заметки с ID {note_id}: {e}")
+            print(f"❌ Ошибка при обновлении заметки с ID {note_id}: {e}")
             return False
 
     def delete(self, note_id: int) -> bool:

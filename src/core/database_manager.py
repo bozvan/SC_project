@@ -12,21 +12,21 @@ class DatabaseManager:
         self._init_db()
 
     def _get_connection(self) -> sqlite3.Connection:
-        """Возвращает соединение с БД (создает если нужно)."""
-        if self.connection is None:
-            self.connection = sqlite3.connect(self.db_path)
-            self.connection.execute("PRAGMA foreign_keys = ON")
-        return self.connection
+        """Возвращает новое соединение с БД."""
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
     def _init_db(self):
         """Инициализирует базу данных, создавая таблицы."""
         create_tables_queries = [
-            # Таблица заметок
+            # Таблица заметок (обновленная с content_type)
             """
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 content TEXT,
+                content_type TEXT DEFAULT 'plain',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -38,7 +38,7 @@ class DatabaseManager:
                 name TEXT UNIQUE NOT NULL
             )
             """,
-            # Таблица связи 'многие-ко-многим' между заметками и тегами
+            # Таблица связи многие-ко-многим между заметками и тегами
             """
             CREATE TABLE IF NOT EXISTS note_tag_relation (
                 note_id INTEGER,
@@ -50,12 +50,43 @@ class DatabaseManager:
             """
         ]
 
-        conn = self._get_connection()
-        cursor = conn.cursor()
-        for query in create_tables_queries:
-            cursor.execute(query)
-        conn.commit()
-        print(f"База данных инициализирована: {self.db_path}")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            # Создаем таблицы
+            for query in create_tables_queries:
+                cursor.execute(query)
+
+            # Проверяем и добавляем колонку content_type если её нет
+            try:
+                cursor.execute("ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT 'plain'")
+                print("✅ Добавлена колонка content_type в таблицу notes")
+            except sqlite3.OperationalError:
+                # Колонка уже существует
+                pass
+
+            conn.commit()
+            print(f"✅ База данных инициализирована: {self.db_path}")
+
+    def migrate_database(self):
+        """Миграция базы данных для добавления новых полей"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Добавляем content_type если не существует
+                cursor.execute("PRAGMA table_info(notes)")
+                columns = [column[1] for column in cursor.fetchall()]
+
+                if 'content_type' not in columns:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT 'plain'")
+                    print("✅ Миграция: добавлена колонка content_type")
+
+                conn.commit()
+                print("✅ Миграция базы данных завершена")
+
+        except Exception as e:
+            print(f"❌ Ошибка миграции базы данных: {e}")
 
     # --- Методы для работы с заметками ---
     def create_note(self, title: str, content: str) -> Optional[int]:

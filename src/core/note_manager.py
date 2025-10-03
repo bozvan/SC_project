@@ -145,7 +145,7 @@ class NoteManager:
                content: Optional[str] = None, tags: Optional[List[str]] = None,
                content_type: Optional[str] = None) -> bool:
         """
-        Обновляет данные заметки с ОДНИМ соединением к БД
+        Обновляет данные заметки (оптимизировано для автосохранения)
         """
         # Проверяем, существует ли заметка
         existing_note = self.get(note_id)
@@ -163,7 +163,6 @@ class NoteManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Подготавливаем данные для обновления
                 update_fields = []
                 update_values = []
 
@@ -179,22 +178,25 @@ class NoteManager:
                     update_fields.append("content_type = ?")
                     update_values.append(content_type)
 
+                # Если нет изменений, выходим раньше
+                if not update_fields:
+                    print("⚠️  Нет изменений для сохранения")
+                    return True
+
                 # Всегда обновляем updated_at
                 update_fields.append("updated_at = CURRENT_TIMESTAMP")
+                update_values.append(note_id)
 
-                if update_fields:
-                    update_values.append(note_id)
-                    update_query = f"UPDATE notes SET {', '.join(update_fields)} WHERE id = ?"
-                    cursor.execute(update_query, update_values)
+                update_query = f"UPDATE notes SET {', '.join(update_fields)} WHERE id = ?"
+                cursor.execute(update_query, update_values)
 
-                # Обновляем теги в ТОМ ЖЕ соединении
+                # Обновляем теги только если они переданы
                 if tags is not None:
                     # Удаляем старые связи
                     cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
 
                     # Добавляем новые связи
                     for tag_name in tags:
-                        # Используем существующий TagManager но с текущим соединением
                         tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag and tag.id:
                             cursor.execute(
@@ -203,13 +205,7 @@ class NoteManager:
                             )
 
                 conn.commit()
-
-                print(f"✅ Заметка с ID {note_id} успешно обновлена")
-                if content_type is not None:
-                    print(f"   Тип содержимого изменен на: {content_type}")
-                if tags is not None:
-                    print(f"   Обновлены теги: {tags}")
-
+                print(f"✅ Заметка с ID {note_id} обновлена")
                 return True
 
         except Exception as e:

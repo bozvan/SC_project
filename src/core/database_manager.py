@@ -1,4 +1,5 @@
 import sqlite3
+import traceback
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -13,73 +14,85 @@ class DatabaseManager:
 
     def _get_connection(self) -> sqlite3.Connection:
         """Возвращает новое соединение с БД."""
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+        try:
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA journal_mode = WAL")  # Улучшаем производительность
+            return conn
+        except sqlite3.Error as e:
+            print(f"❌ Ошибка подключения к БД: {e}")
+            raise
 
     def _init_db(self):
         """Инициализирует базу данных, создавая таблицы."""
-        create_tables_queries = [
-            # Таблица заметок (обновленная с content_type)
-            """
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                content TEXT,
-                content_type TEXT DEFAULT 'plain',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-            """,
-            # Таблица тегов
-            """
-            CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL
-            )
-            """,
-            # Таблица связи многие-ко-многим между заметками и тегами
-            """
-            CREATE TABLE IF NOT EXISTS note_tag_relation (
-                note_id INTEGER,
-                tag_id INTEGER,
-                PRIMARY KEY (note_id, tag_id),
-                FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
-            )
-            """,
-            # НОВАЯ ТАБЛИЦА: Задачи
-            """
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                note_id INTEGER NOT NULL,
-                description TEXT NOT NULL,
-                is_completed BOOLEAN DEFAULT FALSE,
-                due_date DATETIME NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
-            )
-            """
-        ]
+        try:
+            print(f"🔧 Инициализация БД по пути: {self.db_path}")
+            print(f"🔧 Существует ли файл: {self.db_path.exists()}")
+            create_tables_queries = [
+                # Таблица заметок (обновленная с content_type)
+                """
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    content TEXT,
+                    content_type TEXT DEFAULT 'plain',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """,
+                # Таблица тегов
+                """
+                CREATE TABLE IF NOT EXISTS tags (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL
+                )
+                """,
+                # Таблица связи многие-ко-многим между заметками и тегами
+                """
+                CREATE TABLE IF NOT EXISTS note_tag_relation (
+                    note_id INTEGER,
+                    tag_id INTEGER,
+                    PRIMARY KEY (note_id, tag_id),
+                    FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE,
+                    FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
+                )
+                """,
+                # НОВАЯ ТАБЛИЦА: Задачи
+                """
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    note_id INTEGER NOT NULL,
+                    description TEXT NOT NULL,
+                    is_completed BOOLEAN DEFAULT FALSE,
+                    due_date DATETIME NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
+                )
+                """
+            ]
 
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
 
-            # Создаем таблицы
-            for query in create_tables_queries:
-                cursor.execute(query)
+                # Создаем таблицы
+                for query in create_tables_queries:
+                    cursor.execute(query)
 
-            # Проверяем и добавляем колонку content_type если её нет
-            try:
-                cursor.execute("ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT 'plain'")
-                print("✅ Добавлена колонка content_type в таблицу notes")
-            except sqlite3.OperationalError:
-                # Колонка уже существует
-                pass
+                # Проверяем и добавляем колонку content_type если её нет
+                try:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT 'plain'")
+                    print("✅ Добавлена колонка content_type в таблицу notes")
+                except sqlite3.OperationalError:
+                    # Колонка уже существует
+                    pass
 
-            conn.commit()
-            print(f"✅ База данных инициализирована: {self.db_path}")
+                conn.commit()
+                print(f"✅ База данных инициализирована: {self.db_path}")
+        except Exception as e:
+            print(f"❌ Критическая ошибка инициализации БД: {e}")
+            traceback.print_exc()
+            raise
 
     def migrate_database(self):
         """Миграция базы данных для добавления новых полей"""
@@ -182,10 +195,15 @@ class DatabaseManager:
             return False
 
     def close(self):
-        """Закрывает соединение с БД."""
-        if self.connection:
-            self.connection.close()
-            self.connection = None
+        """Закрывает все соединения с БД."""
+        if hasattr(self, '_connection') and self._connection:
+            try:
+                self._connection.close()
+                print("✅ Соединение с БД закрыто")
+            except:
+                pass
+            finally:
+                self._connection = None
 
     # --- Методы для работы с тегами (пока заглушки) ---
     def create_tag(self, name: str) -> Optional[int]:

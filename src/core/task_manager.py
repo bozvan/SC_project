@@ -18,7 +18,7 @@ class TaskManager:
         self.db = db_manager
         print("✅ Менеджер задач инициализирован")
 
-    def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None) -> Optional[Task]:
+    def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None, is_completed: bool = False) -> Optional[Task]:
         """
         Создает новую задачу для указанной заметки
 
@@ -26,6 +26,7 @@ class TaskManager:
             note_id: ID заметки, к которой привязана задача
             description: Описание задачи
             due_date: Срок выполнения (опционально)
+            is_completed: Статус выполнения (по умолчанию False)
 
         Returns:
             Task: Созданная задача или None при ошибке
@@ -49,9 +50,9 @@ class TaskManager:
 
                 # Вставляем задачу
                 cursor.execute(
-                    """INSERT INTO tasks (note_id, description, due_date, created_at, updated_at) 
-                    VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
-                    (note_id, description, due_date.isoformat() if due_date else None)
+                    """INSERT INTO tasks (note_id, description, due_date, is_completed, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+                    (note_id, description, due_date.isoformat() if due_date else None, 1 if is_completed else 0)
                 )
                 task_id = cursor.lastrowid
                 conn.commit()
@@ -59,12 +60,12 @@ class TaskManager:
                 if task_id:
                     task = Task(
                         description=description,
-                        is_completed=False,
+                        is_completed=is_completed,
                         task_id=task_id,
                         due_date=due_date,
                         note_id=note_id
                     )
-                    task.note_title = note_result[1]  # Добавляем заголовок заметки
+                    task.note_title = note_result[1]
                     print(f"✅ Задача создана: {task}")
                     return task
                 else:
@@ -146,7 +147,7 @@ class TaskManager:
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.note_id = ? 
-                    ORDER BY t.is_completed, t.due_date, t.created_at""",
+                    ORDER BY t.created_at ASC""",  # ИЗМЕНИЛ: сортируем по дате создания
                     (note_id,)
                 )
                 results = cursor.fetchall()
@@ -154,7 +155,6 @@ class TaskManager:
                 tasks = []
                 for (task_id, description, is_completed, due_date_str,
                      created_at, updated_at, note_title) in results:
-                    # Преобразуем строки в datetime
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
                     updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
@@ -170,6 +170,8 @@ class TaskManager:
                     )
                     task.note_title = note_title
                     tasks.append(task)
+
+                    print(f"   📋 Задача {task_id}: '{description}' -> выполнена={bool(is_completed)}")
 
                 print(f"✅ Загружено задач для заметки {note_id}: {len(tasks)}")
                 return tasks
@@ -465,3 +467,157 @@ class TaskManager:
         except Exception as e:
             print(f"❌ Ошибка при получении выполненных задач: {e}")
             return []
+
+    def parse_tasks_from_html(self, html_content: str) -> List[Task]:
+        """
+        Парсит задачи из HTML-контента заметки
+
+        Ищет специальные маркеры задач в HTML:
+        - Элементы с data-type="task"
+        - Чекбоксы с определенными классами
+        - Специальные списки задач
+
+        Args:
+            html_content: HTML-код заметки
+
+        Returns:
+            List[Task]: Список найденных задач
+        """
+        try:
+            from bs4 import BeautifulSoup
+        except ImportError:
+            print("❌ BeautifulSoup не установлен. Установите: pip install beautifulsoup4")
+            return []
+
+        tasks = []
+
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+
+            # Ищем задачи в специальных task-блоках
+            task_elements = soup.find_all(attrs={"data-type": "task"})
+
+            for task_elem in task_elements:
+                # Извлекаем данные задачи
+                task_id = task_elem.get('data-task-id')
+                description = task_elem.get('data-description', '').strip()
+                is_completed = task_elem.get('data-completed', 'false').lower() == 'true'
+
+                # Получаем due_date если есть
+                due_date_str = task_elem.get('data-due-date')
+                due_date = None
+                if due_date_str:
+                    try:
+                        due_date = datetime.fromisoformat(due_date_str)
+                    except ValueError:
+                        pass
+
+                if description:  # Только задачи с описанием
+                    task = Task(
+                        description=description,
+                        is_completed=is_completed,
+                        task_id=int(task_id) if task_id else None,
+                        due_date=due_date
+                    )
+                    tasks.append(task)
+
+            print(f"✅ Извлечено задач из HTML: {len(tasks)}")
+            return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при парсинге задач из HTML: {e}")
+            return []
+
+    def generate_html_from_tasks(self, tasks: List[Task]) -> str:
+        """
+        Генерирует HTML-код для списка задач
+
+        Args:
+            tasks: Список задач
+
+        Returns:
+            str: HTML-код с чекбоксами
+        """
+        if not tasks:
+            return ""
+
+        html_parts = ['<div class="task-list">']
+
+        for task in tasks:
+            checked = "checked" if task.is_completed else ""
+            due_date_attr = f' data-due-date="{task.due_date.isoformat()}"' if task.due_date else ""
+
+            task_html = f'''
+            <div class="task-item" data-type="task" data-task-id="{task.id or ''}" 
+                 data-description="{task.description}" data-completed="{str(task.is_completed).lower()}"{due_date_attr}>
+                <input type="checkbox" class="task-checkbox" {checked} onchange="toggleTask(this)">
+                <span class="task-text">{task.description}</span>
+            </div>
+            '''
+            html_parts.append(task_html)
+
+        html_parts.append('</div>')
+        return '\n'.join(html_parts)
+
+    def extract_and_save_tasks(self, note_id: int, html_content: str) -> bool:
+        """
+        Извлекает задачи из HTML и сохраняет их в БД
+
+        Args:
+            note_id: ID заметки
+            html_content: HTML-контент заметки
+
+        Returns:
+            bool: True если успешно
+        """
+        try:
+            # Парсим задачи из HTML
+            tasks_from_html = self.parse_tasks_from_html(html_content)
+
+            # Получаем существующие задачи для этой заметки
+            existing_tasks = self.get_tasks_for_note(note_id)
+            existing_task_map = {task.description: task for task in existing_tasks}
+
+            # Обновляем или создаем задачи
+            for html_task in tasks_from_html:
+                if html_task.description in existing_task_map:
+                    # Обновляем существующую задачу
+                    existing_task = existing_task_map[html_task.description]
+                    self.update_task(
+                        existing_task.id,
+                        is_completed=html_task.is_completed,
+                        due_date=html_task.due_date
+                    )
+                else:
+                    # Создаем новую задачу
+                    self.create_task(
+                        note_id,
+                        html_task.description,
+                        html_task.due_date
+                    )
+
+            print(f"✅ Задачи синхронизированы для заметки {note_id}")
+            return True
+
+        except Exception as e:
+            print(f"❌ Ошибка при синхронизации задач: {e}")
+            return False
+
+    def debug_tasks_for_note(self, note_id: int):
+        """Отладочный метод: показывает сырые данные из БД"""
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT id, description, is_completed FROM tasks WHERE note_id = ? ORDER BY created_at",
+                    (note_id,)
+                )
+                results = cursor.fetchall()
+
+                print(f"🔍 ОТЛАДКА БД для заметки {note_id}:")
+                for task_id, description, is_completed in results:
+                    print(
+                        f"   📊 ID: {task_id}, Описание: '{description}', is_completed: {is_completed} (тип: {type(is_completed)})")
+
+        except Exception as e:
+            print(f"❌ Ошибка отладки: {e}")

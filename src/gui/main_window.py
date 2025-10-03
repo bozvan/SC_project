@@ -1,7 +1,11 @@
 import os
 import sys
-from PyQt6.QtWidgets import QMainWindow, QMessageBox, QListWidgetItem, QHBoxLayout, QSplitter, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (QMainWindow, QMessageBox, QListWidgetItem,
+                             QVBoxLayout, QHBoxLayout, QCheckBox, QLineEdit,
+                             QPushButton, QScrollArea, QWidget, QLabel)
 from PyQt6.QtCore import Qt
+
+from src.core.task_manager import TaskManager
 from src.gui.ui_main_window import Ui_MainWindow
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
@@ -17,15 +21,192 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.setup_managers()
-        self.setup_ui_simple()
+        self.setup_ui_with_tasks()  # ИЗМЕНИЛ НАЗВАНИЕ
         self.setup_connections()
 
-        # Флаги для предотвращения рекурсии
         self._updating_from_search = False
         self._updating_from_tags = False
+        self.task_manager = TaskManager(self.db_manager)
 
         self.load_notes()
         self.current_note_id = None
+
+    def setup_ui_with_tasks(self):
+        """Настройка UI с областью задач"""
+        self.setup_rich_editor()
+
+        # Создаем область задач
+        self.setup_tasks_area()
+
+        self.tags_widget = TagsWidget(self.tag_manager)
+        self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
+        self.verticalLayout.addWidget(self.tags_widget)
+
+        print("✅ UI настроен с областью задач")
+
+    def setup_tasks_area(self):
+        """Создает область для задач под редактором"""
+        # Создаем контейнер для задач
+        self.tasks_container = QWidget()
+        tasks_layout = QVBoxLayout(self.tasks_container)
+        tasks_layout.setContentsMargins(0, 10, 0, 0)
+
+        # Заголовок
+        tasks_label = QLabel("Задачи этой заметки:")
+        tasks_label.setStyleSheet("font-weight: bold;")
+        tasks_layout.addWidget(tasks_label)
+
+        # Область прокрутки для задач
+        self.tasks_scroll = QScrollArea()
+        self.tasks_scroll.setWidgetResizable(True)
+        self.tasks_scroll.setMaximumHeight(150)
+
+        self.tasks_widget = QWidget()
+        self.tasks_layout = QVBoxLayout(self.tasks_widget)
+        self.tasks_layout.setSpacing(5)
+
+        self.tasks_scroll.setWidget(self.tasks_widget)
+        tasks_layout.addWidget(self.tasks_scroll)
+
+        # Кнопка добавления задачи
+        add_task_layout = QHBoxLayout()
+        self.new_task_input = QLineEdit()
+        self.new_task_input.setPlaceholderText("Новая задача...")
+        self.new_task_input.returnPressed.connect(self.add_task)
+
+        self.add_task_btn = QPushButton("Добавить")
+        self.add_task_btn.clicked.connect(self.add_task)
+
+        add_task_layout.addWidget(self.new_task_input)
+        add_task_layout.addWidget(self.add_task_btn)
+        tasks_layout.addLayout(add_task_layout)
+
+        # Добавляем контейнер задач в основной layout
+        self.verticalLayout_2.addWidget(self.tasks_container)
+
+    def add_task(self):
+        """Добавляет новую задачу"""
+        if not self.current_note_id:
+            QMessageBox.warning(self, "Ошибка", "Сначала создайте или откройте заметку!")
+            return
+
+        description = self.new_task_input.text().strip()
+        if not description:
+            return
+
+        # Создаем задачу в БД
+        task = self.task_manager.create_task(self.current_note_id, description)
+        if task:
+            self.add_task_widget(task)
+            self.new_task_input.clear()
+            self.on_note_modified()
+
+    def add_task_widget(self, task):
+        """Добавляет виджет задачи с правильным статусом"""
+        task_widget = QWidget()
+        task_widget.setObjectName(f"task_widget_{task.id}")  # УНИКАЛЬНЫЙ ID
+
+        layout = QHBoxLayout(task_widget)
+        layout.setContentsMargins(5, 2, 5, 2)
+
+        checkbox = QCheckBox(task.description)
+        checkbox.setChecked(task.is_completed)
+        checkbox.setObjectName(f"task_checkbox_{task.id}")  # УНИКАЛЬНЫЙ ID
+
+        # Сохраняем task.id в свойствах чекбокса
+        checkbox.setProperty("task_id", task.id)
+
+        checkbox.stateChanged.connect(
+            lambda state, task_id=task.id: self.on_task_toggled(task_id, state)
+        )
+
+        layout.addWidget(checkbox)
+        layout.addStretch()
+
+        # Кнопка удаления
+        delete_btn = QPushButton("×")
+        delete_btn.setFixedSize(20, 20)
+        delete_btn.setStyleSheet("font-weight: bold; color: red;")
+        delete_btn.setProperty("task_id", task.id)
+        delete_btn.clicked.connect(
+            lambda checked, task_id=task.id, widget=task_widget: self.delete_task(task_id, widget)
+        )
+        layout.addWidget(delete_btn)
+
+        self.tasks_layout.addWidget(task_widget)
+
+        print(f"   ✅ Добавлен виджет для задачи {task.id}: '{task.description}' -> {task.is_completed}")
+
+    def on_task_toggled(self, task_id, state):
+        """Обработчик переключения чекбокса"""
+        is_checked = state == Qt.CheckState.Checked.value
+        print(f"🔄 Переключение задачи {task_id}: {is_checked}")
+
+        success = self.task_manager.update_task(task_id, is_completed=is_checked)
+        if success:
+            print(f"✅ Статус задачи {task_id} обновлен в БД: {is_checked}")
+        else:
+            print(f"❌ Ошибка обновления статуса задачи {task_id}")
+
+        self.on_note_modified()
+
+    def delete_task(self, task_id, widget):
+        """Удаляет задачу"""
+        print(f"🗑️ Удаление задачи {task_id}")
+        success = self.task_manager.delete_task(task_id)
+        if success:
+            self.tasks_layout.removeWidget(widget)
+            widget.deleteLater()
+            self.on_note_modified()
+            print(f"✅ Задача {task_id} удалена")
+        else:
+            print(f"❌ Ошибка удаления задачи {task_id}")
+
+    def load_tasks_for_note(self, note_id):
+        """Загружает задачи для заметки и отображает их с правильными статусами"""
+        # Очищаем старые задачи
+        self.clear_tasks()
+
+        if not note_id:
+            return
+
+        # ОТЛАДКА: смотрим сырые данные из БД
+        self.task_manager.debug_tasks_for_note(note_id)
+
+        # Загружаем новые задачи
+        tasks = self.task_manager.get_tasks_for_note(note_id)
+        print(f"🔍 Загружено задач для заметки {note_id}: {len(tasks)}")
+
+        for task in tasks:
+            self.add_task_widget(task)
+
+    def clear_tasks(self):
+        """Очищает все задачи из области"""
+        print("🧹 Очистка области задач")
+        for i in reversed(range(self.tasks_layout.count())):
+            widget = self.tasks_layout.itemAt(i).widget()
+            if widget:
+                self.tasks_layout.removeWidget(widget)
+                widget.deleteLater()
+
+    def display_note(self, note):
+        """Отображает заметку и её задачи"""
+        print(f"📝 Отображение заметки {note.id if note else 'None'}")
+
+        self.title_input.setText(note.title)
+        self.rich_editor.set_html(note.content)
+
+        # Загружаем задачи
+        if note and note.id:
+            self.load_tasks_for_note(note.id)
+        else:
+            self.clear_tasks()
+
+        if note.tags:
+            tags_text = ", ".join([tag.name for tag in note.tags])
+            self.tags_input.setText(tags_text)
+        else:
+            self.tags_input.setText("")
 
     def setup_managers(self):
         db_path = "smart_organizer.db"
@@ -59,9 +240,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.save_btn.clicked.connect(self.on_save_note)
         self.cancel_btn.clicked.connect(self.on_cancel_edit)
         self.search_button.clicked.connect(self.on_search_clicked)
-
-        # Отключаем автоматическое обновление при вводе чтобы избежать рекурсии
-        # self.search_input.textChanged.connect(self.on_search_changed)
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 
@@ -208,15 +386,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
 
-    def display_note(self, note):
-        self.title_input.setText(note.title)
-        self.rich_editor.set_html(note.content)
-        if note.tags:
-            tags_text = ", ".join([tag.name for tag in note.tags])
-            self.tags_input.setText(tags_text)
-        else:
-            self.tags_input.setText("")
-
     def set_editor_enabled(self, enabled):
         self.title_input.setEnabled(enabled)
         self.tags_input.setEnabled(enabled)
@@ -226,17 +395,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.save_btn.setEnabled(True)
         self.cancel_btn.setEnabled(True)
 
-    def on_new_note(self):
-        self.set_editor_enabled(True)
-        self.title_input.clear()
-        self.rich_editor.clear()
-        self.tags_input.clear()
-        self.current_note_id = None
-        self.save_btn.setEnabled(True)
-        self.cancel_btn.setEnabled(True)
-        self.title_input.setFocus()
-
     def on_save_note(self):
+        """Сохраняет заметку"""
         try:
             title = self.title_input.text().strip()
             if not title:
@@ -251,6 +411,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.current_note_id:
                 success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
                 if success:
+                    # Задачи уже сохраняются сразу при переключении чекбоксов
                     QMessageBox.information(self, "Успех", "Заметка обновлена!")
                     self.tags_widget.refresh()
                     self.load_notes(self.search_input.text())
@@ -259,10 +420,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             else:
                 note = self.note_manager.create(title, content, tags, "html")
                 if note:
+                    self.current_note_id = note.id
                     QMessageBox.information(self, "Успех", f"Заметка создана! ID: {note.id}")
                     self.tags_widget.refresh()
                     self.load_notes(self.search_input.text())
-                    self.current_note_id = note.id
                 else:
                     QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
 
@@ -270,6 +431,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cancel_btn.setEnabled(False)
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {e}")
+
+    def on_new_note(self):
+        """Создание новой заметки"""
+        self.set_editor_enabled(True)
+        self.title_input.clear()
+        self.rich_editor.clear()
+        self.tags_input.clear()
+        self.clear_tasks()
+        self.current_note_id = None
+        self.save_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(True)
+        self.title_input.setFocus()
 
     def on_cancel_edit(self):
         if self.current_note_id:

@@ -1,17 +1,42 @@
+# [file name]: rich_text_editor.py
+# [file content begin]
 from PyQt6.QtWidgets import (QTextEdit, QToolBar, QVBoxLayout, QWidget,
-                             QFontComboBox, QSpinBox, QColorDialog)
+                             QFontComboBox, QSpinBox, QColorDialog, QApplication)
 from PyQt6.QtGui import (QTextCharFormat, QFont, QTextListFormat,
-                         QTextBlockFormat, QTextCursor, QAction)
-from PyQt6.QtCore import Qt, QSize
+                         QTextBlockFormat, QTextCursor, QAction, QTextDocument,
+                         QTextBlock, QPalette, QMouseEvent, QSyntaxHighlighter,
+                         QTextCharFormat, QColor)
+from PyQt6.QtCore import Qt, QSize, QRegularExpression, pyqtSignal
+import re
+
+
+class TaskHighlighter(QSyntaxHighlighter):
+    """Подсветка задач в тексте"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.task_pattern = QRegularExpression("\\[([ x])\\] (.+)")
+
+        self.completed_format = QTextCharFormat()
+        self.completed_format.setForeground(QColor(128, 128, 128))
+        self.completed_format.setFontStrikeOut(True)
+
+    def highlightBlock(self, text):
+        """Подсвечивает задачи в тексте"""
+        match = self.task_pattern.match(text)
+        if match.hasMatch():
+            if match.captured(1) == "x":
+                # Выполненная задача
+                self.setFormat(0, len(text), self.completed_format)
 
 
 class RichTextEditor(QWidget):
-    """Виджет богатого текстового редактора с панелью инструментов"""
+    """Виджет богатого текстового редактора с поддержкой задач"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.format_actions = {}
-        self._updating_format = False  # Флаг для предотвращения рекурсии
+        self._updating_format = False
         self.setup_ui()
 
     def setup_ui(self):
@@ -23,14 +48,45 @@ class RichTextEditor(QWidget):
         self.text_edit = QTextEdit()
         self.text_edit.setAcceptRichText(True)
 
+        # Устанавливаем подсветку задач
+        self.highlighter = TaskHighlighter(self.text_edit.document())
+
         # Создаем панель инструментов
         self.toolbar = self.create_toolbar()
 
         layout.addWidget(self.toolbar)
         layout.addWidget(self.text_edit)
 
-        # Подключаем сигналы ПОСЛЕ создания всех элементов
+        # Подключаем сигналы
         self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+        self.text_edit.mousePressEvent = self.handle_mouse_press
+
+    def handle_mouse_press(self, event: QMouseEvent):
+        """Обработка кликов для переключения задач"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Получаем позицию клика
+            cursor = self.text_edit.cursorForPosition(event.pos())
+            cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+            line_text = cursor.selectedText()
+
+            # Проверяем, является ли строка задачей
+            task_match = re.match(r'^\[([ x])\] (.+)$', line_text)
+            if task_match:
+                # Переключаем статус задачи
+                current_status = task_match.group(1)
+                task_text = task_match.group(2)
+                new_status = " " if current_status == "x" else "x"
+
+                # Заменяем строку
+                cursor.removeSelectedText()
+                cursor.insertText(f"[{new_status}] {task_text}")
+
+                # Обновляем подсветку
+                self.highlighter.rehighlight()
+                return
+
+        # Если клик не по задаче, вызываем оригинальный обработчик
+        super(QTextEdit, self.text_edit).mousePressEvent(event)
 
     def create_toolbar(self):
         """Создание панели инструментов"""
@@ -115,6 +171,12 @@ class RichTextEditor(QWidget):
         toolbar.addAction(number_list_action)
         self.format_actions['number_list'] = number_list_action
 
+        # Кнопка для добавления задачи
+        task_action = QAction("☑ Задача", self)
+        task_action.setToolTip("Добавить задачу")
+        task_action.triggered.connect(self.insert_task)
+        toolbar.addAction(task_action)
+
         toolbar.addSeparator()
 
         # Отменить/Повторить
@@ -128,15 +190,49 @@ class RichTextEditor(QWidget):
 
         return toolbar
 
-    def toggle_bold(self):
-        """Переключение жирного начертания"""
-        if self._updating_format:
-            return
-
+    def insert_task(self):
+        """Вставляет новую задачу в текст"""
         cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
+        cursor.insertText("[ ] Новая задача\n")
+        self.text_edit.setFocus()
 
+    def get_tasks_from_text(self):
+        """Извлекает задачи из текста"""
+        text = self.to_plain_text()
+        tasks = []
+
+        for line in text.split('\n'):
+            match = re.match(r'^\[([ x])\] (.+)$', line)
+            if match:
+                tasks.append({
+                    'status': match.group(1),
+                    'text': match.group(2),
+                    'completed': match.group(1) == 'x'
+                })
+
+        return tasks
+
+    def set_tasks_to_text(self, tasks):
+        """Устанавливает задачи в текст"""
+        task_lines = []
+        for task in tasks:
+            status = "x" if task.get('completed', False) else " "
+            task_lines.append(f"[{status}] {task.get('text', '')}")
+
+        # Сохраняем текущий текст без задач
+        current_text = self.to_plain_text()
+        lines = current_text.split('\n')
+        non_task_lines = [line for line in lines if not re.match(r'^\[[ x]\]', line)]
+
+        # Объединяем с задачами
+        new_text = '\n'.join(non_task_lines + task_lines)
+        self.set_plain_text(new_text)
+
+    # Все остальные методы форматирования...
+    def toggle_bold(self):
+        if self._updating_format: return
+        cursor = self.text_edit.textCursor()
+        if not cursor.hasSelection(): return
         fmt = QTextCharFormat()
         weight = QFont.Weight.Bold if not cursor.charFormat().fontWeight() == QFont.Weight.Bold else QFont.Weight.Normal
         fmt.setFontWeight(weight)
@@ -144,35 +240,24 @@ class RichTextEditor(QWidget):
         self.text_edit.setFocus()
 
     def toggle_italic(self):
-        """Переключение курсива"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
-
+        if not cursor.hasSelection(): return
         fmt = QTextCharFormat()
         fmt.setFontItalic(not cursor.charFormat().fontItalic())
         cursor.mergeCharFormat(fmt)
         self.text_edit.setFocus()
 
     def toggle_underline(self):
-        """Переключение подчеркивания"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
-
+        if not cursor.hasSelection(): return
         fmt = QTextCharFormat()
         fmt.setFontUnderline(not cursor.charFormat().fontUnderline())
         cursor.mergeCharFormat(fmt)
         self.text_edit.setFocus()
 
     def set_text_color(self):
-        """Установка цвета текста"""
         color = QColorDialog.getColor()
         if color.isValid():
             cursor = self.text_edit.textCursor()
@@ -183,10 +268,7 @@ class RichTextEditor(QWidget):
                 self.text_edit.setFocus()
 
     def set_font_family(self, font):
-        """Установка семейства шрифтов"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
         if cursor.hasSelection():
             fmt = QTextCharFormat()
@@ -195,10 +277,7 @@ class RichTextEditor(QWidget):
             self.text_edit.setFocus()
 
     def set_font_size(self, size):
-        """Установка размера шрифта"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
         if cursor.hasSelection():
             fmt = QTextCharFormat()
@@ -207,22 +286,16 @@ class RichTextEditor(QWidget):
             self.text_edit.setFocus()
 
     def set_alignment(self, alignment):
-        """Установка выравнивания"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
         block_fmt = QTextBlockFormat()
         block_fmt.setAlignment(alignment)
         cursor.mergeBlockFormat(block_fmt)
         self.text_edit.setFocus()
-
-        # Обновляем кнопки выравнивания
         self._updating_format = True
         try:
             for key in ['align_left', 'align_center', 'align_right']:
                 self.format_actions[key].setChecked(False)
-
             if alignment == Qt.AlignmentFlag.AlignLeft:
                 self.format_actions['align_left'].setChecked(True)
             elif alignment == Qt.AlignmentFlag.AlignCenter:
@@ -233,68 +306,46 @@ class RichTextEditor(QWidget):
             self._updating_format = False
 
     def toggle_bullet_list(self):
-        """Переключение маркированного списка"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
-
         if self.format_actions['bullet_list'].isChecked():
             list_fmt = QTextListFormat()
             list_fmt.setStyle(QTextListFormat.Style.ListDisc)
             cursor.createList(list_fmt)
         else:
-            # Снимаем форматирование списка
             block_fmt = QTextBlockFormat()
             cursor.setBlockFormat(block_fmt)
-
         self.text_edit.setFocus()
 
     def toggle_number_list(self):
-        """Переключение нумерованного списка"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         cursor = self.text_edit.textCursor()
-
         if self.format_actions['number_list'].isChecked():
             list_fmt = QTextListFormat()
             list_fmt.setStyle(QTextListFormat.Style.ListDecimal)
             cursor.createList(list_fmt)
         else:
-            # Снимаем форматирование списка
             block_fmt = QTextBlockFormat()
             cursor.setBlockFormat(block_fmt)
-
         self.text_edit.setFocus()
 
     def update_format_actions(self):
-        """Обновление состояния кнопок панели инструментов"""
-        if self._updating_format:
-            return
-
+        if self._updating_format: return
         self._updating_format = True
         try:
             cursor = self.text_edit.textCursor()
             char_fmt = cursor.charFormat()
             block_fmt = cursor.blockFormat()
-
-            # Обновляем кнопки форматирования текста
             self.format_actions['bold'].setChecked(char_fmt.fontWeight() == QFont.Weight.Bold)
             self.format_actions['italic'].setChecked(char_fmt.fontItalic())
             self.format_actions['underline'].setChecked(char_fmt.fontUnderline())
-
-            # Обновляем выравнивание
             alignment = block_fmt.alignment()
             self.format_actions['align_left'].setChecked(alignment == Qt.AlignmentFlag.AlignLeft)
             self.format_actions['align_center'].setChecked(alignment == Qt.AlignmentFlag.AlignCenter)
             self.format_actions['align_right'].setChecked(alignment == Qt.AlignmentFlag.AlignRight)
-
-            # Обновляем комбо-боксы
             current_font = char_fmt.font()
             if current_font.family():
                 self.font_combo.setCurrentFont(current_font)
-
             font_size = char_fmt.fontPointSize()
             if font_size > 0:
                 self.font_size.setValue(int(font_size))
@@ -302,37 +353,28 @@ class RichTextEditor(QWidget):
             self._updating_format = False
 
     def set_html(self, html_content):
-        """Установка HTML содержимого"""
-        # Временно отключаем обновление формата
         self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
         try:
             self.text_edit.setHtml(html_content)
         finally:
-            # Восстанавливаем соединение
             self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
 
     def to_html(self):
-        """Получение HTML содержимого"""
         return self.text_edit.toHtml()
 
     def set_plain_text(self, text):
-        """Установка простого текста"""
-        # Временно отключаем обновление формата
         self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
         try:
             self.text_edit.setPlainText(text)
         finally:
-            # Восстанавливаем соединение
             self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
 
     def to_plain_text(self):
-        """Получение простого текста"""
         return self.text_edit.toPlainText()
 
     def clear(self):
-        """Очистка редактора"""
         self.text_edit.clear()
 
     def get_text_edit(self):
-        """Получение ссылки на QTextEdit"""
         return self.text_edit
+# [file content end]

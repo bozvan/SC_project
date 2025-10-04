@@ -18,6 +18,7 @@ try:
     from src.core.note_manager import NoteManager
     from src.widgets.rich_text_editor import RichTextEditor
     from src.widgets.tags_widget import TagsWidget
+    from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
@@ -30,12 +31,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
 
-        # ВАЖНО: Инициализируем все атрибуты ПЕРЕД использованием
+        # ИНИЦИАЛИЗИРУЙТЕ ВСЕ АТРИБУТЫ ПЕРВЫМ ДЕЛОМ
         self.current_note_id = None
         self._updating_from_search = False
         self._updating_from_tags = False
 
-        self.setup_managers()
+        self.setup_managers()  # ДОЛЖНО БЫТЬ ДО setup_ui_simple()
         self.setup_ui_simple()
         self.setup_connections()
 
@@ -43,10 +44,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.auto_save_timer = QTimer()
         self.auto_save_timer.setSingleShot(True)
         self.auto_save_timer.timeout.connect(self.auto_save_note)
-
-        # Инициализируем TaskManager
-        from src.core.task_manager import TaskManager
-        self.task_manager = TaskManager(self.db_manager)
 
         self.load_notes()
 
@@ -56,10 +53,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Автосохранение при закрытии
         if (hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                hasattr(self, 'save_btn') and
-                self.save_btn.isEnabled()):
-            self.force_auto_save()  # Просто сохраняем без вопросов
+                self.current_note_id):
+            self.force_auto_save()
 
         # Останавливаем таймеры
         if hasattr(self, 'auto_save_timer'):
@@ -78,23 +73,76 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_manager = DatabaseManager(db_path)
         self.tag_manager = TagManager(self.db_manager)
         self.note_manager = NoteManager(self.db_manager, self.tag_manager)
-        print("✅ Менеджеры базы данных инициализированы")
+
+        # СОЗДАЙТЕ task_manager ЗДЕСЬ, а не в setup_ui_simple()
+        from src.core.task_manager import TaskManager
+        self.task_manager = TaskManager(self.db_manager)
+
+        print("✅ Все менеджеры инициализированы")
 
     def setup_ui_simple(self):
         """Настройка UI с областью задач"""
         self.setup_rich_editor()
-
-        # Создаем область задач
         self.setup_tasks_area()
+
+        # Создаем виджет предстоящих задач
+        self.upcoming_tasks_widget = UpcomingTasksWidget(self.task_manager, self.note_manager)
+        self.upcoming_tasks_widget.navigate_to_note.connect(self.navigate_to_note_by_id)
+        self.upcoming_tasks_widget.task_toggled.connect(self.on_task_toggled_from_widget)
+
+        # Добавляем в левую панель
+        self.verticalLayout.addWidget(self.upcoming_tasks_widget)
 
         self.tags_widget = TagsWidget(self.tag_manager)
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 
-        # Скрываем кнопку "Отменить"
+        # Скрываем кнопки "Сохранить" и "Отменить"
         self.cancel_btn.setVisible(False)
 
-        print("✅ UI настроен с областью задач")
+        print("✅ UI настроен с автосохранением")
+
+    def navigate_to_note_by_id(self, note_id):
+        """Переходит к заметке по ID"""
+        print(f"🔍 Переход к заметке {note_id}")
+
+        # Ищем заметку в списке
+        for i in range(self.notes_list.count()):
+            item = self.notes_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                self.notes_list.setCurrentItem(item)
+                print(f"✅ Найдена заметка: {item.text()}")
+                return
+
+        # Если не нашли в текущем списке, загружаем все заметки и ищем снова
+        print("⚠️  Заметка не найдена в текущем списке, загружаем все заметки...")
+        self.load_notes()
+
+        for i in range(self.notes_list.count()):
+            item = self.notes_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                self.notes_list.setCurrentItem(item)
+                print(f"✅ Найдена заметка после перезагрузки: {item.text()}")
+                return
+
+        print(f"❌ Заметка с ID {note_id} не найдена")
+
+    def on_task_toggled_from_widget(self, task_id, is_completed):
+        """Обработчик изменения задачи из виджета предстоящих задач"""
+        print(f"🔄 Задача {task_id} изменена: выполнена = {is_completed}")
+
+        # Обновляем задачи в текущей заметке если она открыта
+        if (hasattr(self, 'current_note_id') and
+                self.current_note_id and
+                hasattr(self, 'tasks_layout')):
+            # Перезагружаем задачи для текущей заметки
+            self.load_tasks_for_note(self.current_note_id)
+            print("✅ Задачи текущей заметки обновлены")
+
+        # Обновляем список предстоящих задач
+        if hasattr(self, 'upcoming_tasks_widget'):
+            self.upcoming_tasks_widget.refresh()
+            print("✅ Список предстоящих задач обновлен")
 
     def setup_tasks_area(self):
         """Создает область для задач под редактором"""
@@ -135,6 +183,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Добавляем контейнер задач в основной layout
         self.verticalLayout_2.addWidget(self.tasks_container)
+
+
 
     def add_task(self):
         """Добавляет новую задачу"""
@@ -226,7 +276,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Настройка соединений"""
         self.new_note_btn.clicked.connect(self.on_new_note)
         self.delete_note_btn.clicked.connect(self.on_delete_note)
-        self.save_btn.clicked.connect(self.on_save_note)
         self.search_button.clicked.connect(self.on_search_clicked)
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
@@ -244,7 +293,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Планирует автосохранение через 3 секунды после последнего изменения"""
         if hasattr(self, 'current_note_id') and self.current_note_id:
             self.auto_save_timer.start(3000)  # 3 секунды
-            self.save_btn.setEnabled(True)
             print("⏰ Автосохранение запланировано через 3 секунды...")
 
     def auto_save_note(self):
@@ -266,7 +314,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
                 print(f"✅ Автосохранение заметки {self.current_note_id}")
-                self.save_btn.setEnabled(False)
             else:
                 print(f"❌ Ошибка автосохранения заметки {self.current_note_id}")
 
@@ -296,7 +343,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
                 print(f"✅ Автосохранение заметки {self.current_note_id}")
-                self.save_btn.setEnabled(False)
                 return True
             else:
                 print(f"❌ Ошибка автосохранения заметки {self.current_note_id}")
@@ -371,9 +417,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Автосохранение предыдущей заметки перед переключением
         if (previous is not None and
                 hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                hasattr(self, 'save_btn') and
-                self.save_btn.isEnabled()):
+                self.current_note_id):
             self.force_auto_save()  # Просто сохраняем без вопросов
 
         # Останавливаем таймер автосохранения
@@ -390,7 +434,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.display_note(note)
                 self.current_note_id = note_id
                 self.set_editor_enabled(True)
-                self.save_btn.setEnabled(False)
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
 
@@ -415,18 +458,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.rich_editor.setEnabled(enabled)
 
     def update_window_title(self):
-        """Обновляет заголовок окна с индикатором несохраненных изменений"""
+        """Обновляет заголовок окна"""
         base_title = "Умный Органайзер"
-        if hasattr(self, 'save_btn') and self.save_btn.isEnabled():
-            self.setWindowTitle(f"{base_title} [*]")  # Индикатор изменений
-        else:
-            self.setWindowTitle(base_title)
+        # Теперь всегда показываем чистый заголовок, так как автосохранение
+        self.setWindowTitle(base_title)
 
     # В методах, где меняется состояние сохранения:
     def on_note_modified(self):
-        """Обработчик изменения заметки"""
-        self.save_btn.setEnabled(True)
-        self.update_window_title()  # Обновляем заголовок
+        """Обработчик изменения заметки (теперь только для автосохранения)"""
 
         # Для автосохранения существующих заметок
         if hasattr(self, 'current_note_id') and self.current_note_id:
@@ -436,9 +475,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Создание новой заметки"""
         # Автосохранение текущей заметки если есть изменения
         if (hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                hasattr(self, 'save_btn') and
-                self.save_btn.isEnabled()):
+                self.current_note_id):
             self.force_auto_save()  # Просто сохраняем без вопросов
 
         # Останавливаем автосохранение
@@ -459,7 +496,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     widget.deleteLater()
 
         self.current_note_id = None
-        self.save_btn.setEnabled(True)
         self.title_input.setFocus()
 
     def on_save_note(self):
@@ -492,7 +528,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 else:
                     QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
 
-            self.save_btn.setEnabled(False)
             self.update_window_title()
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {e}")
@@ -501,9 +536,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Удаление заметки"""
         # Автосохранение если есть изменения
         if (hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                hasattr(self, 'save_btn') and
-                self.save_btn.isEnabled()):
+                self.current_note_id):
             self.force_auto_save()  # Просто сохраняем без вопросов
 
         if not self.current_note_id:

@@ -86,7 +86,7 @@ class TagsWidget(QWidget):
 
         # Статистика
         self.stats_label = QLabel("Всего тегов: 0")
-        self.stats_label.setStyleSheet("color: palette(mid); font-size: 11px; margin-top: 5px;")
+        self.stats_label.setStyleSheet("color: white; font-size: 11px; margin-top: 5px;")
 
         layout.addLayout(input_layout)
         layout.addWidget(self.tags_list)

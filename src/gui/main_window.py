@@ -139,10 +139,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.load_tasks_for_note(self.current_note_id)
             print("✅ Задачи текущей заметки обновлены")
 
-        # Обновляем список предстоящих задач
-        if hasattr(self, 'upcoming_tasks_widget'):
-            self.upcoming_tasks_widget.refresh()
-            print("✅ Список предстоящих задач обновлен")
+        # Автоматически обновляем список предстоящих задач
+        self.refresh_upcoming_tasks()
 
     def setup_tasks_area(self):
         """Создает область для задач под редактором"""
@@ -184,8 +182,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Добавляем контейнер задач в основной layout
         self.verticalLayout_2.addWidget(self.tasks_container)
 
-
-
     def add_task(self):
         """Добавляет новую задачу"""
         if not self.current_note_id:
@@ -201,7 +197,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if task:
             self.add_task_widget(task)
             self.new_task_input.clear()
+
+            # Автоматически обновляем список предстоящих задач
+            self.refresh_upcoming_tasks()
+
             self.on_note_modified()
+
+    def refresh_upcoming_tasks(self):
+        """Обновляет виджет предстоящих задач"""
+        if hasattr(self, 'upcoming_tasks_widget'):
+            self.upcoming_tasks_widget.refresh()
+            print("✅ Список предстоящих задач обновлен")
 
     def add_task_widget(self, task):
         """Добавляет виджет задачи"""
@@ -230,12 +236,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tasks_layout.addWidget(task_widget)
 
     def on_task_toggled(self, task_id, state):
-        """Обработчик переключения чекбокса"""
+        """Обработчик переключения чекбокса в редакторе заметки"""
         is_checked = state == Qt.CheckState.Checked.value
         success = self.task_manager.update_task(task_id, is_completed=is_checked)
         if success:
             print(f"✅ Статус задачи {task_id} обновлен: {is_checked}")
-        self.on_note_modified()
+
+            # Автоматически обновляем список предстоящих задач
+            self.refresh_upcoming_tasks()
+
+            # Обновляем состояние заметки
+            self.on_note_modified()
+        else:
+            print(f"❌ Ошибка обновления задачи {task_id}")
 
     def delete_task(self, task_id, widget):
         """Удаляет задачу"""
@@ -243,6 +256,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if success:
             self.tasks_layout.removeWidget(widget)
             widget.deleteLater()
+
+            # Автоматически обновляем список предстоящих задач
+            self.refresh_upcoming_tasks()
+
             self.on_note_modified()
 
     def load_tasks_for_note(self, note_id):
@@ -261,6 +278,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         tasks = self.task_manager.get_tasks_for_note(note_id)
         for task in tasks:
             self.add_task_widget(task)
+
+        print(f"✅ Загружено {len(tasks)} задач для заметки {note_id}")
 
     def setup_rich_editor(self):
         """Замена стандартного QTextEdit на наш RichTextEditor"""

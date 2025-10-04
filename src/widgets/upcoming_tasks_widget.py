@@ -45,24 +45,6 @@ class UpcomingTasksWidget(QWidget):
         self.scroll_area.setWidget(self.tasks_container)
         layout.addWidget(self.scroll_area)
 
-        # Кнопка обновления
-        self.refresh_btn = QPushButton("Обновить список")
-        self.refresh_btn.clicked.connect(self.load_tasks)
-        self.refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: palette(mid);
-                color: palette(text);
-                border: none;
-                padding: 5px;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-        """)
-        layout.addWidget(self.refresh_btn)
-
         # Статистика
         self.stats_label = QLabel("Невыполненных задач: 0")
         self.stats_label.setStyleSheet("color: white; font-size: 11px; margin-top: 5px;")

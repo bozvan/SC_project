@@ -1,6 +1,8 @@
 import os
 import sys
 import traceback
+
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
@@ -41,6 +43,7 @@ def main():
         from src.gui.main_window import MainWindow
 
         window = MainWindow()
+        window.setWindowIcon(QIcon("assets/icons/icon_copy.png"))
         print("✅ MainWindow создан")
 
         window.show()

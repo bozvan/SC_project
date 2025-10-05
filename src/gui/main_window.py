@@ -19,6 +19,7 @@ try:
     from src.widgets.rich_text_editor import RichTextEditor
     from src.widgets.tags_widget import TagsWidget
     from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
+    from src.gui.note_editor import NoteEditor
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
@@ -97,10 +98,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 
-        # Скрываем кнопки "Сохранить" и "Отменить"
         self.cancel_btn.setVisible(False)
 
-        print("✅ UI настроен с автосохранением")
+        print("✅ UI настроен с системой уведомлений")
 
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID"""
@@ -221,9 +221,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             lambda state, task_id=task.id: self.on_task_toggled(task_id, state)
         )
 
-        layout.addWidget(checkbox)
-        layout.addStretch()
-
         # Кнопка удаления
         delete_btn = QPushButton("×")
         delete_btn.setFixedSize(20, 20)
@@ -231,6 +228,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         delete_btn.clicked.connect(
             lambda checked, task_id=task.id, widget=task_widget: self.delete_task(task_id, widget)
         )
+
+        layout.addWidget(checkbox)
+        layout.addStretch()
         layout.addWidget(delete_btn)
 
         self.tasks_layout.addWidget(task_widget)
@@ -362,6 +362,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
                 print(f"✅ Автосохранение заметки {self.current_note_id}")
+
+                # Обновляем список предстоящих задач после сохранения заметки
+                self.refresh_upcoming_tasks()
+
                 return True
             else:
                 print(f"❌ Ошибка автосохранения заметки {self.current_note_id}")

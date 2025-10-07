@@ -555,3 +555,60 @@ class BookmarkManager:
 
         print(f"✅ Создано закладок: {len(created_bookmarks)} из {len(urls)}")
         return created_bookmarks
+
+    # В класс BookmarkManager добавим методы поиска:
+
+    def search(self, search_text: str = "") -> List[WebBookmark]:
+        """Ищет закладки по тексту"""
+        all_bookmarks = self.get_all()
+
+        if not search_text.strip():
+            return all_bookmarks
+
+        search_text_lower = search_text.lower()
+        filtered_bookmarks = []
+
+        for bookmark in all_bookmarks:
+            if (search_text_lower in bookmark.title.lower() or
+                    search_text_lower in bookmark.url.lower() or
+                    (bookmark.description and search_text_lower in bookmark.description.lower())):
+                filtered_bookmarks.append(bookmark)
+
+        return filtered_bookmarks
+
+    def search_by_tags(self, tag_names: List[str]) -> List[WebBookmark]:
+        """Ищет закладки по тегам"""
+        all_bookmarks = self.get_all()
+
+        if not tag_names:
+            return all_bookmarks
+
+        filtered_bookmarks = []
+
+        for bookmark in all_bookmarks:
+            bookmark_tag_names = [tag.name.lower() for tag in bookmark.tags]
+            # Проверяем, что ВСЕ указанные теги присутствуют
+            if all(tag_name.lower() in bookmark_tag_names for tag_name in tag_names):
+                filtered_bookmarks.append(bookmark)
+
+        return filtered_bookmarks
+
+    def search_by_text_and_tags(self, search_text: str, tag_names: List[str]) -> List[WebBookmark]:
+        """Ищет закладки по тексту И тегам"""
+        # Сначала фильтруем по тегам
+        tagged_bookmarks = self.search_by_tags(tag_names)
+
+        if not search_text.strip():
+            return tagged_bookmarks
+
+        # Затем фильтруем по тексту
+        search_text_lower = search_text.lower()
+        filtered_bookmarks = []
+
+        for bookmark in tagged_bookmarks:
+            if (search_text_lower in bookmark.title.lower() or
+                    search_text_lower in bookmark.url.lower() or
+                    (bookmark.description and search_text_lower in bookmark.description.lower())):
+                filtered_bookmarks.append(bookmark)
+
+        return filtered_bookmarks

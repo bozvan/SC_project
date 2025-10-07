@@ -681,3 +681,23 @@ class NoteManager:
             return f'https://{url}'
 
         return url
+
+    def search_by_tags(self, tag_names: List[str], note_type: Optional[str] = None) -> List[Note]:
+        """
+        Ищет записи только по тегам с фильтрацией по типу
+
+        Args:
+            tag_names: Список тегов для фильтрации
+            note_type: 'note', 'bookmark' или None для всех
+
+        Returns:
+            List[Note]: Список найденных записей
+        """
+        return self.search("", tag_names, note_type)
+
+    def search_by_text_and_tags(self, search_text: str, tag_names: List[str],
+                                note_type: Optional[str] = None) -> List[Note]:
+        """
+        Ищет записи по тексту и тегам с фильтрацией по типу
+        """
+        return self.search(search_text, tag_names, note_type)

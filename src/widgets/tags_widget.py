@@ -122,9 +122,9 @@ class TagsWidget(QWidget):
 
             if note_count > 0:
                 item.setText(f"{tag.name} ({note_count})")
-                item.setToolTip(f"{note_count} заметок")
+                item.setToolTip(f"{note_count} записей (заметки + закладки)")
             else:
-                item.setToolTip("Нет заметок")
+                item.setToolTip("Нет записей")
 
             self.tags_list.addItem(item)
 
@@ -138,17 +138,40 @@ class TagsWidget(QWidget):
         print(f"✅ Загружено тегов: {len(tags)}")
 
     def get_note_count_for_tag(self, tag_name):
-        """Получает количество заметок для тега"""
+        """Получает количество заметок И закладок для тега"""
+        try:
+            # Считаем заметки
+            notes_with_tag = self.tag_manager.get_notes_by_tag(tag_name)
+
+            # Считаем закладки - нужно добавить метод в tag_manager
+            bookmarks_with_tag = self.get_bookmarks_by_tag(tag_name)
+
+            return len(notes_with_tag) + len(bookmarks_with_tag)
+        except Exception as e:
+            print(f"❌ Ошибка подсчета для тега {tag_name}: {e}")
+            return 0
+
+    def get_bookmarks_by_tag(self, tag_name):
+        """Вспомогательный метод для получения закладок по тегу"""
+        # Временная реализация - можно вынести в tag_manager позже
         try:
             from src.core.database_manager import DatabaseManager
-            from src.core.note_manager import NoteManager
+            from src.core.bookmark_manager import BookmarkManager
 
             db = DatabaseManager()
-            note_manager = NoteManager(db, self.tag_manager)
-            notes = note_manager.search_by_tags([tag_name])
-            return len(notes)
-        except:
-            return 0
+            bookmark_manager = BookmarkManager(db)
+            all_bookmarks = bookmark_manager.get_all()
+
+            bookmarks_with_tag = []
+            for bookmark in all_bookmarks:
+                bookmark_tags = [tag.name for tag in bookmark.tags]
+                if tag_name in bookmark_tags:
+                    bookmarks_with_tag.append(bookmark)
+
+            return bookmarks_with_tag
+        except Exception as e:
+            print(f"❌ Ошибка получения закладок по тегу: {e}")
+            return []
 
     def add_tag(self):
         """Добавление нового тега"""

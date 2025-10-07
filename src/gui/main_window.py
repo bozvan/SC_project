@@ -48,7 +48,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.auto_save_timer.setSingleShot(True)
         self.auto_save_timer.timeout.connect(self.auto_save_note)
 
-        self.load_notes()
+        self.load_all_content()
 
     def closeEvent(self, event):
         """Обработчик закрытия окна"""
@@ -96,6 +96,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.upcoming_tasks_widget.navigate_to_note.connect(self.navigate_to_note_by_id)
         self.upcoming_tasks_widget.task_toggled.connect(self.on_task_toggled_from_widget)
 
+        self.search_input.setPlaceholderText("Поиск... #тег @notes @bookmarks")
+        self.search_input.setToolTip(
+            "Поиск заметок и закладок\n"
+            "#тег - фильтр по тегу\n"
+            "@notes - только заметки\n"
+            "@bookmarks - только закладки"
+        )
+
         # Добавляем в левую панель
         self.verticalLayout.addWidget(self.upcoming_tasks_widget)
 
@@ -116,7 +124,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.save_btn.setVisible(False)
         self.cancel_btn.setVisible(False)
 
-        print("✅ UI настроен с отдельными разделами для задач и закладок")
+        print("✅ UI настроен с расширенной фильтрацией")
 
     def on_save_clicked(self):
         """Обработчик нажатия кнопки Сохранить"""
@@ -558,73 +566,95 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return False
 
     def load_notes(self, search_query=""):
-        """Загружает заметки с учетом поискового запроса"""
-        try:
-            search_text, tags = self.parse_search_query(search_query)
+        """Упрощенный метод для обратной совместимости"""
+        self.load_all_content(search_query)
 
-            if tags and search_text:
-                notes = self.note_manager.search_by_text_and_tags(search_text, tags)
-            elif tags:
-                notes = self.note_manager.search_by_tags(tags)
-            elif search_text:
-                notes = self.note_manager.search(search_text)
-            else:
-                notes = self.note_manager.get_all()
-                print("📚 Показаны все заметки")
-
-            self.display_notes(notes)
-
-        except Exception as e:
-            print(f"❌ Ошибка загрузки заметок: {e}")
+    def convert_notes_to_bookmarks_display(self, notes):
+        """Конвертирует заметки типа bookmark в формат для отображения"""
+        bookmarks = []
+        for note in notes:
+            if note.is_bookmark():
+                # Создаем специальный заголовок для закладок
+                note.title = f"🔖 {note.title}"
+                bookmarks.append(note)
+        return bookmarks
 
     def parse_search_query(self, query):
-        """Парсит поисковый запрос"""
+        """Парсит поисковый запрос для заметок И закладок"""
         if not query.strip():
-            return "", []
+            return "", [], "all"  # search_text, tags, content_type
 
         words = query.strip().split()
         text_parts = []
         tags = []
+        content_type = "all"  # all, notes, bookmarks
 
         for word in words:
             if word.startswith('#') and len(word) > 1:
                 tag_name = word[1:]
                 tags.append(tag_name.lower())
+            elif word.startswith('@') and len(word) > 1:
+                # Фильтр по типу контента
+                type_filter = word[1:].lower()
+                if type_filter in ['notes', 'заметки']:
+                    content_type = "notes"
+                elif type_filter in ['bookmarks', 'закладки']:
+                    content_type = "bookmarks"
             else:
                 text_parts.append(word)
 
         search_text = " ".join(text_parts)
-        return search_text, tags
+        return search_text, tags, content_type
 
     def display_notes(self, notes):
-        """Отображает список заметок"""
+        """Отображает список заметок и закладок"""
         self.notes_list.clear()
 
         for note in notes:
-            item = QListWidgetItem(note.title)
+            # Для закладок добавляем иконку в заголовок
+            display_title = note.title
+            if hasattr(note, 'is_bookmark') and note.is_bookmark():
+                if not note.title.startswith("🔖"):
+                    display_title = f"🔖 {note.title}"
+
+            item = QListWidgetItem(display_title)
             item.setData(Qt.ItemDataRole.UserRole, note.id)
+
+            # Добавляем тип в tooltip
             tooltip_parts = []
+            note_type = "Закладка" if note.is_bookmark() else "Заметка"
+            tooltip_parts.append(f"Тип: {note_type}")
+
             if note.tags:
                 tags_str = ", ".join([tag.name for tag in note.tags])
                 tooltip_parts.append(f"Теги: {tags_str}")
+
             tooltip_parts.append(f"Создана: {note.created_date.strftime('%d.%m.%Y')}")
+
+            # Для закладок добавляем URL
+            if note.is_bookmark() and note.url:
+                tooltip_parts.append(f"URL: {note.url}")
+
             item.setToolTip("\n".join(tooltip_parts))
+
+            # Разное оформление для закладок
+            if note.is_bookmark():
+                item.setBackground(Qt.GlobalColor.lightYellow)
+
             self.notes_list.addItem(item)
 
-        print(f"✅ Отображено заметок: {len(notes)}")
+        print(f"✅ Отображено записей: {len(notes)}")
 
-        # Автоматически выбираем первую заметку если есть заметки
+        # Автоматически выбираем первую запись если есть
         if notes and self.notes_list.count() > 0:
             self.notes_list.setCurrentRow(0)
 
     def on_note_selected(self, current, previous):
-        """Обработчик выбора заметки"""
+        """Обработчик выбора заметки или закладки"""
         # Автосохранение предыдущей заметки перед переключением
         if (previous is not None and
                 hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                not hasattr(self, 'current_bookmark_id')):  # Только для заметок
-
+                self.current_note_id):
             self.force_auto_save()
 
         # Останавливаем таймер автосохранения
@@ -635,18 +665,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         try:
-            note_id = current.data(Qt.ItemDataRole.UserRole)
-            note = self.note_manager.get(note_id)
-            if note:
-                # Убираем флаг закладки при выборе заметки
-                if hasattr(self, 'current_bookmark_id'):
-                    del self.current_bookmark_id
+            item_id = current.data(Qt.ItemDataRole.UserRole)
 
-                self.display_note(note)
-                self.current_note_id = note_id
-                self.set_editor_enabled(True)
+            # Определяем тип элемента по заголовку или другим признакам
+            item_text = current.text()
+            is_bookmark = "🔖" in item_text
+
+            if is_bookmark:
+                # Это закладка - используем bookmark_manager
+                bookmark = self.bookmark_manager.get(item_id)
+                if bookmark:
+                    self.display_bookmark(bookmark)
+                    self.current_bookmark_id = item_id
+                    self.current_note_id = None
+            else:
+                # Это заметка - используем note_manager
+                note = self.note_manager.get(item_id)
+                if note:
+                    # Убираем флаг закладки при выборе заметки
+                    if hasattr(self, 'current_bookmark_id'):
+                        del self.current_bookmark_id
+
+                    self.display_note(note)
+                    self.current_note_id = item_id
+                    self.set_editor_enabled(True)
+
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить запись: {e}")
 
     def display_note(self, note):
         """Отображает заметку в редакторе"""
@@ -760,10 +805,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(self, "Ошибка", f"Ошибка при удалении: {e}")
 
     def on_search_clicked(self):
+        """Обработчик поиска - обновляет все списки"""
         query = self.search_input.text()
-        self.load_notes(query)
+        self.load_all_content(query)
 
     def on_tag_selected_from_widget(self, tag_name):
+        """Обработчик выбора тега из виджета - обновляет ВСЕ списки"""
         if self._updating_from_search:
             return
 
@@ -773,9 +820,66 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         try:
             if tag_name:
                 self.search_input.setText(f"#{tag_name}")
-                self.load_notes(f"#{tag_name}")
+                self.load_all_content(f"#{tag_name}")
             else:
                 self.search_input.clear()
-                self.load_notes("")
+                self.load_all_content("")
         finally:
             self._updating_from_tags = False
+
+    # В класс MainWindow добавим:
+
+    def load_all_content(self, search_query=""):
+        """Загружает и отображает заметки и закладки с учетом фильтра"""
+        try:
+            search_text, tags, content_type = self.parse_search_query(search_query)
+
+            # Загружаем заметки
+            notes = self.load_notes_data(search_text, tags, content_type)
+            # Загружаем закладки
+            bookmarks = self.load_bookmarks_data(search_text, tags, content_type)
+
+            # Отображаем в соответствующих виджетах
+            self.display_notes(notes)
+            self.display_bookmarks_in_widget(bookmarks)
+
+            print(f"✅ Загружено: {len(notes)} заметок, {len(bookmarks)} закладок")
+
+        except Exception as e:
+            print(f"❌ Ошибка загрузки контента: {e}")
+
+    def load_notes_data(self, search_text="", tags=None, content_type="all"):
+        """Загружает данные заметок по фильтрам"""
+        if content_type not in ["all", "notes"]:
+            return []
+
+        if tags and search_text:
+            return self.note_manager.search_by_text_and_tags(search_text, tags, "note")
+        elif tags:
+            return self.note_manager.search_by_tags(tags, "note")
+        elif search_text:
+            return self.note_manager.search(search_text, note_type="note")
+        else:
+            return self.note_manager.get_all()
+
+    def load_bookmarks_data(self, search_text="", tags=None, content_type="all"):
+        """Загружает данные закладок по фильтрам"""
+        if content_type not in ["all", "bookmarks"]:
+            return []
+
+        if tags and search_text:
+            return self.bookmark_manager.search_by_text_and_tags(search_text, tags)
+        elif tags:
+            return self.bookmark_manager.search_by_tags(tags)
+        elif search_text:
+            return self.bookmark_manager.search(search_text)
+        else:
+            return self.bookmark_manager.get_all()
+
+    def display_bookmarks_in_widget(self, bookmarks):
+        """Обновляет виджет закладок с переданным списком"""
+        if hasattr(self, 'bookmarks_widget'):
+            # Временно отключаем сигналы чтобы избежать рекурсии
+            self.bookmarks_widget.blockSignals(True)
+            self.bookmarks_widget.load_bookmarks_data(bookmarks)
+            self.bookmarks_widget.blockSignals(False)

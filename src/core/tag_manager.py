@@ -260,3 +260,21 @@ class TagManager:
         except Exception as e:
             print(f"Ошибка при обновлении тега с ID {tag_id}: {e}")
             return False
+
+    def get_notes_by_tag(self, tag_name: str) -> List:
+        """Возвращает заметки с указанным тегом"""
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT n.id 
+                    FROM notes n
+                    JOIN note_tag_relation ntr ON n.id = ntr.note_id
+                    JOIN tags t ON ntr.tag_id = t.id
+                    WHERE t.name = ?
+                """, (tag_name,))
+                results = cursor.fetchall()
+                return results
+        except Exception as e:
+            print(f"❌ Ошибка получения заметок по тегу {tag_name}: {e}")
+            return []

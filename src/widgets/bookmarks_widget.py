@@ -337,3 +337,25 @@ class BookmarksWidget(QWidget):
     def refresh(self):
         """Обновляет список закладок"""
         self.load_bookmarks(self.search_input.text())
+
+    # В класс BookmarksWidget добавим:
+
+    def load_bookmarks_data(self, bookmarks):
+        """Загружает переданный список закладок (для фильтрации)"""
+        self.bookmarks_list.clear()
+
+        for bookmark in bookmarks:
+            # Создаем кастомный виджет для каждой закладки
+            bookmark_widget = self.create_bookmark_widget(bookmark)
+
+            # Создаем item для списка
+            item = QListWidgetItem()
+            item.setSizeHint(bookmark_widget.sizeHint())
+            item.setData(Qt.ItemDataRole.UserRole, bookmark.id)
+
+            self.bookmarks_list.addItem(item)
+            self.bookmarks_list.setItemWidget(item, bookmark_widget)
+
+        # Обновляем статистику
+        self.stats_label.setText(f"Закладок: {len(bookmarks)}")
+        print(f"✅ Отображено закладок: {len(bookmarks)}")

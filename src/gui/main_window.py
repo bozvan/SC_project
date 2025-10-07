@@ -20,6 +20,8 @@ try:
     from src.widgets.tags_widget import TagsWidget
     from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
     from src.gui.note_editor import NoteEditor
+    from src.core.bookmark_manager import BookmarkManager
+    from src.widgets.bookmarks_widget import BookmarksWidget
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
@@ -79,10 +81,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         from src.core.task_manager import TaskManager
         self.task_manager = TaskManager(self.db_manager)
 
+        from src.core.bookmark_manager import BookmarkManager
+        self.bookmark_manager = BookmarkManager(self.db_manager)
+
         print("✅ Все менеджеры инициализированы")
 
     def setup_ui_simple(self):
-        """Настройка UI с областью задач"""
+        """Настройка UI с отдельными разделами для задач и закладок"""
         self.setup_rich_editor()
         self.setup_tasks_area()
 
@@ -94,13 +99,181 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Добавляем в левую панель
         self.verticalLayout.addWidget(self.upcoming_tasks_widget)
 
+        # Создаем виджет закладок
+        self.bookmarks_widget = BookmarksWidget(self.bookmark_manager)
+        self.bookmarks_widget.bookmark_selected.connect(self.on_bookmark_selected)
+        self.verticalLayout.addWidget(self.bookmarks_widget)
+
         self.tags_widget = TagsWidget(self.tag_manager)
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 
+        # Скрываем кнопки "Сохранить" и "Отменить"
+        self.save_btn.setVisible(True)
+        self.save_btn.setEnabled(False)  # Изначально выключена
+        self.save_btn.clicked.connect(self.on_save_clicked)
+
+        # self.save_btn.setVisible(False)
         self.cancel_btn.setVisible(False)
 
-        print("✅ UI настроен с системой уведомлений")
+        print("✅ UI настроен с отдельными разделами для задач и закладок")
+
+    def on_save_clicked(self):
+        """Обработчик нажатия кнопки Сохранить"""
+        try:
+            # Определяем что сохраняем - заметку или закладку
+            if hasattr(self, 'current_note_id') and self.current_note_id:
+                self.save_note()
+            elif hasattr(self, 'current_bookmark_id') and self.current_bookmark_id:
+                self.save_bookmark()
+            else:
+                self.save_new_note()  # Новая заметка
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {e}")
+
+    def save_note(self):
+        """Сохраняет существующую заметку"""
+        title = self.title_input.text().strip()
+        if not title:
+            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
+            return
+
+        content = self.rich_editor.to_html()
+        tags_text = self.tags_input.text().strip()
+        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+        tags = [tag for tag in tags if tag]
+
+        success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
+        if success:
+            print(f"✅ Заметка {self.current_note_id} сохранена")
+            self.save_btn.setEnabled(False)
+            # Обновляем список заметок
+            self.load_notes(self.search_input.text())
+            self.tags_widget.refresh()
+        else:
+            QMessageBox.critical(self, "Ошибка", "Не удалось сохранить заметку")
+
+    def save_bookmark(self):
+        """Сохраняет изменения в закладке"""
+        title = self.title_input.text().strip()
+        if not title:
+            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
+            return
+
+        # Получаем текущую закладку
+        bookmark = self.bookmark_manager.get(self.current_bookmark_id)
+        if not bookmark:
+            QMessageBox.critical(self, "Ошибка", "Закладка не найдена!")
+            return
+
+        # Получаем теги
+        tags_text = self.tags_input.text().strip()
+        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+        tags = [tag for tag in tags if tag]
+
+        # Обновляем закладку
+        # Нужно добавить метод update в BookmarkManager
+        success = self.bookmark_manager.update(
+            self.current_bookmark_id,
+            title=title,
+            description=bookmark.description,  # Пока не редактируем описание
+            tags=tags
+        )
+
+        if success:
+            print(f"✅ Закладка {self.current_bookmark_id} сохранена")
+            self.save_btn.setEnabled(False)
+            # Обновляем список закладок
+            self.bookmarks_widget.refresh()
+            self.tags_widget.refresh()
+        else:
+            QMessageBox.critical(self, "Ошибка", "Не удалось сохранить закладку")
+
+    def save_new_note(self):
+        """Создает новую заметку"""
+        title = self.title_input.text().strip()
+        if not title:
+            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
+            return
+
+        content = self.rich_editor.to_html()
+        tags_text = self.tags_input.text().strip()
+        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+        tags = [tag for tag in tags if tag]
+
+        note = self.note_manager.create(title, content, tags, "html")
+        if note:
+            print(f"✅ Новая заметка создана: {note.id}")
+            self.save_btn.setEnabled(False)
+            self.current_note_id = note.id
+            # Обновляем список заметок
+            self.load_notes(self.search_input.text())
+            self.tags_widget.refresh()
+        else:
+            QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
+
+    def on_bookmark_selected(self, bookmark_id: int):
+        """Обработчик выбора закладки"""
+        bookmark = self.bookmark_manager.get(bookmark_id)
+        if bookmark:
+            # Показываем информацию о закладке в редакторе
+            self.display_bookmark(bookmark)
+
+    def display_bookmark(self, bookmark):
+        """Отображает закладку в редакторе в простом формате"""
+        # Очищаем редактор
+        self.title_input.clear()
+        self.rich_editor.clear()
+        self.tags_input.clear()
+
+        # Заполняем информацию о закладке
+        self.title_input.setText(bookmark.title)
+
+        # Простой текст без HTML форматирования
+        content = f"""🔖 {bookmark.title}
+
+    URL: {bookmark.url}
+
+    """
+
+        if bookmark.description:
+            content += f"Описание: {bookmark.description}\n\n"
+
+        content += f"Домен: {bookmark.get_domain()}\n"
+        content += f"Добавлена: {bookmark.created_date.strftime('%d.%m.%Y %H:%M')}\n"
+
+        if bookmark.tags:
+            tags_text = ", ".join([tag.name for tag in bookmark.tags])
+            content += f"Теги: {tags_text}\n"
+
+        self.rich_editor.set_plain_text(content)
+        self.rich_editor.setEnabled(False)
+
+        # Показываем теги
+        if bookmark.tags:
+            tags_text = ", ".join([tag.name for tag in bookmark.tags])
+            self.tags_input.setText(tags_text)
+
+        # Выключаем кнопку Сохранить (нет изменений)
+        self.save_btn.setEnabled(False)
+        self.current_note_id = None
+        self.current_bookmark_id = bookmark.id
+
+    def show_add_bookmark_dialog(self):
+        """Показывает диалог добавления закладки"""
+        from src.widgets.add_bookmark_dialog import AddBookmarkDialog
+
+        dialog = AddBookmarkDialog(self.bookmark_manager, self)
+        dialog.bookmark_added.connect(self.on_bookmark_added)
+        dialog.exec()
+
+    def on_bookmark_added(self):
+        """Обработчик добавления новой закладки"""
+        print("✅ Новая закладка добавлена")
+        # Обновляем список заметок чтобы показать новую закладку
+        self.load_notes(self.search_input.text())
+        # Обновляем теги
+        self.tags_widget.refresh()
 
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID"""
@@ -299,14 +472,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 
-        # Подключаем автосохранение при изменениях
-        self.title_input.textChanged.connect(self.schedule_auto_save)
-        self.rich_editor.text_edit.textChanged.connect(self.schedule_auto_save)
-        self.tags_input.textChanged.connect(self.schedule_auto_save)
+        # Подключаем автосохранение И включение кнопки Сохранить при изменениях
+        self.title_input.textChanged.connect(self.on_content_changed)
+        self.rich_editor.text_edit.textChanged.connect(self.on_content_changed)
+        self.tags_input.textChanged.connect(self.on_content_changed)
 
         self.actionNewNote.triggered.connect(self.on_new_note)
         self.actionRefresh.triggered.connect(self.load_notes)
         self.actionExit.triggered.connect(self.close)
+
+    def on_content_changed(self):
+        """Обработчик изменения содержимого"""
+        # Включаем кнопку Сохранить при любых изменениях
+        self.save_btn.setEnabled(True)
+
+        # Для заметок также планируем автосохранение
+        if hasattr(self, 'current_note_id') and self.current_note_id:
+            self.schedule_auto_save()
 
     def schedule_auto_save(self):
         """Планирует автосохранение через 3 секунды после последнего изменения"""
@@ -440,8 +622,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Автосохранение предыдущей заметки перед переключением
         if (previous is not None and
                 hasattr(self, 'current_note_id') and
-                self.current_note_id):
-            self.force_auto_save()  # Просто сохраняем без вопросов
+                self.current_note_id and
+                not hasattr(self, 'current_bookmark_id')):  # Только для заметок
+
+            self.force_auto_save()
 
         # Останавливаем таймер автосохранения
         if hasattr(self, 'auto_save_timer'):
@@ -454,6 +638,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             note_id = current.data(Qt.ItemDataRole.UserRole)
             note = self.note_manager.get(note_id)
             if note:
+                # Убираем флаг закладки при выборе заметки
+                if hasattr(self, 'current_bookmark_id'):
+                    del self.current_bookmark_id
+
                 self.display_note(note)
                 self.current_note_id = note_id
                 self.set_editor_enabled(True)
@@ -461,7 +649,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
 
     def display_note(self, note):
-        """Отображает заметку и её задачи"""
+        """Отображает заметку в редакторе"""
         self.title_input.setText(note.title)
         self.rich_editor.set_html(note.content)
 
@@ -474,6 +662,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.tags_input.setText(tags_text)
         else:
             self.tags_input.setText("")
+
+        # Выключаем кнопку Сохранить (нет изменений)
+        self.save_btn.setEnabled(False)
 
     def set_editor_enabled(self, enabled):
         self.title_input.setEnabled(enabled)
@@ -498,13 +689,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Создание новой заметки"""
         # Автосохранение текущей заметки если есть изменения
         if (hasattr(self, 'current_note_id') and
-                self.current_note_id):
-            self.force_auto_save()  # Просто сохраняем без вопросов
+                self.current_note_id and
+                self.save_btn.isEnabled()):
+
+            reply = QMessageBox.question(
+                self,
+                "Несохраненные изменения",
+                "Сохранить изменения в текущей заметке перед созданием новой?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self.on_save_clicked()
 
         # Останавливаем автосохранение
         if hasattr(self, 'auto_save_timer'):
             self.auto_save_timer.stop()
 
+        # Очищаем все атрибуты
+        if hasattr(self, 'current_bookmark_id'):
+            del self.current_bookmark_id
+
+        self.current_note_id = None
+
+        # Очищаем поля
         self.set_editor_enabled(True)
         self.title_input.clear()
         self.rich_editor.clear()
@@ -518,42 +727,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.tasks_layout.removeWidget(widget)
                     widget.deleteLater()
 
-        self.current_note_id = None
+        # Включаем кнопку Сохранить (новая заметка)
+        self.save_btn.setEnabled(True)
         self.title_input.setFocus()
-
-    def on_save_note(self):
-        try:
-            title = self.title_input.text().strip()
-            if not title:
-                QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
-                return
-
-            content = self.rich_editor.to_html()
-            tags_text = self.tags_input.text().strip()
-            tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
-            tags = [tag for tag in tags if tag]
-
-            if self.current_note_id:
-                success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
-                if success:
-                    QMessageBox.information(self, "Успех", "Заметка обновлена!")
-                    self.tags_widget.refresh()
-                    self.load_notes(self.search_input.text())
-                else:
-                    QMessageBox.critical(self, "Ошибка", "Не удалось обновить заметку")
-            else:
-                note = self.note_manager.create(title, content, tags, "html")
-                if note:
-                    QMessageBox.information(self, "Успех", f"Заметка создана! ID: {note.id}")
-                    self.tags_widget.refresh()
-                    self.load_notes(self.search_input.text())
-                    self.current_note_id = note.id
-                else:
-                    QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
-
-            self.update_window_title()
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {e}")
 
     def on_delete_note(self):
         """Удаление заметки"""
@@ -573,7 +749,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 print(f"✅ Заметка {self.current_note_id} удалена")
                 self.tags_widget.refresh()
                 self.load_notes(self.search_input.text())
-                self.set_editor_enabled(False)
+                self.set_editor_enabled(True)
                 self.title_input.clear()
                 self.rich_editor.clear()
                 self.tags_input.clear()
@@ -603,19 +779,3 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.load_notes("")
         finally:
             self._updating_from_tags = False
-
-    def sync_tags_selection(self, search_query):
-        if self._updating_from_tags:
-            return
-
-        self._updating_from_search = True
-        try:
-            search_text, tags = self.parse_search_query(search_query)
-
-            if len(tags) == 1:
-                self.tags_widget.select_tag_by_name(tags[0])
-            else:
-                self.tags_widget.clear_selection()
-        finally:
-            self._updating_from_search = False
-# [file content end]

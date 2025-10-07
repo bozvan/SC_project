@@ -43,7 +43,7 @@ def main():
         from src.gui.main_window import MainWindow
 
         window = MainWindow()
-        window.setWindowIcon(QIcon("assets/icons/icon_copy.png"))
+        window.setWindowIcon(QIcon("assets/icons/icon3.png"))
         print("✅ MainWindow создан")
 
         window.show()

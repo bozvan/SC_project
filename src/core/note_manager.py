@@ -1,3 +1,5 @@
+import re
+from urllib.parse import urlparse
 from typing import List, Optional
 from datetime import datetime
 from .models import Note, Tag
@@ -17,37 +19,52 @@ class NoteManager:
         # Выполняем миграцию при инициализации
         self.db.migrate_database()
 
-    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None, content_type: str = "html") -> \
-    Optional[Note]:
+    def create(self, title: str, content: str = "", tags: Optional[List[str]] = None,
+               content_type: str = "html", note_type: str = "note",
+               url: Optional[str] = None, page_title: Optional[str] = None,
+               page_description: Optional[str] = None) -> Optional[Note]:
         """
-        Создает новую заметку с ОДНИМ соединением к БД
+        Создает новую заметку или веб-закладку
         """
         if not title or not title.strip():
-            print("❌ Ошибка: заголовок заметки не может быть пустым")
+            print("❌ Ошибка: заголовок не может быть пустым")
             return None
 
-        # Валидация content_type
+        # Валидация типов
+        if note_type not in ["note", "bookmark"]:
+            print(f"⚠️  Неподдерживаемый note_type: {note_type}. Используется 'note'")
+            note_type = "note"
+
         if content_type not in ["plain", "html"]:
             print(f"⚠️  Неподдерживаемый content_type: {content_type}. Используется 'html'")
             content_type = "html"
 
+        # Для закладок проверяем URL
+        if note_type == "bookmark" and (not url or not url.strip()):
+            print("❌ Ошибка: для закладки URL не может быть пустым")
+            return None
+
         title = title.strip()
         content = content.strip() if content else ""
+        url = url.strip() if url else None
+        page_title = page_title.strip() if page_title else None
+        page_description = page_description.strip() if page_description else None
 
         try:
-            # Используем ОДНО соединение для всех операций
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Вставляем заметку в таблицу notes
+                # Вставляем запись в таблицу notes
                 cursor.execute(
-                    "INSERT INTO notes (title, content, content_type) VALUES (?, ?, ?)",
-                    (title, content, content_type)
+                    """INSERT INTO notes (title, content, content_type, note_type, 
+                              url, page_title, page_description) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (title, content, content_type, note_type, url, page_title, page_description)
                 )
                 note_id = cursor.lastrowid
 
                 if not note_id:
-                    print("❌ Ошибка: не удалось получить ID созданной заметки")
+                    print("❌ Ошибка: не удалось получить ID созданной записи")
                     return None
 
                 # Обрабатываем теги в ТОМ ЖЕ соединении
@@ -56,7 +73,6 @@ class NoteManager:
                     for tag_name in tags:
                         tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag:
-                            # Связываем заметку с тегом
                             cursor.execute(
                                 "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
                                 (note_id, tag.id)
@@ -72,53 +88,61 @@ class NoteManager:
                     note_id=note_id,
                     created_date=datetime.now(),
                     modified_date=datetime.now(),
-                    content_type=content_type
+                    content_type=content_type,
+                    note_type=note_type,
+                    url=url,
+                    page_title=page_title,
+                    page_description=page_description
                 )
                 note.tags = tag_objects
 
-                print(f"✅ Заметка '{title}' создана с ID: {note_id} (тип: {content_type})")
+                record_type = "закладка" if note_type == "bookmark" else "заметка"
+                print(f"✅ {record_type} '{title}' создана с ID: {note_id}")
+                if note_type == "bookmark":
+                    print(f"   🔗 URL: {url}")
                 if tag_objects:
-                    print(f"   Привязаны теги: {[tag.name for tag in tag_objects]}")
+                    print(f"   🏷️ Привязаны теги: {[tag.name for tag in tag_objects]}")
 
                 return note
 
         except Exception as e:
-            print(f"❌ Ошибка при создании заметки '{title}': {e}")
+            print(f"❌ Ошибка при создании записи '{title}': {e}")
             return None
 
     def get(self, note_id: int) -> Optional[Note]:
         """
         Возвращает объект Note по ID со списком связанных тегов
-
-        Args:
-            note_id: ID заметки
-
-        Returns:
-            Note: Найденная заметка или None если не найдена
         """
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Получаем данные заметки
+                # Получаем данные записи
                 cursor.execute(
-                    "SELECT id, title, content, content_type, created_at, updated_at FROM notes WHERE id = ?",
+                    """SELECT id, title, content, content_type, note_type, 
+                              url, page_title, page_description, created_at, updated_at 
+                    FROM notes WHERE id = ?""",
                     (note_id,)
                 )
                 result = cursor.fetchone()
 
                 if not result:
-                    print(f"❌ Заметка с ID {note_id} не найдена")
+                    print(f"❌ Запись с ID {note_id} не найдена")
                     return None
 
-                note_id, title, content, content_type, created_at, updated_at = result
+                (note_id, title, content, content_type, note_type, url,
+                 page_title, page_description, created_at, updated_at) = result
 
-                # Получаем теги для этой заметки
+                # Получаем теги для этой записи
                 tag_objects = self.tag_manager.get_tags_for_note(note_id)
 
                 # Преобразуем строки дат в объекты datetime
                 created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
                 modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                # Если note_type не установлен, используем по умолчанию "note"
+                if note_type is None:
+                    note_type = "note"
 
                 # Если content_type не установлен, используем по умолчанию "plain"
                 if content_type is None:
@@ -131,35 +155,51 @@ class NoteManager:
                     note_id=note_id,
                     created_date=created_date,
                     modified_date=modified_date,
-                    content_type=content_type
+                    content_type=content_type,
+                    note_type=note_type,
+                    url=url,
+                    page_title=page_title,
+                    page_description=page_description
                 )
                 note.tags = tag_objects
 
                 return note
 
         except Exception as e:
-            print(f"❌ Ошибка при получении заметки с ID {note_id}: {e}")
+            print(f"❌ Ошибка при получении записи с ID {note_id}: {e}")
             return None
 
     def update(self, note_id: int, title: Optional[str] = None,
                content: Optional[str] = None, tags: Optional[List[str]] = None,
-               content_type: Optional[str] = None) -> bool:
+               content_type: Optional[str] = None, note_type: Optional[str] = None,
+               url: Optional[str] = None, page_title: Optional[str] = None,
+               page_description: Optional[str] = None) -> bool:
         """
-        Обновляет данные заметки (оптимизировано для автосохранения)
+        Обновляет данные заметки или закладки с валидацией
         """
-        # Проверяем, существует ли заметка
         existing_note = self.get(note_id)
         if not existing_note:
-            print(f"❌ Заметка с ID {note_id} не существует")
+            print(f"❌ Запись с ID {note_id} не существует")
             return False
 
-        # Валидация content_type
+        # Если обновляем URL закладки - валидируем его
+        if url is not None and existing_note.is_bookmark():
+            normalized_url = self._normalize_url(url)
+            if not self._validate_url(normalized_url):
+                print(f"❌ Ошибка: некорректный URL '{url}'")
+                return False
+            url = normalized_url
+
+        # Валидация типов
+        if note_type is not None and note_type not in ["note", "bookmark"]:
+            print(f"⚠️  Неподдерживаемый note_type: {note_type}. Изменение не применено.")
+            note_type = None
+
         if content_type is not None and content_type not in ["plain", "html"]:
             print(f"⚠️  Неподдерживаемый content_type: {content_type}. Изменение не применено.")
             content_type = None
 
         try:
-            # Используем ОДНО соединение для всех операций
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
@@ -178,6 +218,22 @@ class NoteManager:
                     update_fields.append("content_type = ?")
                     update_values.append(content_type)
 
+                if note_type is not None:
+                    update_fields.append("note_type = ?")
+                    update_values.append(note_type)
+
+                if url is not None:
+                    update_fields.append("url = ?")
+                    update_values.append(url.strip() if url else None)
+
+                if page_title is not None:
+                    update_fields.append("page_title = ?")
+                    update_values.append(page_title.strip() if page_title else None)
+
+                if page_description is not None:
+                    update_fields.append("page_description = ?")
+                    update_values.append(page_description.strip() if page_description else None)
+
                 # Если нет изменений, выходим раньше
                 if not update_fields:
                     print("⚠️  Нет изменений для сохранения")
@@ -192,10 +248,7 @@ class NoteManager:
 
                 # Обновляем теги только если они переданы
                 if tags is not None:
-                    # Удаляем старые связи
                     cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
-
-                    # Добавляем новые связи
                     for tag_name in tags:
                         tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag and tag.id:
@@ -205,11 +258,16 @@ class NoteManager:
                             )
 
                 conn.commit()
-                print(f"✅ Заметка с ID {note_id} обновлена")
+
+                record_type = "закладка" if (note_type or existing_note.note_type) == "bookmark" else "заметка"
+                print(f"✅ {record_type} с ID {note_id} обновлена")
+                if url is not None:
+                    print(f"   🔗 URL обновлен: {url}")
+
                 return True
 
         except Exception as e:
-            print(f"❌ Ошибка при обновлении заметки с ID {note_id}: {e}")
+            print(f"❌ Ошибка при обновлении записи с ID {note_id}: {e}")
             return False
 
     def _get_or_create_tag_with_connection(self, cursor, tag_name: str) -> Optional[Tag]:
@@ -456,3 +514,170 @@ class NoteManager:
             List[Note]: Список найденных заметок
         """
         return self.search(search_text, tag_names)
+
+    def create_bookmark(self, url: str, title: str = "", description: str = "",
+                        tags: Optional[List[str]] = None) -> Optional[Note]:
+        """
+        Создает новую веб-закладку с валидацией URL
+        """
+        if not url or not url.strip():
+            print("❌ Ошибка: URL не может быть пустым")
+            return None
+
+        # Нормализуем URL
+        normalized_url = self._normalize_url(url)
+
+        # Валидируем URL
+        if not self._validate_url(normalized_url):
+            print(f"❌ Ошибка: некорректный URL '{url}'")
+            print("   URL должен быть в формате: https://example.com или example.com")
+            return None
+
+        # Если заголовок не указан, используем URL
+        if not title.strip():
+            title = normalized_url
+
+        return self.create(
+            title=title,
+            content="",  # Закладки не имеют содержимого
+            tags=tags,
+            content_type="plain",
+            note_type="bookmark",
+            url=normalized_url,
+            page_title=title,
+            page_description=description
+        )
+
+    def get_all_bookmarks(self) -> List[Note]:
+        """
+        Возвращает все веб-закладки
+        """
+        return self.search(note_type="bookmark")
+
+    def search_bookmarks(self, search_text: str = "", tag_names: Optional[List[str]] = None) -> List[Note]:
+        """
+        Ищет закладки по тексту и/или тегам
+        """
+        return self.search(search_text, tag_names, note_type="bookmark")
+
+    def search(self, search_text: str = "", tag_names: Optional[List[str]] = None,
+               note_type: Optional[str] = None) -> List[Note]:
+        """
+        Ищет записи по тексту и/или тегам с фильтрацией по типу
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Базовый запрос
+                query = """
+                SELECT n.id, n.title, n.content, n.created_at, n.updated_at,
+                       n.note_type, n.url, n.page_title, n.page_description
+                FROM notes n
+                WHERE 1=1
+                """
+                params = []
+
+                # Фильтр по типу записи
+                if note_type:
+                    query += " AND n.note_type = ?"
+                    params.append(note_type)
+
+                # Добавляем условие для текстового поиска
+                if search_text.strip():
+                    search_pattern = f"%{search_text.strip()}%"
+                    query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?) OR LOWER(n.page_title) LIKE LOWER(?) OR LOWER(n.page_description) LIKE LOWER(?))"
+                    params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+
+                # Добавляем условие для тегов
+                if tag_names:
+                    normalized_tag_names = [name.strip().lower() for name in tag_names]
+                    for i, tag_name in enumerate(normalized_tag_names):
+                        query += f"""
+                        AND EXISTS (
+                            SELECT 1 FROM note_tag_relation ntr{i}
+                            JOIN tags t{i} ON ntr{i}.tag_id = t{i}.id
+                            WHERE ntr{i}.note_id = n.id AND t{i}.name = ?
+                        )
+                        """
+                        params.append(tag_name)
+
+                # Сортируем по дате обновления (новые сначала)
+                query += " ORDER BY n.updated_at DESC"
+
+                cursor.execute(query, params)
+                results = cursor.fetchall()
+
+                notes = []
+                for (note_id, title, content, created_at, updated_at,
+                     note_type, url, page_title, page_description) in results:
+                    # Получаем теги для каждой записи
+                    tag_objects = self.tag_manager.get_tags_for_note(note_id)
+
+                    # Преобразуем даты
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    # Создаем объект Note
+                    note = Note(
+                        title=title,
+                        content=content or "",
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=modified_date,
+                        note_type=note_type or "note",
+                        url=url,
+                        page_title=page_title,
+                        page_description=page_description
+                    )
+                    note.tags = tag_objects
+                    notes.append(note)
+
+                search_type = "закладок" if note_type == "bookmark" else "заметок" if note_type == "note" else "записей"
+                print(f"Найдено {search_type}: {len(notes)}")
+                if search_text:
+                    print(f"Поисковый запрос: '{search_text}'")
+                if tag_names:
+                    print(f"Теги для фильтрации: {tag_names}")
+
+                return notes
+
+        except Exception as e:
+            print(f"Ошибка при поиске записей: {e}")
+            return []
+
+    def _validate_url(self, url: str) -> bool:
+        """
+        Проверяет валидность URL
+        """
+        if not url or not url.strip():
+            return False
+
+        url = url.strip()
+
+        # Простая проверка формата URL
+        try:
+            result = urlparse(url)
+            # URL должен иметь схему (http, https) и домен
+            return all([result.scheme in ['http', 'https'], result.netloc])
+        except:
+            return False
+
+    def _normalize_url(self, url: str) -> str:
+        """
+        Нормализует URL (добавляет https:// если нужно)
+        """
+        if not url:
+            return url
+
+        url = url.strip()
+
+        # Если URL начинается с www., добавляем https://
+        if url.startswith('www.'):
+            return f'https://{url}'
+
+        # Если нет схемы, добавляем https://
+        if not url.startswith(('http://', 'https://')):
+            return f'https://{url}'
+
+        return url

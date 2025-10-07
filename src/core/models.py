@@ -11,34 +11,48 @@ class Note:
                  note_id: Optional[int] = None,
                  created_date: Optional[datetime] = None,
                  modified_date: Optional[datetime] = None,
-                 content_type: str = "plain"):
+                 content_type: str = "plain",
+                 note_type: str = "note",  # "note" или "bookmark"
+                 url: Optional[str] = None,
+                 page_title: Optional[str] = None,
+                 page_description: Optional[str] = None):
         """
-        Инициализация заметки
+        Инициализация заметки или закладки
 
         Args:
-            title: Заголовок заметки
+            title: Заголовок заметки/закладки
             content: Содержимое заметки
             note_id: Уникальный идентификатор
             created_date: Дата создания
             modified_date: Дата последнего изменения
             content_type: Тип содержимого - "plain" или "html"
+            note_type: Тип записи - "note" (заметка) или "bookmark" (закладка)
+            url: URL веб-страницы (только для закладок)
+            page_title: Заголовок веб-страницы (только для закладок)
+            page_description: Описание веб-страницы (только для закладок)
         """
         self.id = note_id
         self.title = title
         self.content = content
         self.created_date = created_date if created_date else datetime.now()
         self.modified_date = modified_date if modified_date else datetime.now()
-        self.content_type = content_type  # "plain" или "html"
+        self.content_type = content_type
+        self.note_type = note_type  # "note" или "bookmark"
+        self.url = url
+        self.page_title = page_title
+        self.page_description = page_description
         self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:
-        """Строковое представление заметки"""
+        """Строковое представление заметки/закладки"""
+        type_str = "🔖" if self.note_type == "bookmark" else "📝"
         content_type_str = f" ({self.content_type})" if self.content_type != "plain" else ""
-        return f"Note(id={self.id}, title='{self.title}'{content_type_str}, created={self.created_date.strftime('%Y-%m-%d %H:%M')})"
+        url_str = f" [URL: {self.url}]" if self.url else ""
+        return f"{type_str} Note(id={self.id}, title='{self.title}'{content_type_str}{url_str}, type={self.note_type})"
 
     def __repr__(self) -> str:
         """Представление для отладки"""
-        return f"Note(id={self.id}, title='{self.title}', content_type='{self.content_type}', content='{self.content[:50]}...')"
+        return f"Note(id={self.id}, title='{self.title}', type='{self.note_type}', url='{self.url}')"
 
     def add_tag(self, tag: 'Tag') -> None:
         """Добавляет тег к заметке"""
@@ -57,6 +71,14 @@ class Note:
     def is_html(self) -> bool:
         """Проверяет, является ли содержимое HTML"""
         return self.content_type == "html"
+
+    def is_bookmark(self) -> bool:
+        """Проверяет, является ли запись закладкой"""
+        return self.note_type == "bookmark"
+
+    def is_note(self) -> bool:
+        """Проверяет, является ли запись заметкой"""
+        return self.note_type == "note"
 
 
 class Tag:
@@ -149,23 +171,43 @@ class WebBookmark:
                  url: str,
                  title: str = "",
                  description: str = "",
-                 bookmark_id: Optional[int] = None):
+                 bookmark_id: Optional[int] = None,
+                 favicon_url: Optional[str] = None,
+                 created_date: Optional[datetime] = None,
+                 updated_date: Optional[datetime] = None):
         """
         Инициализация закладки
 
         Args:
-            url: URL страницы
+            url: URL веб-страницы
             title: Заголовок страницы
             description: Описание страницы
             bookmark_id: Уникальный идентификатор
+            favicon_url: URL иконки сайта
+            created_date: Дата создания
+            updated_date: Дата обновления
         """
         self.id = bookmark_id
         self.url = url
         self.title = title
         self.description = description
-        self.created_date = datetime.now()
-        self.tags: List[Tag] = []
+        self.favicon_url = favicon_url
+        self.created_date = created_date if created_date else datetime.now()
+        self.updated_date = updated_date if updated_date else datetime.now()
+        self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:
         """Строковое представление закладки"""
-        return f"WebBookmark(title='{self.title}', url='{self.url}')"
+        return f"🔖 WebBookmark(id={self.id}, title='{self.title}', url='{self.url}')"
+
+    def __repr__(self) -> str:
+        """Представление для отладки"""
+        return f"WebBookmark(id={self.id}, title='{self.title}', url='{self.url}')"
+
+    def get_domain(self) -> str:
+        """Возвращает домен из URL"""
+        from urllib.parse import urlparse
+        try:
+            return urlparse(self.url).netloc
+        except:
+            return self.url

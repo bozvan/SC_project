@@ -29,7 +29,7 @@ class DatabaseManager:
             print(f"🔧 Инициализация БД по пути: {self.db_path}")
             print(f"🔧 Существует ли файл: {self.db_path.exists()}")
             create_tables_queries = [
-                # Таблица заметок (обновленная с content_type)
+                # Таблица заметок (остается без изменений)
                 """
                 CREATE TABLE IF NOT EXISTS notes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +57,7 @@ class DatabaseManager:
                     FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
                 )
                 """,
-                # НОВАЯ ТАБЛИЦА: Задачи
+                # Таблица задач
                 """
                 CREATE TABLE IF NOT EXISTS tasks (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,6 +69,28 @@ class DatabaseManager:
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
                 )
+                """,
+                # НОВАЯ ТАБЛИЦА: Закладки (отдельно от заметок)
+                """
+                CREATE TABLE IF NOT EXISTS bookmarks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    url TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    favicon_url TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """,
+                # Таблица связи многие-ко-многим между закладками и тегами
+                """
+                CREATE TABLE IF NOT EXISTS bookmark_tag_relation (
+                    bookmark_id INTEGER,
+                    tag_id INTEGER,
+                    PRIMARY KEY (bookmark_id, tag_id),
+                    FOREIGN KEY (bookmark_id) REFERENCES bookmarks (id) ON DELETE CASCADE,
+                    FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
+                )
                 """
             ]
 
@@ -79,12 +101,29 @@ class DatabaseManager:
                 for query in create_tables_queries:
                     cursor.execute(query)
 
-                # Проверяем и добавляем колонку content_type если её нет
+                # Миграция: добавляем новые поля если их нет
                 try:
-                    cursor.execute("ALTER TABLE notes ADD COLUMN content_type TEXT DEFAULT 'plain'")
-                    print("✅ Добавлена колонка content_type в таблицу notes")
+                    cursor.execute("ALTER TABLE notes ADD COLUMN note_type TEXT DEFAULT 'note'")
+                    print("✅ Добавлена колонка note_type в таблицу notes")
                 except sqlite3.OperationalError:
-                    # Колонка уже существует
+                    pass
+
+                try:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN url TEXT")
+                    print("✅ Добавлена колонка url в таблицу notes")
+                except sqlite3.OperationalError:
+                    pass
+
+                try:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN page_title TEXT")
+                    print("✅ Добавлена колонка page_title в таблицу notes")
+                except sqlite3.OperationalError:
+                    pass
+
+                try:
+                    cursor.execute("ALTER TABLE notes ADD COLUMN page_description TEXT")
+                    print("✅ Добавлена колонка page_description в таблицу notes")
+                except sqlite3.OperationalError:
                     pass
 
                 conn.commit()

@@ -3,19 +3,21 @@ import sys
 import traceback
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QPushButton, QScrollArea, \
-    QWidget, QLabel, QHBoxLayout, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QPushButton, QScrollArea, \
+    QWidget, QLabel, QHBoxLayout, QVBoxLayout
 
-from src.gui.ui_notes_page import Ui_NotesPage
-
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+# Получаем путь к корневой папке SC_project
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)  # Поднимаемся на уровень выше из src/gui/
+sc_project_root = os.path.dirname(project_root)  # Еще выше - в SC_project
 
 try:
     from src.gui.ui_main_window import Ui_MainWindow
+    from src.gui.ui_notes_page import Ui_NotesPage
     from src.core.database_manager import DatabaseManager
     from src.core.task_manager import TaskManager
     from src.core.tag_manager import TagManager
+    from src.widgets.tags_widget import TagsWidget
     from src.core.note_manager import NoteManager
     from src.widgets.rich_text_editor import RichTextEditor
     from src.gui.note_editor import NoteEditor
@@ -26,9 +28,32 @@ except ImportError as e:
     sys.exit(1)
 
 
+def parse_search_query(query):
+    """Парсит поисковый запрос"""
+    if not query.strip():
+        return "", []
+
+    words = query.strip().split()
+    text_parts = []
+    tags = []
+
+    for word in words:
+        if word.startswith('#') and len(word) > 1:
+            tag_name = word[1:]
+            tags.append(tag_name.lower())
+        else:
+            text_parts.append(word)
+
+    search_text = " ".join(text_parts)
+    return search_text, tags
+
+
 class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
     def __init__(self):
         super().__init__()
+        self.content_editor = None
+        self.rich_editor = None
+        self.current_bookmark_id = None
         self.tasks_layout = None
         self.tasks_widget = None
         self.tasks_scroll = None
@@ -47,9 +72,12 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self._updating_from_search = False
         self._updating_from_tags = False
 
-        self.setup_managers()  # ДОЛЖНО БЫТЬ ДО setup_ui_simple()
+        self.setup_managers()
         self.setup_ui_simple()
         self.setup_connections()
+
+        # Автопоиск при вводе текста
+        self.search_input.textChanged.connect(self.on_search_text_changed)
 
         # Таймер для автосохранения
         self.auto_save_timer = QTimer()
@@ -79,6 +107,22 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         event.accept()
         print("✅ Приложение завершено корректно")
 
+    def on_search_text_changed(self, text):
+        """Обработчик изменения текста в поле поиска - автопоиск"""
+        # Используем таймер для задержки поиска (чтобы не искать на каждый символ)
+        if not hasattr(self, 'search_timer'):
+            self.search_timer = QTimer()
+            self.search_timer.setSingleShot(True)
+            self.search_timer.timeout.connect(self.perform_auto_search)
+
+        # Перезапускаем таймер при каждом изменении текста
+        self.search_timer.start(50)  # Поиск через 50 мс после последнего ввода
+
+    def perform_auto_search(self):
+        """Выполняет поиск после задержки"""
+        query = self.search_input.text()
+        self.load_notes(query)
+
     def setup_managers(self):
         db_path = "smart_organizer.db"
         self.db_manager = DatabaseManager(db_path)
@@ -91,6 +135,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         """Настройка UI с отдельными разделами для задач и закладок"""
         self.setup_rich_editor()
         self.setup_tasks_area()
+
+        self.tags_widget = TagsWidget(self.tag_manager)
+        self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
+        self.verticalLayout.addWidget(self.tags_widget)
 
         self.save_btn.setVisible(True)
         self.save_btn.setEnabled(False)  # Изначально выключена
@@ -132,7 +180,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.save_btn.setEnabled(False)
             # Обновляем список заметок
             self.load_notes(self.search_input.text())
-            #self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось сохранить заметку")
 
@@ -168,7 +216,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.save_btn.setEnabled(False)
             # Обновляем список закладок
             # self.bookmarks_widget.refresh() # РАССКОМЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ЗАКЛАДОК
-            # self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось сохранить закладку")
 
@@ -191,7 +239,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.current_note_id = note.id
             # Обновляем список заметок
             self.load_notes(self.search_input.text())
-            # self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
 
@@ -253,10 +301,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
     def on_bookmark_added(self):
         """Обработчик добавления новой закладки"""
         print("✅ Новая закладка добавлена")
-        # Обновляем список заметок чтобы показать новую закладку
+        # Обновляем список заметок, чтобы показать новую закладку
         self.load_notes(self.search_input.text())
         # Обновляем теги
-        # self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+        self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
 
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID"""
@@ -455,15 +503,14 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 
-        # Подключаем автосохранение И включение кнопки Сохранить при изменениях
+        # Подключаем автосохранение И включение кнопки. Сохранить при изменениях
         self.title_input.textChanged.connect(self.on_content_changed)
         self.rich_editor.text_edit.textChanged.connect(self.on_content_changed)
         self.tags_input.textChanged.connect(self.on_content_changed)
 
-
     def on_content_changed(self):
         """Обработчик изменения содержимого"""
-        # Включаем кнопку Сохранить при любых изменениях
+        # Включаем кнопку. Сохранить при любых изменениях
         self.save_btn.setEnabled(True)
 
         # Для заметок также планируем автосохранение
@@ -540,7 +587,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
     def load_notes(self, search_query=""):
         """Загружает заметки с учетом поискового запроса"""
         try:
-            search_text, tags = self.parse_search_query(search_query)
+            search_text, tags = parse_search_query(search_query)
 
             if tags and search_text:
                 notes = self.note_manager.search_by_text_and_tags(search_text, tags)
@@ -556,25 +603,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         except Exception as e:
             print(f"❌ Ошибка загрузки заметок: {e}")
-
-    def parse_search_query(self, query):
-        """Парсит поисковый запрос"""
-        if not query.strip():
-            return "", []
-
-        words = query.strip().split()
-        text_parts = []
-        tags = []
-
-        for word in words:
-            if word.startswith('#') and len(word) > 1:
-                tag_name = word[1:]
-                tags.append(tag_name.lower())
-            else:
-                text_parts.append(word)
-
-        search_text = " ".join(text_parts)
-        return search_text, tags
 
     def display_notes(self, notes):
         """Отображает список заметок"""
@@ -727,7 +755,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             success = self.note_manager.delete(self.current_note_id)
             if success:
                 print(f"✅ Заметка {self.current_note_id} удалена")
-                # self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+                self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
                 self.load_notes(self.search_input.text())
                 self.set_editor_enabled(True)
                 self.title_input.clear()

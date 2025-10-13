@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from src.gui.ui_main_window import Ui_MainWindow
 from src.widgets.notes_widget import NotesWidget
 from src.widgets.bookmarks_widget import BookmarksWidget
+from src.widgets.task_widget import TaskWidget
 from src.widgets.settings_widget import SettingsWidget
 from src.widgets.workspaces_widget import WorkspacesWidget
 
@@ -97,9 +98,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def show_tasks_widget(self):
         """Показать виджет задач"""
-        self.show_placeholder("Виджет задач")
-        self.btnTasks.setStyleSheet("background-color: #8e8e8e;")
-        self.reset_other_buttons(self.btnTasks)
+        try:
+            task_widget = TaskWidget()
+            self.set_content_widget(task_widget)
+            self.btnNotes.setStyleSheet("background-color: #8e8e8e;")
+            self.reset_other_buttons(self.btnTasks)
+        except Exception as e:
+            print(f"Ошибка при создании виджета задач: {e}")
+            self.show_placeholder("Виджет задач")
+        #self.btnTasks.setStyleSheet("background-color: #8e8e8e;")
+        #self.reset_other_buttons(self.btnTasks)
 
     def show_bookmarks_widget(self):
         """Показать виджет закладок"""

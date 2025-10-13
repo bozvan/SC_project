@@ -8,6 +8,7 @@ from src.gui.ui_task_widget import Ui_TaskWidget
 class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
     """Виджет для отображения предстоящих задач из ВСЕХ заметок"""
 
+    navigate_to_note_requested = pyqtSignal(int)  # note_id
     task_toggled = pyqtSignal(int, bool)  # task_id, is_completed
     navigate_to_note = pyqtSignal(int)  # note_id
 
@@ -119,23 +120,23 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
 
         # Кнопка перехода к заметке
         if hasattr(task, 'note_id') and task.note_id:
-            note_btn = QPushButton("📝")
             note_title = getattr(task, 'note_title', f"Заметка {task.note_id}")
+            note_btn = QPushButton(f"📝 --> {note_title}")
             note_btn.setToolTip(f"Перейти к заметке: {note_title}")
-            note_btn.setFixedSize(25, 25)
+            note_btn.setFixedSize(75, 25)
             note_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    border: 1px solid gray;
-                    border-radius: 3px;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-            """)
+                        QPushButton {
+                            background-color: transparent;
+                            border: 1px solid gray;
+                            border-radius: 3px;
+                            font-size: 12px;
+                        }
+                        QPushButton:hover {
+                            background-color: #e0e0e0;
+                        }
+                    """)
             note_btn.clicked.connect(
-                lambda checked, note_id=task.note_id: self.navigate_to_note.emit(note_id)
+                lambda checked, note_id=task.note_id: self.navigate_to_note_requested.emit(note_id)
             )
             layout.addWidget(note_btn)
 

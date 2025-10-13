@@ -86,6 +86,32 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.load_notes()
 
+    def navigate_to_note_by_id(self, note_id):
+        """Переходит к заметке по ID (вызывается извне)"""
+        print(f"🔍 Навигация к заметке {note_id}")
+
+        # Ищем заметку в текущем списке
+        for i in range(self.notes_list.count()):
+            item = self.notes_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                self.notes_list.setCurrentItem(item)
+                print(f"✅ Найдена заметка: {item.text()}")
+                return
+
+        # Если не нашли в текущем списке, загружаем все заметки и ищем снова
+        print("⚠️  Заметка не найдена в текущем списке, загружаем все заметки...")
+        self.load_notes("")  # Загружаем все заметки
+
+        for i in range(self.notes_list.count()):
+            item = self.notes_list.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                self.notes_list.setCurrentItem(item)
+                print(f"✅ Найдена заметка после перезагрузки: {item.text()}")
+                return
+
+        print(f"❌ Заметка с ID {note_id} не найдена")
+        QMessageBox.warning(self, "Ошибка", f"Заметка с ID {note_id} не найдена")
+
     def closeEvent(self, event):
         """Обработчик закрытия окна"""
         print("🔴 Закрытие приложения...")
@@ -174,8 +200,12 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 self.force_auto_save()
 
             self.editor_window = NoteEditorWindow(self.note_manager, self.current_note_id)
+
+            # Подключаем все сигналы
             self.editor_window.note_saved.connect(self.on_note_saved_from_window)
+            self.editor_window.note_updated.connect(self.on_note_updated_from_window)  # ← Новый обработчик
             self.editor_window.window_closed.connect(self.on_editor_window_closed)
+
             self.editor_window.show()
 
             # Поднимаем окно на передний план
@@ -188,11 +218,36 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             print(f"❌ Ошибка при создании окна редактора: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось открыть окно редактора: {e}")
 
+    def on_note_updated_from_window(self, note_id, title, content, tags):
+        """Обработчик обновления заметки из отдельного окна"""
+        print(f"🔄 Заметка {note_id} обновлена в отдельном окне")
+
+        # Обновляем текущую заметку если она открыта
+        if hasattr(self, 'current_note_id') and self.current_note_id == note_id:
+            # Обновляем данные в редакторе
+            self.title_input.setText(title)
+
+            if hasattr(self, 'rich_editor') and hasattr(self.rich_editor, 'set_html'):
+                self.rich_editor.set_html(content)
+
+            # Обновляем теги
+            tags_text = ", ".join(tags)
+            self.tags_input.setText(tags_text)
+
+            print(f"✅ Данные заметки {note_id} обновлены в основном редакторе")
+
+        # Принудительно обновляем список заметок
+        self.load_notes(self.search_input.text())
+
+        # Обновляем виджет тегов если есть
+        if hasattr(self, 'tags_widget'):
+            self.tags_widget.refresh()
+
     def on_note_saved_from_window(self, note_id):
         """Обработчик сохранения заметки из отдельного окна"""
-        # Обновляем данные в основном окне
-        self.load_notes(self.search_input.text())
-        print(f"✅ Заметка {note_id} сохранена из отдельного окна")
+        print(f"💾 Заметка {note_id} сохранена из отдельного окна")
+        # Вызываем обновление через новый метод
+        self.on_note_updated_from_window(note_id, "", "", [])
 
     def on_editor_window_closed(self, note_id):
         """Обработчик закрытия окна редактора"""

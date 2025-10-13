@@ -1,10 +1,9 @@
 import sys
-from PyQt6 import QtWidgets
+from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt
 from src.gui.ui_main_window import Ui_MainWindow
 from src.widgets.notes_widget import NotesWidget
 from src.widgets.bookmarks_widget import BookmarksWidget
-from src.widgets.task_widget import TaskWidget
 from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
 from src.widgets.settings_widget import SettingsWidget
 from src.widgets.workspaces_widget import WorkspacesWidget
@@ -53,7 +52,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.note_manager = NoteManager(self.db_manager, self.tag_manager)
         self.task_manager = TaskManager(self.db_manager)
         self.bookmark_manager = BookmarkManager(self.db_manager)
-
         print("✅ Все менеджеры инициализированы")
 
     def apply_styles(self):
@@ -146,12 +144,40 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_tasks_widget(self):
         """Показать виджет задач"""
         try:
+            # Передаем только 2 аргумента
             tasks_widget = UpcomingTasksWidget(self.task_manager, self.note_manager)
+
+            # Устанавливаем parent после создания
+            tasks_widget.setParent(self)
+
+            # Подключаем сигнал перехода к заметке
+            tasks_widget.navigate_to_note_requested.connect(self.navigate_to_note_from_task)
+
             self.set_content_widget(tasks_widget)
             self.reset_other_buttons(self.btnTasks)
         except Exception as e:
             print(f"Ошибка при создании виджета задач: {e}")
+            import traceback
+            traceback.print_exc()
             self.show_placeholder("Виджет задач")
+
+    def navigate_to_note_from_task(self, note_id):
+        """Переходит к заметке из виджета задач"""
+        print(f"🔄 Запрос перехода к заметке {note_id} из виджета задач")
+
+        # Переключаемся на виджет заметок
+        self.show_notes_widget()
+
+        # Даем время на создание виджета заметок
+        QtCore.QTimer.singleShot(100, lambda: self.open_note_in_notes_widget(note_id))
+
+    def open_note_in_notes_widget(self, note_id):
+        """Открывает конкретную заметку в виджете заметок"""
+        if hasattr(self.current_widget, 'navigate_to_note_by_id'):
+            self.current_widget.navigate_to_note_by_id(note_id)
+            print(f"✅ Заметка {note_id} открыта в редакторе")
+        else:
+            print(f"❌ Не удалось открыть заметку {note_id}: виджет заметок не поддерживает навигацию")
 
     def show_bookmarks_widget(self):
         """Показать виджет закладок"""

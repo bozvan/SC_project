@@ -2,17 +2,20 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLineEdit,
                              QPushButton, QLabel, QHBoxLayout, QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from src.gui.ui_note_editor import Ui_NoteEditorWindow
 import traceback
 
 
-class NoteEditorWindow(QMainWindow):
+class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
     """Независимое окно для редактирования заметки"""
 
     note_saved = pyqtSignal(int)  # Сигнал при сохранении заметки
     window_closed = pyqtSignal(int)  # Сигнал при закрытии окна
+    note_updated = pyqtSignal(int, str, str, list)  # ← ДОБАВЬТЕ ЭТОТ СИГНАЛ
 
     def __init__(self, note_manager, note_id):
         super().__init__()  # Без parent для независимости
+        self.setupUi(self)
 
         # Установите флаги для настоящего независимого окна
         self.setWindowFlags(
@@ -25,75 +28,40 @@ class NoteEditorWindow(QMainWindow):
         self.note_manager = note_manager
         self.note_id = note_id
 
+        self.setup_rich_editor()
+
         # Инициализация таймера автосохранения
         self.auto_save_timer = QTimer()
         self.auto_save_timer.setSingleShot(True)
         self.auto_save_timer.timeout.connect(self.auto_save_note)
 
-        self.setup_ui()
         self.load_note()
         self.setup_connections()
 
-    def setup_ui(self):
-        """Настройка интерфейса окна"""
-        self.setWindowTitle("Редактор заметки")
-        self.setMinimumSize(600, 400)
-
-        # Центральный виджет
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-
-        # Layout
-        layout = QVBoxLayout(central_widget)
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
-
-        # Заголовок
-        title_label = QLabel("Заголовок:")
-        layout.addWidget(title_label)
-
-        self.title_input = QLineEdit()
-        self.title_input.setPlaceholderText("Введите заголовок заметки...")
-        layout.addWidget(self.title_input)
-
-        # Содержимое
-        content_label = QLabel("Содержимое:")
-        layout.addWidget(content_label)
-
-        # Rich text editor
+    def setup_rich_editor(self):
+        """Заменяет стандартный QTextEdit на RichTextEditor"""
         try:
             from src.widgets.rich_text_editor import RichTextEditor
+
+            # Сохраняем позицию текущего редактора в layout
+            old_editor = self.content_editor
+
+            # Создаем богатый текстовый редактор
             self.rich_editor = RichTextEditor()
-            layout.addWidget(self.rich_editor)
+
+            # Заменяем в layout
+            layout = self.centralwidget.layout()
+            for i in range(layout.count()):
+                if layout.itemAt(i).widget() == old_editor:
+                    layout.removeWidget(old_editor)
+                    old_editor.deleteLater()
+                    layout.insertWidget(i, self.rich_editor)
+                    break
+
         except ImportError:
-            # Fallback - простой текстовый редактор
-            from PyQt6.QtWidgets import QTextEdit
-            self.rich_editor = QTextEdit()
-            layout.addWidget(self.rich_editor)
-
-        # Теги
-        tags_label = QLabel("Теги (через запятую):")
-        layout.addWidget(tags_label)
-
-        self.tags_input = QLineEdit()
-        self.tags_input.setPlaceholderText("тег1, тег2, тег3...")
-        layout.addWidget(self.tags_input)
-
-        # Статус автосохранения
-        self.status_label = QLabel("⚪ Не сохранено")
-        self.status_label.setStyleSheet("color: gray; font-size: 11px;")
-        layout.addWidget(self.status_label)
-
-        # Кнопки
-        button_layout = QHBoxLayout()
-        self.save_btn = QPushButton("💾 Сохранить")
-        self.save_btn.setStyleSheet("font-weight: bold;")
-        self.cancel_btn = QPushButton("❌ Закрыть")
-
-        button_layout.addWidget(self.save_btn)
-        button_layout.addStretch()
-        button_layout.addWidget(self.cancel_btn)
-        layout.addLayout(button_layout)
+            # Используем стандартный QTextEdit
+            self.rich_editor = self.content_editor
+            print("⚠️  RichTextEditor не найден, используется стандартный QTextEdit")
 
     def setup_connections(self):
         """Настройка соединений для автосохранения"""
@@ -143,7 +111,7 @@ class NoteEditorWindow(QMainWindow):
 
     def schedule_auto_save(self):
         """Планирует автосохранение через 3 секунды после последнего изменения"""
-        self.auto_save_timer.start(3000)  # 3 секунды
+        self.auto_save_timer.start(50)  # 50 мс
         self.update_status("⏳ Сохранение через 3с...")
 
     def auto_save_note(self):
@@ -170,6 +138,7 @@ class NoteEditorWindow(QMainWindow):
             if success:
                 self.update_status("✅ Автосохранено")
                 self.note_saved.emit(self.note_id)
+                self.note_updated.emit(self.note_id, title, content, tags)  # ← Используем новый сигнал
                 print(f"✅ Автосохранение заметки {self.note_id} в отдельном окне")
             else:
                 self.update_status("❌ Ошибка автосохранения")
@@ -221,6 +190,7 @@ class NoteEditorWindow(QMainWindow):
         if success:
             self.update_status("✅ Сохранено")
             self.note_saved.emit(self.note_id)
+            self.note_updated.emit(self.note_id, title, content, tags)  # ← Используем новый сигнал
             QMessageBox.information(self, "Успех", "Заметка сохранена!")
             print(f"✅ Заметка {self.note_id} сохранена в отдельном окне")
         else:

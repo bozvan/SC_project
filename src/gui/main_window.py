@@ -35,7 +35,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def setup_ui(self):
         """Настройка дополнительных параметров UI"""
         self.setWindowTitle("Умный Органайзер")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1100, 600)
         self.splitter.setSizes([100, 600])
 
         if self.widgetConteiner.layout() is None:

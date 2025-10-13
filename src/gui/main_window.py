@@ -5,16 +5,28 @@ from src.gui.ui_main_window import Ui_MainWindow
 from src.widgets.notes_widget import NotesWidget
 from src.widgets.bookmarks_widget import BookmarksWidget
 from src.widgets.task_widget import TaskWidget
+from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
 from src.widgets.settings_widget import SettingsWidget
 from src.widgets.workspaces_widget import WorkspacesWidget
+from src.core.task_manager import TaskManager
+from src.core.bookmark_manager import BookmarkManager
+from src.core.database_manager import DatabaseManager
+from src.core.tag_manager import TagManager
+from src.core.note_manager import NoteManager
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        self.bookmark_manager = None
+        self.task_manager = None
+        self.note_manager = None
+        self.tag_manager = None
+        self.db_manager = None
         self.setupUi(self)
         self.current_widget = None
         self.setup_ui()
+        self.setup_managers()
         self.connect_signals()
         self.show_notes_widget()
 
@@ -24,12 +36,24 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Настройка дополнительных параметров UI"""
         self.setWindowTitle("Умный Органайзер")
         self.setMinimumSize(800, 600)
-
         self.splitter.setSizes([100, 600])
 
         if self.widgetConteiner.layout() is None:
             layout = QtWidgets.QVBoxLayout(self.widgetConteiner)
             layout.setContentsMargins(0, 0, 0, 0)
+            print("✅ Layout контейнера создан")
+        else:
+            print("✅ Layout контейнера уже существует")
+
+    def setup_managers(self):
+        db_path = "smart_organizer.db"
+        self.db_manager = DatabaseManager(db_path)
+        self.tag_manager = TagManager(self.db_manager)
+        self.note_manager = NoteManager(self.db_manager, self.tag_manager)
+        self.task_manager = TaskManager(self.db_manager)
+        self.bookmark_manager = BookmarkManager(self.db_manager)
+
+        print("✅ Все менеджеры инициализированы")
 
     def apply_styles(self):
         """Принудительное применение стилей"""
@@ -99,8 +123,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_tasks_widget(self):
         """Показать виджет задач"""
         try:
-            task_widget = TaskWidget()
-            self.set_content_widget(task_widget)
+            tasks_widget = UpcomingTasksWidget(self.task_manager, self.note_manager)
+            self.set_content_widget(tasks_widget)
             self.btnNotes.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnTasks)
         except Exception as e:

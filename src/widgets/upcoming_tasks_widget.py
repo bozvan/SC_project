@@ -1,12 +1,12 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-                             QLabel, QCheckBox, QHBoxLayout, QPushButton, QMenu,
-                             QMessageBox, QScrollArea, QFrame)
+from PyQt6.QtWidgets import QListWidgetItem, QWidget, QHBoxLayout, QCheckBox, QLabel, QPushButton
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 
+from src.gui.ui_task_widget import Ui_TaskWidget
 
-class UpcomingTasksWidget(QWidget):
-    """Виджет для отображения предстоящих задач из ВСЕХ заметок в боковой панели"""
+
+class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
+    """Виджет для отображения предстоящих задач из ВСЕХ заметок"""
 
     task_toggled = pyqtSignal(int, bool)  # task_id, is_completed
     navigate_to_note = pyqtSignal(int)  # note_id
@@ -15,88 +15,88 @@ class UpcomingTasksWidget(QWidget):
         super().__init__()
         self.task_manager = task_manager
         self.note_manager = note_manager
-        self.setup_ui()
+        self.setupUi(self)
+
+        # Настройка дополнительных параметров UI
+        self.setup_additional_ui()
+        self.connect_signals()
         self.load_tasks()
 
-    def setup_ui(self):
-        """Настройка интерфейса виджета"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
+    def setup_additional_ui(self):
+        """Дополнительная настройка UI"""
+        # Настройка списка задач
+        self.tasks_list.setAlternatingRowColors(True)
 
-        # Заголовок
-        title_label = QLabel("Предстоящие задачи")
-        title_label.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 5px;")
-        layout.addWidget(title_label)
+        # Настройка комбо-боксов
+        self.filter_combo.currentIndexChanged.connect(self.on_filter_changed)
 
-        # Область прокрутки для задач
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setMaximumHeight(400)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        # Контейнер для задач
-        self.tasks_container = QWidget()
-        self.tasks_layout = QVBoxLayout(self.tasks_container)
-        self.tasks_layout.setContentsMargins(2, 2, 2, 2)
-        self.tasks_layout.setSpacing(3)
-
-        self.scroll_area.setWidget(self.tasks_container)
-        layout.addWidget(self.scroll_area)
-
-        # Статистика
-        self.stats_label = QLabel("Невыполненных задач: 0")
-        self.stats_label.setStyleSheet("color: white; font-size: 11px; margin-top: 5px;")
-        layout.addWidget(self.stats_label)
+    def connect_signals(self):
+        """Подключение сигналов"""
+        self.pushButton.clicked.connect(self.refresh)
 
     def load_tasks(self):
-        """Загрузка и отображение невыполненных задач из всех заметок"""
-        # Очищаем старые задачи
-        for i in reversed(range(self.tasks_layout.count())):
-            widget = self.tasks_layout.itemAt(i).widget()
-            if widget:
-                self.tasks_layout.removeWidget(widget)
-                widget.deleteLater()
+        """Загрузка и отображение задач"""
+        self.tasks_list.clear()
 
-        # Загружаем все невыполненные задачи
-        tasks = self.task_manager.get_all_incomplete_tasks()
+        # Получаем задачи в зависимости от фильтра
+        filter_type = self.filter_combo.currentText()
 
-        if not tasks:
-            # Показываем сообщение если задач нет
-            no_tasks_label = QLabel("Нет предстоящих задач")
-            no_tasks_label.setStyleSheet("color: palette(mid); font-style: italic; padding: 10px;")
-            no_tasks_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.tasks_layout.addWidget(no_tasks_label)
+        if filter_type == "Все задачи":
+            # Получаем и выполненные, и невыполненные задачи
+            incomplete_tasks = self.task_manager.get_all_incomplete_tasks()
+
+            # Получаем выполненные задачи через существующий метод или создаем временное решение
+            completed_tasks = self.get_completed_tasks()
+            tasks = incomplete_tasks + completed_tasks
+
+        elif filter_type == "Только активные":
+            tasks = self.task_manager.get_all_incomplete_tasks()
+        elif filter_type == "Только выполненные":
+            tasks = self.get_completed_tasks()
+        elif filter_type == "Просроченные":
+            # Временно используем пустой список
+            tasks = []
         else:
-            # Отображаем задачи как чекбоксы
-            for task in tasks:
-                self.add_task_widget(task)
+            tasks = self.task_manager.get_all_incomplete_tasks()
+
+        # Отображаем задачи
+        for task in tasks:
+            self.add_task_item(task)
 
         # Обновляем статистику
-        self.stats_label.setText(f"Невыполненных задач: {len(tasks)}")
-        print(f"✅ Загружено предстоящих задач: {len(tasks)}")
+        self.update_stats(tasks)
 
-    def add_task_widget(self, task):
-        """Добавляет виджет задачи с чекбоксом"""
-        task_widget = QFrame()
-        task_widget.setFrameStyle(QFrame.Shape.Box)
-        task_widget.setStyleSheet("""
-            QFrame {
-                background-color: palette(base);
-                border: 1px solid palette(midlight);
-                border-radius: 3px;
-                padding: 0px;
-            }
-            QFrame:hover {
-                background-color: palette(alternate-base);
-                border: 1px solid palette(highlight);
-            }
-        """)
+    def get_completed_tasks(self):
+        """Получает выполненные задачи через существующие методы"""
+        try:
+            # Получаем все задачи для всех заметок и фильтруем выполненные
+            all_tasks = []
 
-        layout = QHBoxLayout(task_widget)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(8)
+            # Получаем все заметки
+            all_notes = self.note_manager.get_all()
+
+            for note in all_notes:
+                # Получаем задачи для каждой заметки
+                note_tasks = self.task_manager.get_tasks_for_note(note.id)
+                for task in note_tasks:
+                    if task.is_completed:
+                        # Добавляем информацию о заметке к задаче
+                        task.note_title = note.title
+                        all_tasks.append(task)
+
+            return all_tasks
+
+        except Exception as e:
+            print(f"Ошибка при получении выполненных задач: {e}")
+            return []
+
+    def add_task_item(self, task):
+        """Добавляет задачу в список"""
+        # Создаем кастомный виджет для элемента списка
+        item_widget = QWidget()
+        layout = QHBoxLayout(item_widget)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(10)
 
         # Чекбокс задачи
         checkbox = QCheckBox()
@@ -109,48 +109,48 @@ class UpcomingTasksWidget(QWidget):
         # Описание задачи
         task_label = QLabel(task.description)
         task_label.setWordWrap(True)
-        task_label.setStyleSheet("font-size: 11px;")
 
         # Зачеркиваем текст если задача выполнена
         if task.is_completed:
-            task_label.setStyleSheet("font-size: 11px; text-decoration: line-through; color: gray;")
+            task_label.setStyleSheet("text-decoration: line-through; color: gray;")
 
         layout.addWidget(task_label)
         layout.addStretch()
 
-        # Информация о заметке (кликабельная)
-        if task.note_title:
+        # Кнопка перехода к заметке
+        if hasattr(task, 'note_id') and task.note_id:
             note_btn = QPushButton("📝")
-            note_btn.setToolTip(f"Перейти к заметке: {task.note_title}")
+            note_title = getattr(task, 'note_title', f"Заметка {task.note_id}")
+            note_btn.setToolTip(f"Перейти к заметке: {note_title}")
+            note_btn.setFixedSize(25, 25)
             note_btn.setStyleSheet("""
                 QPushButton {
                     background-color: transparent;
-                    border: none;
+                    border: 1px solid gray;
+                    border-radius: 3px;
                     font-size: 12px;
-                    padding: 2px;
                 }
                 QPushButton:hover {
-                    background-color: palette(highlight);
-                    border-radius: 2px;
+                    background-color: #e0e0e0;
                 }
             """)
-            note_btn.setFixedSize(20, 20)
             note_btn.clicked.connect(
                 lambda checked, note_id=task.note_id: self.navigate_to_note.emit(note_id)
             )
             layout.addWidget(note_btn)
 
-        # Сохраняем данные задачи
-        task_widget.task_data = {
+        # Создаем элемент списка
+        list_item = QListWidgetItem(self.tasks_list)
+        list_item.setSizeHint(item_widget.sizeHint())
+
+        # Сохраняем данные задачи в элемент
+        list_item.task_data = {
             'task_id': task.id,
-            'note_id': task.note_id,
-            'description': task.description,
-            'is_completed': task.is_completed,
-            'checkbox': checkbox,
-            'label': task_label
+            'is_completed': task.is_completed
         }
 
-        self.tasks_layout.addWidget(task_widget)
+        self.tasks_list.addItem(list_item)
+        self.tasks_list.setItemWidget(list_item, item_widget)
 
     def on_task_toggled(self, task_id, state):
         """Обработчик изменения чекбокса задачи"""
@@ -159,99 +159,30 @@ class UpcomingTasksWidget(QWidget):
         # Обновляем в БД
         success = self.task_manager.update_task(task_id, is_completed=is_completed)
         if success:
-            # Обновляем отображение этой задачи
-            self.update_task_display(task_id, is_completed)
             self.task_toggled.emit(task_id, is_completed)
             print(f"✅ Задача {task_id} отмечена как {'выполнена' if is_completed else 'не выполнена'}")
 
-            # Через 0.5 секунды обновляем весь список (чтобы выполненные задачи исчезли)
-            if is_completed:
-                from PyQt6.QtCore import QTimer
-                QTimer.singleShot(500, self.load_tasks)
+            # Обновляем отображение
+            self.refresh()
 
-    def update_task_display(self, task_id, is_completed):
-        """Обновляет отображение конкретной задачи"""
-        # Ищем виджет с этой задачей
-        for i in range(self.tasks_layout.count()):
-            widget = self.tasks_layout.itemAt(i).widget()
-            if (hasattr(widget, 'task_data') and
-                    widget.task_data['task_id'] == task_id):
+    def update_stats(self, tasks):
+        """Обновление статистики"""
+        total = len(tasks)
+        completed = sum(1 for task in tasks if task.is_completed)
+        active = total - completed
 
-                # Обновляем стиль текста
-                if is_completed:
-                    widget.task_data['label'].setStyleSheet(
-                        "font-size: 11px; text-decoration: line-through; color: gray;"
-                    )
-                else:
-                    widget.task_data['label'].setStyleSheet("font-size: 11px;")
+        self.total_label.setText(f"Всего: {total}")
+        self.active_label.setText(f"Активные: {active}")
+        self.completed_label.setText(f"Выполнено: {completed}")
 
-                break
+    def on_filter_changed(self):
+        """Обработчик изменения фильтра"""
+        self.load_tasks()
 
-    def show_context_menu(self, position):
-        """Показывает контекстное меню для задачи"""
-        # Находим виджет под курсором
-        for i in range(self.tasks_layout.count()):
-            widget = self.tasks_layout.itemAt(i).widget()
-            if (widget and
-                    hasattr(widget, 'task_data') and
-                    widget.underMouse()):
-
-                task_data = widget.task_data
-                menu = QMenu(self)
-
-                # Действие для перехода к заметке
-                if task_data['note_id']:
-                    goto_note_action = QAction("Перейти к заметке", self)
-                    goto_note_action.triggered.connect(
-                        lambda: self.navigate_to_note.emit(task_data['note_id'])
-                    )
-                    menu.addAction(goto_note_action)
-                    menu.addSeparator()
-
-                # Действия в зависимости от статуса задачи
-                if task_data['is_completed']:
-                    mark_incomplete_action = QAction("Отметить как невыполненную", self)
-                    mark_incomplete_action.triggered.connect(
-                        lambda: self.toggle_task(task_data['task_id'], False)
-                    )
-                    menu.addAction(mark_incomplete_action)
-                else:
-                    mark_complete_action = QAction("Отметить как выполненную", self)
-                    mark_complete_action.triggered.connect(
-                        lambda: self.toggle_task(task_data['task_id'], True)
-                    )
-                    menu.addAction(mark_complete_action)
-
-                menu.exec(self.mapToGlobal(position))
-                break
-
-    def toggle_task(self, task_id, is_completed):
-        """Переключает статус задачи"""
-        success = self.task_manager.update_task(task_id, is_completed=is_completed)
-        if success:
-            # Находим и обновляем чекбокс
-            for i in range(self.tasks_layout.count()):
-                widget = self.tasks_layout.itemAt(i).widget()
-                if (hasattr(widget, 'task_data') and
-                        widget.task_data['task_id'] == task_id):
-
-                    widget.task_data['checkbox'].setChecked(is_completed)
-                    self.update_task_display(task_id, is_completed)
-                    self.task_toggled.emit(task_id, is_completed)
-
-                    # Обновляем список если задача выполнена
-                    if is_completed:
-                        from PyQt6.QtCore import QTimer
-                        QTimer.singleShot(500, self.load_tasks)
-                    break
+    def on_sort_changed(self):
+        """Обработчик изменения сортировки"""
+        self.load_tasks()
 
     def refresh(self):
         """Обновляет список задач"""
         self.load_tasks()
-
-    def mousePressEvent(self, event):
-        """Обработчик клика по виджету для контекстного меню"""
-        if event.button() == Qt.MouseButton.RightButton:
-            self.show_context_menu(event.pos())
-        else:
-            super().mousePressEvent(event)

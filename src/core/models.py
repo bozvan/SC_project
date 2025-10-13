@@ -126,7 +126,8 @@ class Task:
                  due_date: Optional[datetime] = None,
                  note_id: Optional[int] = None,
                  created_date: Optional[datetime] = None,
-                 updated_date: Optional[datetime] = None):
+                 modified_date: Optional[datetime] = None,
+                 priority: str = "medium"):
         """
         Инициализация задачи
 
@@ -137,15 +138,17 @@ class Task:
             due_date: Срок выполнения
             note_id: ID родительской заметки
             created_date: Дата создания
-            updated_date: Дата обновления
+            modified_date: Дата обновления
+            priority: Приоритет задачи
         """
         self.id = task_id
         self.description = description
         self.is_completed = is_completed
         self.due_date = due_date
         self.note_id = note_id
-        self.created_date = created_date if created_date else datetime.now()
-        self.updated_date = updated_date if updated_date else datetime.now()
+        self.created_date = created_date or datetime.now()
+        self.modified_date = modified_date or datetime.now()
+        self.priority = priority  # "high", "medium", "low"
         self.note_title = None  # Для отображения контекста в виджетах
 
     def __str__(self) -> str:
@@ -154,9 +157,10 @@ class Task:
         due_info = f" (до {self.due_date.strftime('%d.%m.%Y')})" if self.due_date else ""
         return f"Task({status} '{self.description}'{due_info})"
 
-    def __repr__(self) -> str:
-        """Представление для отладки"""
-        return f"Task(id={self.id}, note_id={self.note_id}, desc='{self.description[:20]}...', completed={self.is_completed})"
+    def __repr__(self):
+        return (f"Task(id={self.id}, description='{self.description}', "
+                f"completed={self.is_completed}, priority='{self.priority}', "
+                f"due_date={self.due_date}, note_id={self.note_id})")
 
     def toggle_completion(self) -> None:
         """Переключает статус выполнения задачи"""

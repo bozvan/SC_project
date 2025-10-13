@@ -1,7 +1,9 @@
 import os
 import sys
 import traceback
-from PyQt6 import QtWidgets
+from datetime import datetime
+
+from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QPushButton, QScrollArea, \
     QWidget, QLabel, QHBoxLayout, QVBoxLayout
@@ -453,7 +455,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.refresh_upcoming_tasks()
 
     def setup_tasks_area(self):
-        """Создает область для задач под редактором"""
+        """Создает область для задач под редактором с расширенными возможностями"""
         # Создаем контейнер для задач
         self.tasks_container = QWidget()
         tasks_layout = QVBoxLayout(self.tasks_container)
@@ -476,21 +478,147 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.tasks_scroll.setWidget(self.tasks_widget)
         tasks_layout.addWidget(self.tasks_scroll)
 
-        # Кнопка добавления задачи
-        add_task_layout = QHBoxLayout()
-        self.new_task_input = QLineEdit()
-        self.new_task_input.setPlaceholderText("Новая задача...")
-        self.new_task_input.returnPressed.connect(self.add_task)
-
-        self.add_task_btn = QPushButton("Добавить")
-        self.add_task_btn.clicked.connect(self.add_task)
-
-        add_task_layout.addWidget(self.new_task_input)
-        add_task_layout.addWidget(self.add_task_btn)
-        tasks_layout.addLayout(add_task_layout)
+        # РАСШИРЕННАЯ ФОРМА ДОБАВЛЕНИЯ ЗАДАЧИ
+        self.setup_expanded_task_form(tasks_layout)
 
         # Добавляем контейнер задач в основной layout
         self.verticalLayout_2.addWidget(self.tasks_container)
+
+    def setup_expanded_task_form(self, parent_layout):
+        """Настраивает расширенную форму добавления задачи"""
+        # Основной контейнер для формы
+        self.task_form_container = QWidget()
+        task_form_layout = QVBoxLayout(self.task_form_container)
+        task_form_layout.setContentsMargins(0, 5, 0, 5)
+
+        # Первая строка - описание задачи
+        description_layout = QHBoxLayout()
+        self.new_task_input = QLineEdit()
+        self.new_task_input.setPlaceholderText("Описание задачи...")
+        self.new_task_input.returnPressed.connect(self.on_task_form_submit)
+
+        self.add_task_btn = QPushButton("Добавить")
+        self.add_task_btn.clicked.connect(self.on_task_form_submit)
+
+        description_layout.addWidget(self.new_task_input)
+        description_layout.addWidget(self.add_task_btn)
+
+        # Вторая строка - расширенные опции (изначально скрыты)
+        self.extended_options_container = QWidget()
+        extended_layout = QHBoxLayout(self.extended_options_container)
+        extended_layout.setContentsMargins(0, 5, 0, 0)
+
+        # Приоритет
+        priority_layout = QHBoxLayout()
+        priority_layout.addWidget(QLabel("Приоритет:"))
+        self.priority_combo = QtWidgets.QComboBox()
+        self.priority_combo.addItems(["🔴 Высокий", "🟡 Средний", "🟢 Низкий"])
+        self.priority_combo.setCurrentText("🟡 Средний")  # По умолчанию
+        priority_layout.addWidget(self.priority_combo)
+        priority_layout.addStretch()
+
+        # Срок выполнения
+        due_date_layout = QHBoxLayout()
+        due_date_layout.addWidget(QLabel("Срок:"))
+        self.due_date_edit = QtWidgets.QDateEdit()
+        self.due_date_edit.setCalendarPopup(True)
+        self.due_date_edit.setDate(QtCore.QDate.currentDate())
+        self.due_date_edit.setMinimumDate(QtCore.QDate.currentDate())
+        due_date_layout.addWidget(self.due_date_edit)
+        due_date_layout.addStretch()
+
+        # Кнопка очистки срока
+        self.clear_due_date_btn = QPushButton("×")
+        self.clear_due_date_btn.setFixedSize(20, 20)
+        self.clear_due_date_btn.setToolTip("Очистить срок")
+        self.clear_due_date_btn.clicked.connect(self.clear_due_date)
+        due_date_layout.addWidget(self.clear_due_date_btn)
+
+        extended_layout.addLayout(priority_layout)
+        extended_layout.addLayout(due_date_layout)
+        extended_layout.addStretch()
+
+        # Изначально скрываем расширенные опции
+        self.extended_options_container.setVisible(False)
+
+        # Кнопка показа/скрытия расширенных опций
+        self.toggle_options_btn = QPushButton("⚙️ Дополнительно")
+        self.toggle_options_btn.setCheckable(True)
+        self.toggle_options_btn.setChecked(False)
+        self.toggle_options_btn.clicked.connect(self.toggle_extended_options)
+
+        # Собираем всю форму
+        task_form_layout.addLayout(description_layout)
+        task_form_layout.addWidget(self.toggle_options_btn)
+        task_form_layout.addWidget(self.extended_options_container)
+
+        parent_layout.addWidget(self.task_form_container)
+
+    def toggle_extended_options(self, checked):
+        """Переключает видимость расширенных опций"""
+        self.extended_options_container.setVisible(checked)
+        if checked:
+            self.toggle_options_btn.setText("⚙️ Скрыть")
+        else:
+            self.toggle_options_btn.setText("⚙️ Дополнительно")
+
+    def clear_due_date(self):
+        """Очищает срок выполнения"""
+        self.due_date_edit.setDate(QtCore.QDate.currentDate())
+
+    def on_task_form_submit(self):
+        """Обработчик отправки формы задачи"""
+        if not self.current_note_id:
+            QMessageBox.warning(self, "Ошибка", "Сначала создайте или откройте заметку!")
+            return
+
+        description = self.new_task_input.text().strip()
+        if not description:
+            return
+
+        # Получаем приоритет
+        priority_text = self.priority_combo.currentText()
+        priority_map = {
+            "🔴 Высокий": "high",
+            "🟡 Средний": "medium",
+            "🟢 Низкий": "low"
+        }
+        priority = priority_map.get(priority_text, "medium")
+
+        # Получаем срок выполнения (если установлен)
+        due_date = None
+        selected_date = self.due_date_edit.date()
+        if selected_date > QtCore.QDate.currentDate():
+            due_date = QtCore.QDateTime(selected_date, QtCore.QTime(23, 59)).toPyDateTime()
+
+        # Создаем задачу в БД
+        task = self.task_manager.create_task(
+            note_id=self.current_note_id,
+            description=description,
+            due_date=due_date,
+            priority=priority
+        )
+
+        if task:
+            self.add_task_widget(task)  # Уже включает сортировку
+            self.clear_task_form()
+
+            # Автоматически обновляем список предстоящих задач
+            self.refresh_upcoming_tasks()
+            self.on_note_modified()
+
+            print(f"✅ Задача создана: {description} (приоритет: {priority})")
+
+    def clear_task_form(self):
+        """Очищает форму добавления задачи"""
+        self.new_task_input.clear()
+        self.priority_combo.setCurrentText("🟡 Средний")
+        self.due_date_edit.setDate(QtCore.QDate.currentDate())
+
+        # Скрываем расширенные опции
+        self.toggle_options_btn.setChecked(False)
+        self.extended_options_container.setVisible(False)
+        self.toggle_options_btn.setText("⚙️ Дополнительно")
 
     def add_task(self):
         """Добавляет новую задачу"""
@@ -520,30 +648,176 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             print("✅ Список предстоящих задач обновлен")
 
     def add_task_widget(self, task):
-        """Добавляет виджет задачи"""
+        """Добавляет виджет задачи с отображением приоритета и срока"""
         task_widget = QWidget()
         layout = QHBoxLayout(task_widget)
         layout.setContentsMargins(5, 2, 5, 2)
 
-        checkbox = QCheckBox(task.description)
+        # Чекбокс с дополнительной информацией
+        task_text = task.description
+
+        # Добавляем иконку приоритета
+        priority_icons = {
+            "high": "🔴",
+            "medium": "🟡",
+            "low": "🟢"
+        }
+        priority_icon = priority_icons.get(task.priority, "🟡")
+
+        # Добавляем информацию о сроке
+        due_info = ""
+        if task.due_date:
+            due_date_str = task.due_date.strftime('%d.%m.%Y')
+            due_info = f" (до {due_date_str})"
+
+        checkbox = QCheckBox(f"{priority_icon} {task_text}{due_info}")
         checkbox.setChecked(task.is_completed)
         checkbox.stateChanged.connect(
             lambda state, task_id=task.id: self.on_task_toggled(task_id, state)
+        )
+
+        # Кнопка редактирования
+        edit_btn = QPushButton("✏️")
+        edit_btn.setFixedSize(25, 25)
+        edit_btn.setToolTip("Редактировать задачу")
+        edit_btn.clicked.connect(
+            lambda checked, task_id=task.id: self.edit_task(task_id)
         )
 
         # Кнопка удаления
         delete_btn = QPushButton("×")
         delete_btn.setFixedSize(20, 20)
         delete_btn.setStyleSheet("font-weight: bold; color: red;")
+        delete_btn.setToolTip("Удалить задачу")
         delete_btn.clicked.connect(
             lambda checked, task_id=task.id, widget=task_widget: self.delete_task(task_id, widget)
         )
 
         layout.addWidget(checkbox)
         layout.addStretch()
+        layout.addWidget(edit_btn)
         layout.addWidget(delete_btn)
 
         self.tasks_layout.addWidget(task_widget)
+        self.sort_tasks()
+
+    def sort_tasks(self):
+        """Сортирует задачи по приоритету и сроку выполнения"""
+        if not hasattr(self, 'tasks_layout') or self.tasks_layout.count() == 0:
+            return
+
+        # Если есть текущая заметка, перезагружаем задачи с сортировкой из БД
+        if hasattr(self, 'current_note_id') and self.current_note_id:
+            self.load_tasks_for_note(self.current_note_id)
+
+    def edit_task(self, task_id):
+        """Редактирование существующей задачи"""
+        task = self.task_manager.get_task(task_id)
+        if not task:
+            return
+
+        # Создаем диалог редактирования
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Редактировать задачу")
+        dialog.setModal(True)
+        dialog.setFixedWidth(400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Описание
+        layout.addWidget(QLabel("Описание:"))
+        description_edit = QLineEdit(task.description)
+        layout.addWidget(description_edit)
+
+        # Приоритет
+        priority_layout = QHBoxLayout()
+        priority_layout.addWidget(QLabel("Приоритет:"))
+        priority_combo = QtWidgets.QComboBox()
+        priority_combo.addItems(["🔴 Высокий", "🟡 Средний", "🟢 Низкий"])
+
+        # Устанавливаем текущий приоритет
+        priority_map_reverse = {
+            "high": "🔴 Высокий",
+            "medium": "🟡 Средний",
+            "low": "🟢 Низкий"
+        }
+        priority_combo.setCurrentText(priority_map_reverse.get(task.priority, "🟡 Средний"))
+        priority_layout.addWidget(priority_combo)
+        priority_layout.addStretch()
+        layout.addLayout(priority_layout)
+
+        # Срок выполнения
+        due_date_layout = QHBoxLayout()
+        due_date_layout.addWidget(QLabel("Срок:"))
+        due_date_edit = QtWidgets.QDateEdit()
+        due_date_edit.setCalendarPopup(True)
+
+        if task.due_date:
+            due_date_edit.setDate(QtCore.QDate(
+                task.due_date.year,
+                task.due_date.month,
+                task.due_date.day
+            ))
+        else:
+            due_date_edit.setDate(QtCore.QDate.currentDate())
+
+        due_date_edit.setMinimumDate(QtCore.QDate.currentDate())
+        due_date_layout.addWidget(due_date_edit)
+
+        # Кнопка очистки срока
+        clear_due_date_btn = QPushButton("×")
+        clear_due_date_btn.setFixedSize(20, 20)
+        clear_due_date_btn.setToolTip("Очистить срок")
+        clear_due_date_btn.clicked.connect(lambda: due_date_edit.setDate(QtCore.QDate.currentDate()))
+        due_date_layout.addWidget(clear_due_date_btn)
+        due_date_layout.addStretch()
+        layout.addLayout(due_date_layout)
+
+        # Кнопки
+        button_layout = QHBoxLayout()
+        save_btn = QPushButton("Сохранить")
+        cancel_btn = QPushButton("Отмена")
+
+        save_btn.clicked.connect(dialog.accept)
+        cancel_btn.clicked.connect(dialog.reject)
+
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            # Обновляем задачу
+            new_description = description_edit.text().strip()
+            if not new_description:
+                QMessageBox.warning(self, "Ошибка", "Описание не может быть пустым!")
+                return
+
+            new_priority_text = priority_combo.currentText()
+            new_priority_map = {
+                "🔴 Высокий": "high",
+                "🟡 Средний": "medium",
+                "🟢 Низкий": "low"
+            }
+            new_priority = new_priority_map.get(new_priority_text, "medium")
+
+            new_due_date = None
+            selected_date = due_date_edit.date()
+            if selected_date > QtCore.QDate.currentDate():
+                new_due_date = QtCore.QDateTime(selected_date, QtCore.QTime(23, 59)).toPyDateTime()
+
+            success = self.task_manager.update_task(
+                task_id,
+                description=new_description,
+                priority=new_priority,
+                due_date=new_due_date
+            )
+
+            if success:
+                print(f"✅ Задача {task_id} обновлена")
+                # ПЕРЕЗАГРУЖАЕМ ВСЕ ЗАДАЧИ С СОРТИРОВКОЙ
+                self.load_tasks_for_note(self.current_note_id)
+                self.refresh_upcoming_tasks()
+                self.on_note_modified()
 
     def on_task_toggled(self, task_id, state):
         """Обработчик переключения чекбокса в редакторе заметки"""
@@ -557,6 +831,9 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
             # Обновляем состояние заметки
             self.on_note_modified()
+
+            # СОРТИРУЕМ ЗАДАЧИ ПОСЛЕ ИЗМЕНЕНИЯ СТАТУСА
+            self.sort_tasks()
         else:
             print(f"❌ Ошибка обновления задачи {task_id}")
 
@@ -572,8 +849,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
             self.on_note_modified()
 
+            # СОРТИРОВКА НЕ НУЖНА - просто удалили элемент
+
     def load_tasks_for_note(self, note_id):
-        """Загружает задачи для заметки"""
+        """Загружает задачи для заметки с автоматической сортировкой"""
         # Очищаем старые задачи
         for i in reversed(range(self.tasks_layout.count())):
             widget = self.tasks_layout.itemAt(i).widget()
@@ -584,12 +863,79 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         if not note_id:
             return
 
-        # Загружаем новые задачи
+        # Загружаем новые задачи ИЗ БД С СОРТИРОВКОЙ
         tasks = self.task_manager.get_tasks_for_note(note_id)
+
+        # Сортируем задачи по приоритету и сроку
+        priority_order = {"high": 1, "medium": 2, "low": 3}
+        tasks.sort(key=lambda task: (
+            priority_order.get(task.priority, 2),  # Сначала по приоритету
+            task.due_date or datetime(9999, 12, 31),  # Затем по сроку (без срока - в конец)
+            task.description.lower()  # Затем по описанию
+        ))
+
         for task in tasks:
-            self.add_task_widget(task)
+            self.add_task_widget_without_sort(task)  # Добавляем без повторной сортировки
 
         print(f"✅ Загружено {len(tasks)} задач для заметки {note_id}")
+
+    def add_task_widget_without_sort(self, task):
+        """Добавляет виджет задачи без вызова сортировки (для использования в load_tasks_for_note)"""
+        task_widget = QWidget()
+        layout = QHBoxLayout(task_widget)
+        layout.setContentsMargins(5, 2, 5, 2)
+
+        # Чекбокс с дополнительной информацией
+        task_text = task.description
+
+        # Добавляем иконку приоритета
+        priority_icons = {
+            "high": "🔴",
+            "medium": "🟡",
+            "low": "🟢"
+        }
+        priority_icon = priority_icons.get(task.priority, "🟡")
+
+        # Добавляем информацию о сроке
+        due_info = ""
+        if task.due_date:
+            due_date_str = task.due_date.strftime('%d.%m.%Y')
+            due_info = f" (до {due_date_str})"
+
+        checkbox = QCheckBox(f"{priority_icon} {task_text}{due_info}")
+        checkbox.setChecked(task.is_completed)
+        checkbox.stateChanged.connect(
+            lambda state, task_id=task.id: self.on_task_toggled(task_id, state)
+        )
+
+        # Кнопка редактирования
+        edit_btn = QPushButton("✏️")
+        edit_btn.setFixedSize(25, 25)
+        edit_btn.setToolTip("Редактировать задачу")
+        edit_btn.clicked.connect(
+            lambda checked, task_id=task.id: self.edit_task(task_id)
+        )
+
+        # Кнопка удаления
+        delete_btn = QPushButton("×")
+        delete_btn.setFixedSize(20, 20)
+        delete_btn.setStyleSheet("font-weight: bold; color: red;")
+        delete_btn.setToolTip("Удалить задачу")
+        delete_btn.clicked.connect(
+            lambda checked, task_id=task.id, widget=task_widget: self.delete_task(task_id, widget)
+        )
+
+        layout.addWidget(checkbox)
+        layout.addStretch()
+        layout.addWidget(edit_btn)
+        layout.addWidget(delete_btn)
+
+        self.tasks_layout.addWidget(task_widget)
+
+    def add_task_widget(self, task):
+        """Добавляет виджет задачи и сортирует список"""
+        self.add_task_widget_without_sort(task)
+        self.sort_tasks()  # Теперь просто перезагружает с сортировкой из БД
 
     def setup_rich_editor(self):
         """Замена стандартного QTextEdit на наш RichTextEditor"""

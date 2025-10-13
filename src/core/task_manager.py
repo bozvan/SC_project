@@ -1,6 +1,5 @@
-import sqlite3
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 from .models import Task
 from .database_manager import DatabaseManager
 
@@ -16,9 +15,66 @@ class TaskManager:
             db_manager: Экземпляр DatabaseManager для работы с БД
         """
         self.db = db_manager
+        self._create_tasks_table()
         print("✅ Менеджер задач инициализирован")
 
-    def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None, is_completed: bool = False) -> Optional[Task]:
+    def _create_tasks_table(self):
+        """Создает таблицу задач с поддержкой приоритетов если не существует"""
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Сначала проверяем существование таблицы
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='tasks'
+                """)
+                table_exists = cursor.fetchone()
+
+                if table_exists:
+                    # Проверяем существование колонки priority
+                    cursor.execute("PRAGMA table_info(tasks)")
+                    columns = [column[1] for column in cursor.fetchall()]
+
+                    if 'priority' not in columns:
+                        print("🔧 Добавляем колонку priority в таблицу tasks")
+                        cursor.execute("""
+                            ALTER TABLE tasks 
+                            ADD COLUMN priority TEXT DEFAULT 'medium' 
+                            CHECK(priority IN ('high', 'medium', 'low'))
+                        """)
+
+                    # Также проверяем другие необходимые колонки
+                    if 'due_date' not in columns:
+                        print("🔧 Добавляем колонку due_date в таблицу tasks")
+                        cursor.execute("""
+                            ALTER TABLE tasks 
+                            ADD COLUMN due_date DATETIME
+                        """)
+                else:
+                    # Создаем таблицу с нуля
+                    cursor.execute("""
+                        CREATE TABLE tasks (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            note_id INTEGER NOT NULL,
+                            description TEXT NOT NULL,
+                            is_completed BOOLEAN DEFAULT FALSE,
+                            priority TEXT DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
+                            due_date DATETIME,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
+                        )
+                    """)
+                    print("✅ Таблица задач создана с поддержкой приоритетов и сроков")
+
+                conn.commit()
+
+        except Exception as e:
+            print(f"❌ Ошибка при создании/обновлении таблицы задач: {e}")
+
+    def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None,
+                    priority: str = "medium", is_completed: bool = False) -> Optional[Task]:
         """
         Создает новую задачу для указанной заметки
 
@@ -26,6 +82,7 @@ class TaskManager:
             note_id: ID заметки, к которой привязана задача
             description: Описание задачи
             due_date: Срок выполнения (опционально)
+            priority: Приоритет задачи ('high', 'medium', 'low')
             is_completed: Статус выполнения (по умолчанию False)
 
         Returns:
@@ -34,6 +91,11 @@ class TaskManager:
         if not description or not description.strip():
             print("❌ Ошибка: описание задачи не может быть пустым")
             return None
+
+        # Валидация приоритета
+        if priority not in ['high', 'medium', 'low']:
+            print(f"⚠️  Неверный приоритет '{priority}', установлен 'medium'")
+            priority = 'medium'
 
         description = description.strip()
 
@@ -50,9 +112,10 @@ class TaskManager:
 
                 # Вставляем задачу
                 cursor.execute(
-                    """INSERT INTO tasks (note_id, description, due_date, is_completed, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
-                    (note_id, description, due_date.isoformat() if due_date else None, 1 if is_completed else 0)
+                    """INSERT INTO tasks (note_id, description, due_date, priority, is_completed, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+                    (note_id, description, due_date.isoformat() if due_date else None, priority,
+                     1 if is_completed else 0)
                 )
                 task_id = cursor.lastrowid
                 conn.commit()
@@ -63,7 +126,8 @@ class TaskManager:
                         is_completed=is_completed,
                         task_id=task_id,
                         due_date=due_date,
-                        note_id=note_id
+                        note_id=note_id,
+                        priority=priority
                     )
                     task.note_title = note_result[1]
                     print(f"✅ Задача создана: {task}")
@@ -90,7 +154,7 @@ class TaskManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
                               t.created_at, t.updated_at, n.title
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
@@ -100,7 +164,7 @@ class TaskManager:
                 result = cursor.fetchone()
 
                 if result:
-                    (task_id, note_id, description, is_completed, due_date_str,
+                    (task_id, note_id, description, is_completed, priority, due_date_str,
                      created_at, updated_at, note_title) = result
 
                     # Преобразуем строки в datetime
@@ -115,7 +179,8 @@ class TaskManager:
                         due_date=due_date,
                         note_id=note_id,
                         created_date=created_date,
-                        updated_date=updated_date
+                        modified_date=updated_date,
+                        priority=priority or 'medium'  # Защита от None
                     )
                     task.note_title = note_title
 
@@ -142,20 +207,35 @@ class TaskManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """SELECT t.id, t.description, t.is_completed, t.due_date, 
+                    """SELECT t.id, t.description, t.is_completed, t.priority, t.due_date, 
                               t.created_at, t.updated_at, n.title
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.note_id = ? 
-                    ORDER BY t.created_at ASC""",  # ИЗМЕНИЛ: сортируем по дате создания
+                    ORDER BY 
+                        CASE priority 
+                            WHEN 'high' THEN 1 
+                            WHEN 'medium' THEN 2 
+                            WHEN 'low' THEN 3 
+                        END,
+                        t.due_date ASC,
+                        t.created_at ASC""",
                     (note_id,)
                 )
                 results = cursor.fetchall()
 
                 tasks = []
-                for (task_id, description, is_completed, due_date_str,
+                for (task_id, description, is_completed, priority, due_date_str,
                      created_at, updated_at, note_title) in results:
-                    due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+
+                    # ПРЕОБРАЗОВАНИЕ ДАТЫ
+                    due_date = None
+                    if due_date_str:
+                        try:
+                            due_date = datetime.fromisoformat(due_date_str)
+                        except ValueError as e:
+                            print(f"⚠️ Ошибка преобразования даты '{due_date_str}': {e}")
+
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
                     updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
@@ -163,15 +243,14 @@ class TaskManager:
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date,
+                        due_date=due_date,  # УБЕДИТЕСЬ ЧТО ЭТО ПЕРЕДАЕТСЯ
                         note_id=note_id,
                         created_date=created_date,
-                        updated_date=updated_date
+                        modified_date=updated_date,
+                        priority=priority  # УБЕДИТЕСЬ ЧТО ЭТО ПЕРЕДАЕТСЯ
                     )
                     task.note_title = note_title
                     tasks.append(task)
-
-                    print(f"   📋 Задача {task_id}: '{description}' -> выполнена={bool(is_completed)}")
 
                 print(f"✅ Загружено задач для заметки {note_id}: {len(tasks)}")
                 return tasks
@@ -181,7 +260,8 @@ class TaskManager:
             return []
 
     def update_task(self, task_id: int, description: Optional[str] = None,
-                    is_completed: Optional[bool] = None, due_date: Optional[datetime] = None) -> bool:
+                    is_completed: Optional[bool] = None, due_date: Optional[datetime] = None,
+                    priority: Optional[str] = None) -> bool:
         """
         Обновляет данные задачи
 
@@ -190,6 +270,7 @@ class TaskManager:
             description: Новое описание
             is_completed: Новый статус выполнения
             due_date: Новый срок выполнения
+            priority: Новый приоритет
 
         Returns:
             bool: True если обновление успешно
@@ -198,6 +279,11 @@ class TaskManager:
         existing_task = self.get_task(task_id)
         if not existing_task:
             return False
+
+        # Валидация приоритета
+        if priority is not None and priority not in ['high', 'medium', 'low']:
+            print(f"⚠️  Неверный приоритет '{priority}', приоритет не изменен")
+            priority = None
 
         try:
             with self.db._get_connection() as conn:
@@ -214,12 +300,18 @@ class TaskManager:
                     update_fields.append("is_completed = ?")
                     update_values.append(1 if is_completed else 0)
 
+                # ИСПРАВЛЕНИЕ: Не сбрасываем due_date если он не указан явно
                 if due_date is not None:
                     update_fields.append("due_date = ?")
                     update_values.append(due_date.isoformat() if due_date else None)
-                elif due_date is None and existing_task.due_date is not None:
-                    # Явное удаление due_date
-                    update_fields.append("due_date = NULL")
+                # УБИРАЕМ эту часть - она сбрасывает дедлайн!
+                # elif due_date is None and existing_task.due_date is not None:
+                #     # Явное удаление due_date
+                #     update_fields.append("due_date = NULL")
+
+                if priority is not None:
+                    update_fields.append("priority = ?")
+                    update_values.append(priority)
 
                 # Всегда обновляем updated_at
                 update_fields.append("updated_at = CURRENT_TIMESTAMP")
@@ -239,6 +331,163 @@ class TaskManager:
         except Exception as e:
             print(f"❌ Ошибка при обновлении задачи с ID {task_id}: {e}")
             return False
+
+    def get_tasks_by_priority(self, priority: str) -> List[Task]:
+        """
+        Возвращает задачи по приоритету
+
+        Args:
+            priority: Приоритет ('high', 'medium', 'low')
+
+        Returns:
+            List[Task]: Список задач с указанным приоритетом
+        """
+        if priority not in ['high', 'medium', 'low']:
+            print(f"❌ Неверный приоритет: {priority}")
+            return []
+
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.priority = ? 
+                    ORDER BY t.due_date, t.created_at""",
+                    (priority,)
+                )
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, task_priority, due_date_str,
+                     created_at, updated_at, note_title) in results:
+                    due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=task_priority
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                print(f"✅ Найдено задач с приоритетом '{priority}': {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении задач по приоритету: {e}")
+            return []
+
+    def get_urgent_tasks(self) -> List[Task]:
+        """
+        Возвращает срочные задачи (высокий приоритет + срок в ближайшие 3 дня)
+
+        Returns:
+            List[Task]: Список срочных задач
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.priority = 'high' 
+                    AND t.due_date IS NOT NULL 
+                    AND date(t.due_date) BETWEEN date('now') AND date('now', '+3 days')
+                    AND t.is_completed = FALSE
+                    ORDER BY t.due_date ASC""",
+                )
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
+                     created_at, updated_at, note_title) in results:
+                    due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=priority
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                print(f"✅ Найдено срочных задач: {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении срочных задач: {e}")
+            return []
+
+    def get_tasks_with_due_dates(self) -> List[Task]:
+        """
+        Возвращает все задачи с установленными сроками
+
+        Returns:
+            List[Task]: Список задач со сроками
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.due_date IS NOT NULL 
+                    ORDER BY t.due_date ASC, 
+                        CASE priority 
+                            WHEN 'high' THEN 1 
+                            WHEN 'medium' THEN 2 
+                            WHEN 'low' THEN 3 
+                        END""",
+                )
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
+                     created_at, updated_at, note_title) in results:
+                    due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=priority
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                print(f"✅ Найдено задач со сроками: {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении задач со сроками: {e}")
+            return []
 
     def delete_task(self, task_id: int) -> bool:
         """
@@ -299,27 +548,29 @@ class TaskManager:
             return None
 
     def get_all_incomplete_tasks(self) -> List[Task]:
-        """
-        Возвращает все невыполненные задачи из всех заметок
-
-        Returns:
-            List[Task]: Список невыполненных задач
-        """
+        """Возвращает все невыполненные задачи из всех заметок"""
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.due_date, 
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
                               t.created_at, t.updated_at, n.title
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.is_completed = FALSE
-                    ORDER BY t.due_date, t.created_at""",
+                    ORDER BY 
+                        CASE priority 
+                            WHEN 'high' THEN 1 
+                            WHEN 'medium' THEN 2 
+                            WHEN 'low' THEN 3 
+                        END,
+                        t.due_date,
+                        t.created_at""",
                 )
                 results = cursor.fetchall()
 
                 tasks = []
-                for (task_id, note_id, description, is_completed, due_date_str,
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
                      created_at, updated_at, note_title) in results:
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
@@ -332,7 +583,8 @@ class TaskManager:
                         due_date=due_date,
                         note_id=note_id,
                         created_date=created_date,
-                        updated_date=updated_date
+                        modified_date=updated_date,
+                        priority=priority
                     )
                     task.note_title = note_title
                     tasks.append(task)
@@ -373,11 +625,12 @@ class TaskManager:
                 results = cursor.fetchall()
 
                 tasks = []
-                for (task_id, note_id, description, is_completed, due_date_str,
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
                      created_at, updated_at, note_title) in results:
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
-                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+                    modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
 
                     task = Task(
                         description=description,
@@ -386,7 +639,8 @@ class TaskManager:
                         due_date=due_date,
                         note_id=note_id,
                         created_date=created_date,
-                        updated_date=updated_date
+                        modified_date=modified_date,
+                        priority=priority
                     )
                     task.note_title = note_title
                     tasks.append(task)
@@ -438,7 +692,7 @@ class TaskManager:
                 for result in results:
                     # Безопасная распаковка с проверкой количества полей
                     if len(result) == 8:
-                        (task_id, note_id, description, is_completed, due_date_str,
+                        (task_id, note_id, description, is_completed, priority, due_date_str,
                          created_at, updated_at, note_title) = result
                     else:
                         # Альтернативная распаковка если полей меньше
@@ -447,7 +701,7 @@ class TaskManager:
 
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
                     created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
-                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+                    modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
                         description=description,
@@ -456,7 +710,8 @@ class TaskManager:
                         due_date=due_date,
                         note_id=note_id,
                         created_date=created_date,
-                        updated_date=updated_date
+                        modified_date=modified_date,
+                        priority=priority
                     )
                     task.note_title = note_title
                     tasks.append(task)

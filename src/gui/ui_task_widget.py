@@ -41,6 +41,42 @@ class Ui_TaskWidget(object):
         self.verticalLayout.addLayout(self.tasks_header)
         self.tasks_filter = QtWidgets.QHBoxLayout()
         self.tasks_filter.setObjectName("tasks_filter")
+        self.sort_combo = QtWidgets.QComboBox(parent=TaskWidget)
+        self.sort_combo.setMinimumSize(QtCore.QSize(0, 40))
+        self.sort_combo.setStyleSheet("QComboBox {\n"
+"    font-family: \"Times New Roman\";\n"
+"    font-size: 14px;\n"
+"    padding: 5px;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    font-family: \"Times New Roman\";\n"
+"    font-size: 16px;\n"
+"    font-weight: bold;\n"
+"    outline: none;  /* ← Убирает обводку при фокусе */\n"
+"    border: none;   /* ← Убирает границу если есть */\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView::item {\n"
+"    padding: 8px 12px;\n"
+"    outline: none;  /* ← Убирает обводку у пунктов */\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView::item:selected {\n"
+"    background-color: #e0e0e0;\n"
+"    color: black;\n"
+"    outline: none;  /* ← Убирает обводку у выбранного пункта */\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView::item:hover {\n"
+"    background-color: #FFAA00;\n"
+"    outline: none;  /* ← Убирает обводку при наведении */\n"
+"}")
+        self.sort_combo.setObjectName("sort_combo")
+        self.sort_combo.addItem("")
+        self.sort_combo.addItem("")
+        self.sort_combo.addItem("")
+        self.tasks_filter.addWidget(self.sort_combo)
         self.filter_combo = QtWidgets.QComboBox(parent=TaskWidget)
         self.filter_combo.setMinimumSize(QtCore.QSize(0, 40))
         self.filter_combo.setStyleSheet("QComboBox {\n"
@@ -104,6 +140,9 @@ class Ui_TaskWidget(object):
         TaskWidget.setWindowTitle(_translate("TaskWidget", "Form"))
         self.refresh_btn.setText(_translate("TaskWidget", "Предстоящие задачи"))
         self.pushButton.setText(_translate("TaskWidget", "🔄 Обновить"))
+        self.sort_combo.setItemText(0, _translate("TaskWidget", "По дате создания"))
+        self.sort_combo.setItemText(1, _translate("TaskWidget", "По сроку выполнения"))
+        self.sort_combo.setItemText(2, _translate("TaskWidget", "По приоритету"))
         self.filter_combo.setItemText(0, _translate("TaskWidget", "Все задачи"))
         self.filter_combo.setItemText(1, _translate("TaskWidget", "Только активные"))
         self.filter_combo.setItemText(2, _translate("TaskWidget", "Только выполненные"))

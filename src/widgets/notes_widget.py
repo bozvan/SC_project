@@ -20,7 +20,7 @@ try:
     from src.widgets.tags_widget import TagsWidget
     from src.core.note_manager import NoteManager
     from src.widgets.rich_text_editor import RichTextEditor
-    from src.gui.note_editor import NoteEditor
+    from src.widgets.note_editor import NoteEditorWindow
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
@@ -147,7 +147,58 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         # self.save_btn.setVisible(False)
         self.cancel_btn.setVisible(False)
 
+        # Добавляем кнопку открепления
+        self.detach_btn = QPushButton("📌 Открепить")
+        self.detach_btn.setToolTip("Открыть в отдельном окне")
+        self.detach_btn.clicked.connect(self.detach_note)
+
+        # Добавьте кнопку в ваш layout, например в заголовок:
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(QLabel("Редактор заметки"))
+        header_layout.addStretch()
+        header_layout.addWidget(self.detach_btn)
+
+        self.verticalLayout.insertLayout(0, header_layout)
+
         print("✅ UI настроен с отдельными разделами для задач и закладок")
+
+    def detach_note(self):
+        """Открепление текущей заметки в отдельное окно"""
+        if not hasattr(self, 'current_note_id') or not self.current_note_id:
+            QMessageBox.warning(self, "Предупреждение", "Сначала откройте заметку!")
+            return
+
+        try:
+            # Автосохранение текущей заметки перед откреплением
+            if hasattr(self, 'force_auto_save'):
+                self.force_auto_save()
+
+            self.editor_window = NoteEditorWindow(self.note_manager, self.current_note_id)
+            self.editor_window.note_saved.connect(self.on_note_saved_from_window)
+            self.editor_window.window_closed.connect(self.on_editor_window_closed)
+            self.editor_window.show()
+
+            # Поднимаем окно на передний план
+            self.editor_window.raise_()
+            self.editor_window.activateWindow()
+
+            print(f"📌 Заметка {self.current_note_id} откреплена в отдельное окно")
+
+        except Exception as e:
+            print(f"❌ Ошибка при создании окна редактора: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть окно редактора: {e}")
+
+    def on_note_saved_from_window(self, note_id):
+        """Обработчик сохранения заметки из отдельного окна"""
+        # Обновляем данные в основном окне
+        self.load_notes(self.search_input.text())
+        print(f"✅ Заметка {note_id} сохранена из отдельного окна")
+
+    def on_editor_window_closed(self, note_id):
+        """Обработчик закрытия окна редактора"""
+        # Включаем редактор обратно в основном окне
+        self.set_editor_enabled(True)
+        print(f"📌 Окно редактора для заметки {note_id} закрыто")
 
     def on_save_clicked(self):
         """Обработчик нажатия кнопки Сохранить"""

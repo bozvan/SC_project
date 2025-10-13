@@ -28,9 +28,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setup_ui()
         self.setup_managers()
         self.connect_signals()
-        self.show_notes_widget()
 
+        # Применяем стили ДО показа виджета заметок
         self.apply_styles()
+        self.show_notes_widget()
 
     def setup_ui(self):
         """Настройка дополнительных параметров UI"""
@@ -57,25 +58,48 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def apply_styles(self):
         """Принудительное применение стилей"""
-        button_style = """
-                    QPushButton {
-                        margin: 0px;
-                        padding: 12px 8px;
-                        border: none;
-                        border-top: 1px solid #e0e0e0;
-                        border-bottom: 1px solid #e0e0e0;
-                        border-radius: 0px;
-                        text-align: left;
-                        background-color: #8E8E8E;
-                    }
-                    QPushButton:hover {
-                        background-color: #FFAA00;
-                    }
-                    QPushButton:pressed {
-                        background-color: #e0e0e0;
-                    }
-                """
+        # Базовый стиль для неактивных кнопок
+        self.inactive_style = """
+            QPushButton {
+                margin: 0px;
+                padding: 12px 8px;
+                border: none;
+                border-top: 1px solid #e0e0e0;
+                border-bottom: 1px solid #e0e0e0;
+                border-radius: 0px;
+                text-align: left;
+                background-color: #8E8E8E;
+            }
+            QPushButton:hover {
+                background-color: #FFAA00;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """
 
+        # Стиль для активной кнопки
+        self.active_style = """
+            QPushButton {
+                margin: 0px;
+                padding: 12px 8px;
+                border: none;
+                border-top: 1px solid #e0e0e0;
+                border-bottom: 1px solid #e0e0e0;
+                border-radius: 0px;
+                text-align: left;
+                background-color: #FFAA00;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #FFBB33;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """
+
+        # Изначально все кнопки неактивны
         buttons = [
             self.btnTasks,
             self.btnNotes,
@@ -86,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         ]
 
         for button in buttons:
-            button.setStyleSheet(button_style)
+            button.setStyleSheet(self.inactive_style)
 
     def connect_signals(self):
         """Подключение сигналов кнопок"""
@@ -114,7 +138,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             notes_widget = NotesWidget()
             self.set_content_widget(notes_widget)
-            self.btnNotes.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnNotes)
         except Exception as e:
             print(f"Ошибка при создании виджета заметок: {e}")
@@ -125,20 +148,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             tasks_widget = UpcomingTasksWidget(self.task_manager, self.note_manager)
             self.set_content_widget(tasks_widget)
-            self.btnNotes.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnTasks)
         except Exception as e:
             print(f"Ошибка при создании виджета задач: {e}")
             self.show_placeholder("Виджет задач")
-        #self.btnTasks.setStyleSheet("background-color: #8e8e8e;")
-        #self.reset_other_buttons(self.btnTasks)
 
     def show_bookmarks_widget(self):
         """Показать виджет закладок"""
         try:
             bookmarks_widget = BookmarksWidget()
             self.set_content_widget(bookmarks_widget)
-            self.btnBookmarks.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnBookmarks)
         except Exception as e:
             print(f"Ошибка при создании виджета закладок: {e}")
@@ -149,7 +168,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             workspaces_widget = WorkspacesWidget()
             self.set_content_widget(workspaces_widget)
-            self.btnWorkspaces.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnWorkspaces)
         except Exception as e:
             print(f"Ошибка при создании виджета рабочих пространств: {e}")
@@ -160,7 +178,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             settings_widget = SettingsWidget()
             self.set_content_widget(settings_widget)
-            self.btnSettings.setStyleSheet("background-color: #8e8e8e;")
             self.reset_other_buttons(self.btnSettings)
         except Exception as e:
             print(f"Ошибка при создании виджета настроек: {e}")
@@ -183,10 +200,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.btnChangetheme
         ]
 
+        # Сначала устанавливаем всем неактивный стиль
         for button in buttons:
-            if button != active_button:
-                button.setStyleSheet("")
-        self.apply_styles()
+            button.setStyleSheet(self.inactive_style)
+
+        # Затем устанавливаем активный стиль для выбранной кнопки
+        active_button.setStyleSheet(self.active_style)
 
     def toggle_theme(self):
         """Переключение темы (заглушка)"""

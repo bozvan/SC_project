@@ -43,10 +43,10 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         self.search_input.clear()
 
     def load_bookmarks(self, search_text: str = ""):
-        """Загружает и отображает закладки"""
+        """Загружает и отображает закладки ТОЛЬКО для текущего workspace"""
         self.bookmarks_list.clear()
 
-        # Получаем закладки для текущего workspace
+        # Получаем закладки ТОЛЬКО для текущего workspace
         bookmarks = self.bookmark_manager.get_bookmarks_by_workspace(self.workspace_id)
 
         # Фильтруем по поисковому запросу
@@ -86,7 +86,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         widget.open_requested.connect(self.open_in_browser)
         widget.description_changed.connect(self.on_description_changed)
         widget.edit_requested.connect(self.edit_bookmark)
-        widget.delete_requested.connect(self.delete_bookmark)  # НОВЫЙ СИГНАЛ
+        widget.delete_requested.connect(self.delete_bookmark)
 
         return widget
 
@@ -211,10 +211,19 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         """Обработчик добавления новой закладки"""
         from src.widgets.add_bookmark_dialog import AddBookmarkDialog
 
-        # Передаем только 2 аргумента: bookmark_manager и parent
-        dialog = AddBookmarkDialog(self.bookmark_manager, self)
-        dialog.bookmark_added.connect(self.on_bookmark_added)
-        dialog.exec()
+        try:
+            # ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
+            print(f"🔍 Отладка BookmarksWidget.on_add_bookmark():")
+            print(f"   - Текущий workspace_id: {self.workspace_id} (тип: {type(self.workspace_id)})")
+            print(f"   - Bookmark Manager: {type(self.bookmark_manager)}")
+            print(f"   - Parent: {type(self)}")
+
+            dialog = AddBookmarkDialog(self.bookmark_manager, self.workspace_id, self)
+            dialog.bookmark_added.connect(self.on_bookmark_added)
+            dialog.exec()
+        except Exception as e:
+            print(f"❌ Ошибка при создании диалога добавления закладки: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть диалог добавления закладки: {str(e)}")
 
     def on_bookmark_added(self):
         """Обработчик добавления новой закладки"""

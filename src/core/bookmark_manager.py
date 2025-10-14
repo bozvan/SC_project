@@ -54,7 +54,7 @@ class BookmarkManager:
             title: Заголовок закладки
             description: Описание закладки
             tags: Список тегов
-            favicon_url: URL иконки
+            favicon_url: URL иконки (строка или None)
             workspace_id: ID рабочего пространства
 
         Returns:
@@ -76,6 +76,15 @@ class BookmarkManager:
         if not title.strip():
             title = self._extract_domain(normalized_url)
 
+        # ВАЖНО: Проверяем и нормализуем favicon_url
+        normalized_favicon_url = None
+        if favicon_url is not None:
+            if isinstance(favicon_url, str) and favicon_url.strip():
+                normalized_favicon_url = favicon_url.strip()
+            else:
+                print(f"⚠️  Некорректный favicon_url: {type(favicon_url)}, установлен None")
+                normalized_favicon_url = None
+
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
@@ -84,7 +93,7 @@ class BookmarkManager:
                 cursor.execute(
                     """INSERT INTO bookmarks (url, title, description, favicon_url, workspace_id) 
                     VALUES (?, ?, ?, ?, ?)""",
-                    (normalized_url, title.strip(), description.strip(), favicon_url, workspace_id)
+                    (normalized_url, title.strip(), description.strip(), normalized_favicon_url, workspace_id)
                 )
                 bookmark_id = cursor.lastrowid
 
@@ -112,12 +121,12 @@ class BookmarkManager:
                     title=title,
                     description=description,
                     bookmark_id=bookmark_id,
-                    favicon_url=favicon_url,
+                    favicon_url=normalized_favicon_url,
                     workspace_id=workspace_id
                 )
                 bookmark.tags = tag_objects
 
-                print(f"✅ Закладка создана: {bookmark}")
+                print(f"✅ Закладка создана: {bookmark} в workspace {workspace_id}")
                 if tag_objects:
                     print(f"   🏷️ Привязаны теги: {[tag.name for tag in tag_objects]}")
 
@@ -238,7 +247,6 @@ class BookmarkManager:
         except Exception as e:
             print(f"❌ Ошибка при обновлении закладки {bookmark_id}: {e}")
             return False
-
 
     def update(self, bookmark_id: int, title: Optional[str] = None,
                description: Optional[str] = None, tags: Optional[List[str]] = None,
@@ -579,19 +587,16 @@ class BookmarkManager:
     def parse_url_metadata(self, url: str) -> Dict[str, Optional[str]]:
         """
         Извлекает метаданные из веб-страницы
-
-        Args:
-            url: URL для парсинга
-
-        Returns:
-            Dict с title, description и другими метаданными
         """
         try:
             print(f"🔍 Получение метаданных для: {url}")
 
-            # Делаем запрос с таймаутом
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()  # Проверяем статус ответа
+            # Увеличиваем таймаут для YouTube и других тяжелых сайтов
+            timeout = 15 if 'youtube.com' in url or 'youtu.be' in url else 10
+
+            # Делаем запрос с увеличенным таймаутом
+            response = self.session.get(url, timeout=timeout)
+            response.raise_for_status()
 
             # Парсим HTML
             soup = BeautifulSoup(response.content, 'html.parser')
@@ -714,29 +719,34 @@ class BookmarkManager:
                                    workspace_id: int = 1) -> Optional[WebBookmark]:
         """
         Добавляет закладку с автоматическим получением метаданных
-
-        Args:
-            url: URL веб-страницы
-            tags: Список тегов для закладки
-            workspace_id: ID рабочего пространства
-
-        Returns:
-            WebBookmark: Созданная закладка или None при ошибке
         """
         try:
             print(f"📥 Добавление закладки: {url}")
 
+            # ПРОВЕРКА И НОРМАЛИЗАЦИЯ workspace_id
+            normalized_workspace_id = 1
+            if isinstance(workspace_id, int):
+                normalized_workspace_id = workspace_id
+            else:
+                print(f"⚠️  workspace_id имеет неверный тип: {type(workspace_id)}, преобразуем в int")
+                try:
+                    normalized_workspace_id = int(workspace_id) if workspace_id else 1
+                except (ValueError, TypeError):
+                    print(f"⚠️  Не удалось преобразовать workspace_id, используем значение по умолчанию 1")
+                    normalized_workspace_id = 1
+
+            print(f"🔍 Используем workspace_id: {normalized_workspace_id}")
+
             # Получаем метаданные
             metadata = self.parse_url_metadata(url)
 
-            # Создаем закладку
-            bookmark = self.create(
+            # Используем безопасный метод создания
+            bookmark = self.safe_create_bookmark(
                 url=metadata['url'],
                 title=metadata['title'],
-                description=metadata['description'],
+                description=metadata['description'] or '',
                 tags=tags,
-                favicon_url=metadata['favicon_url'],
-                workspace_id=workspace_id
+                workspace_id=normalized_workspace_id  # Используем нормализованный ID
             )
 
             if bookmark:
@@ -748,6 +758,79 @@ class BookmarkManager:
 
         except Exception as e:
             print(f"❌ Ошибка при добавлении закладки: {e}")
+            return None
+
+    def safe_create_bookmark(self, url: str, title: str = "", description: str = "",
+                             tags: Optional[List[str]] = None, workspace_id: int = 1) -> Optional[WebBookmark]:
+        """
+        Безопасное создание закладки без favicon_url
+        """
+        # ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
+        print(f"🔍 Отладка BookmarkManager.safe_create_bookmark():")
+        print(f"   - URL: {url}")
+        print(f"   - Title: {title}")
+        print(f"   - Description: {description}")
+        print(f"   - Tags: {tags}")
+        print(f"   - Workspace ID: {workspace_id} (тип: {type(workspace_id)})")
+
+        if not url or not url.strip():
+            print("❌ Ошибка: URL не может быть пустым")
+            return None
+
+        normalized_url = self.normalize_url(url)
+
+        if not self.validate_url(normalized_url):
+            print(f"❌ Ошибка: некорректный URL '{url}'")
+            return None
+
+        if not title.strip():
+            title = self._extract_domain(normalized_url)
+
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Вставляем закладку без favicon_url
+                cursor.execute(
+                    """INSERT INTO bookmarks (url, title, description, workspace_id) 
+                    VALUES (?, ?, ?, ?)""",
+                    (normalized_url, title.strip(), description.strip(), workspace_id)
+                )
+                bookmark_id = cursor.lastrowid
+
+                if not bookmark_id:
+                    print("❌ Ошибка: не удалось получить ID созданной закладки")
+                    return None
+
+                # Обрабатываем теги
+                tag_objects = []
+                if tags:
+                    for tag_name in tags:
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
+                        if tag:
+                            cursor.execute(
+                                "INSERT INTO bookmark_tag_relation (bookmark_id, tag_id) VALUES (?, ?)",
+                                (bookmark_id, tag.id)
+                            )
+                            tag_objects.append(tag)
+
+                conn.commit()
+
+                bookmark = WebBookmark(
+                    url=normalized_url,
+                    title=title,
+                    description=description,
+                    bookmark_id=bookmark_id,
+                    favicon_url=None,  # Всегда None для безопасного создания
+                    workspace_id=workspace_id
+                )
+                bookmark.tags = tag_objects
+
+                print(f"✅ Закладка создана (без иконки): {bookmark} в workspace {workspace_id}")
+                return bookmark
+
+        except Exception as e:
+            print(f"❌ Ошибка при безопасном создании закладки: {e}")
             return None
 
     def bulk_add_bookmarks(self, urls: List[str], common_tags: Optional[List[str]] = None,

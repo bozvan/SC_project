@@ -1,147 +1,158 @@
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                             QLineEdit, QPushButton, QTextEdit, QMessageBox,
-                             QProgressBar)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QDialog, QMessageBox
+from PyQt6.QtCore import pyqtSignal, Qt
+
+from src.gui.ui_add_bookmark_dialog import Ui_AddBookmarkDialog
 
 
-class AddBookmarkDialog(QDialog):
-    """Диалог для добавления новой веб-закладки"""
+class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
+    """Диалоговое окно для добавления новой закладки"""
 
-    bookmark_added = pyqtSignal()  # Сигнал при успешном добавлении закладки
+    bookmark_added = pyqtSignal()  # Сигнал при добавлении закладки
 
-    def __init__(self, bookmark_manager, parent=None):
+    def __init__(self, bookmark_manager, workspace_id=1, parent=None):
         super().__init__(parent)
+        self.setupUi(self)
+
         self.bookmark_manager = bookmark_manager
-        self.setup_ui()
+        self.workspace_id = workspace_id  # Сохраняем workspace_id
 
-    def setup_ui(self):
-        """Настройка интерфейса диалога"""
-        self.setWindowTitle("Добавить веб-закладку")
-        self.setModal(True)
-        self.resize(500, 300)
+        # Проверяем, что кнопки существуют перед настройкой
+        if hasattr(self, 'add_btn') and self.add_btn is not None:
+            self.add_btn.setDefault(True)
+            self.add_btn.setAutoDefault(True)
+        else:
+            print("⚠️ Кнопка add_btn не найдена в UI")
 
-        layout = QVBoxLayout(self)
+        if hasattr(self, 'cancel_btn') and self.cancel_btn is not None:
+            self.cancel_btn.setAutoDefault(False)
+        else:
+            print("⚠️ Кнопка cancel_btn не найдена в UI")
 
-        # Поле для URL
-        url_layout = QHBoxLayout()
-        url_label = QLabel("URL страницы:")
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("https://example.com или example.com")
-        self.url_input.textChanged.connect(self.on_url_changed)
+        self.setup_connections()
 
-        url_layout.addWidget(url_label)
-        url_layout.addWidget(self.url_input)
-        layout.addLayout(url_layout)
+    def setup_connections(self):
+        """Настраивает соединения сигналов"""
+        if hasattr(self, 'cancel_btn') and self.cancel_btn is not None:
+            self.cancel_btn.clicked.connect(self.reject)
+        else:
+            print("⚠️ Кнопка cancel_btn не найдена для подключения сигнала")
 
-        # Поле для тегов
-        tags_layout = QHBoxLayout()
-        tags_label = QLabel("Теги (через запятую):")
-        self.tags_input = QLineEdit()
-        self.tags_input.setPlaceholderText("работа, программирование, интересное")
+        if hasattr(self, 'add_btn') and self.add_btn is not None:
+            self.add_btn.clicked.connect(self.add_bookmark)
+        else:
+            print("⚠️ Кнопка add_btn не найдена для подключения сигнала")
 
-        tags_layout.addWidget(tags_label)
-        tags_layout.addWidget(self.tags_input)
-        layout.addLayout(tags_layout)
+        # Обработка нажатия Enter в полях ввода
+        if hasattr(self, 'url_edit') and self.url_edit is not None:
+            self.url_edit.returnPressed.connect(self.on_enter_pressed)
 
-        # Предпросмотр метаданных
-        preview_label = QLabel("Предпросмотр:")
-        self.preview_text = QTextEdit()
-        self.preview_text.setReadOnly(True)
-        self.preview_text.setMaximumHeight(100)
-        self.preview_text.setPlaceholderText("Здесь появится информация о странице...")
+        if hasattr(self, 'title_edit') and self.title_edit is not None:
+            self.title_edit.returnPressed.connect(self.on_enter_pressed)
 
-        layout.addWidget(preview_label)
-        layout.addWidget(self.preview_text)
+        if hasattr(self, 'tags_edit') and self.tags_edit is not None:
+            self.tags_edit.returnPressed.connect(self.on_enter_pressed)
 
-        # Прогресс-бар
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
+        # Валидация в реальном времени
+        if hasattr(self, 'url_edit') and self.url_edit is not None:
+            self.url_edit.textChanged.connect(self.validate_form)
 
-        # Кнопки
-        buttons_layout = QHBoxLayout()
+    def on_enter_pressed(self):
+        """Обработчик нажатия Enter в полях ввода"""
+        if self.validate_form():
+            self.add_bookmark()
 
-        self.fetch_btn = QPushButton("Получить информацию")
-        self.fetch_btn.clicked.connect(self.fetch_metadata)
-        self.fetch_btn.setEnabled(False)
+    def keyPressEvent(self, event):
+        """Обработчик нажатия клавиш"""
+        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            # Проверяем, что cancel_btn существует и имеет фокус
+            if (hasattr(self, 'cancel_btn') and self.cancel_btn is not None and
+                    self.cancel_btn.hasFocus()):
+                return
+            if self.validate_form():
+                self.add_bookmark()
+            else:
+                self.focusNextChild()
+        else:
+            super().keyPressEvent(event)
 
-        self.add_btn = QPushButton("Добавить закладку")
-        self.add_btn.clicked.connect(self.add_bookmark)
-        self.add_btn.setEnabled(False)
+    def validate_form(self):
+        """Проверяет валидность формы"""
+        if not hasattr(self, 'url_edit') or self.url_edit is None:
+            return False
 
-        cancel_btn = QPushButton("Отмена")
-        cancel_btn.clicked.connect(self.reject)
+        url = self.url_edit.text().strip()
+        is_valid = bool(url)
 
-        buttons_layout.addWidget(self.fetch_btn)
-        buttons_layout.addWidget(self.add_btn)
-        buttons_layout.addStretch()
-        buttons_layout.addWidget(cancel_btn)
+        # Включаем/выключаем кнопку добавления если она существует
+        if hasattr(self, 'add_btn') and self.add_btn is not None:
+            self.add_btn.setEnabled(is_valid)
 
-        layout.addLayout(buttons_layout)
-
-    def on_url_changed(self, text):
-        """Обработчик изменения URL"""
-        is_valid = self.bookmark_manager.validate_url(text)
-        self.fetch_btn.setEnabled(is_valid)
-        self.add_btn.setEnabled(False)
-
-        if not text:
-            self.preview_text.clear()
-
-    def fetch_metadata(self):
-        """Получает метаданные страницы"""
-        url = self.url_input.text().strip()
+        # Подсветка поля URL
         if not url:
-            return
+            self.url_edit.setStyleSheet("border: 1px solid red;")
+        else:
+            self.url_edit.setStyleSheet("")
 
-        # Показываем прогресс
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)  # Индикатор без определенного конца
-        self.fetch_btn.setEnabled(False)
-
-        # Получаем метаданные
-        metadata = self.bookmark_manager.parse_url_metadata(url)
-
-        # Форматируем предпросмотр
-        preview_text = f"Заголовок: {metadata.get('title', 'Не найден')}\n"
-        preview_text += f"Описание: {metadata.get('description', 'Не найдено')}\n"
-        preview_text += f"URL: {metadata.get('url', url)}\n"
-
-        if metadata.get('status_code'):
-            status_text = "✅ Успешно" if metadata['status_code'] == 200 else f"⚠️  Ошибка {metadata['status_code']}"
-            preview_text += f"Статус: {status_text}"
-
-        self.preview_text.setPlainText(preview_text)
-
-        # Скрываем прогресс и активируем кнопку добавления
-        self.progress_bar.setVisible(False)
-        self.add_btn.setEnabled(True)
+        return is_valid
 
     def add_bookmark(self):
-        """Добавляет закладку"""
-        url = self.url_input.text().strip()
-        tags_text = self.tags_input.text().strip()
+        """Добавляет новую закладку"""
+        # Проверяем существование необходимых виджетов
+        if not hasattr(self, 'url_edit') or self.url_edit is None:
+            QMessageBox.warning(self, "Ошибка", "Поле URL не найдено")
+            return
 
-        # Парсим теги
-        tags = [tag.strip() for tag in tags_text.split(",")] if tags_text else []
-        tags = [tag for tag in tags if tag]  # Убираем пустые
+        url = self.url_edit.text().strip()
 
-        # Показываем прогресс
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setRange(0, 0)
+        # Получаем опциональные поля если они существуют
+        title = ""
+        if hasattr(self, 'title_edit') and self.title_edit is not None:
+            title = self.title_edit.text().strip()
 
-        # ИСПРАВЛЕНИЕ: Используем правильный метод bookmark_manager
-        bookmark = self.bookmark_manager.add_bookmark_with_metadata(url, tags)
+        description = ""
+        if hasattr(self, 'description_edit') and self.description_edit is not None:
+            description = self.description_edit.toPlainText().strip()
 
-        # Скрываем прогресс
-        self.progress_bar.setVisible(False)
+        tags_text = ""
+        if hasattr(self, 'tags_edit') and self.tags_edit is not None:
+            tags_text = self.tags_edit.text().strip()
 
-        if bookmark:
-            QMessageBox.information(self, "Успех",
-                                    f"Закладка '{bookmark.title}' успешно добавлена!")
-            self.bookmark_added.emit()
-            self.accept()
-        else:
-            QMessageBox.warning(self, "Ошибка",
-                                "Не удалось добавить закладку. Проверьте URL и попробуйте снова.")
+        # Валидация
+        if not url:
+            QMessageBox.warning(self, "Ошибка", "URL закладки не может быть пустым")
+            if hasattr(self, 'url_edit') and self.url_edit is not None:
+                self.url_edit.setFocus()
+            return
+
+        try:
+            # Парсим теги
+            tags = []
+            if tags_text:
+                tags = [tag.strip() for tag in tags_text.split(',') if tag.strip()]
+
+            # ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
+            print(f"🔍 Отладка AddBookmarkDialog.add_bookmark():")
+            print(f"   - URL: {url}")
+            print(f"   - Title: {title}")
+            print(f"   - Description: {description}")
+            print(f"   - Tags: {tags}")
+            print(f"   - Workspace ID: {self.workspace_id} (тип: {type(self.workspace_id)})")
+            print(f"   - Bookmark Manager: {type(self.bookmark_manager)}")
+
+            # Добавляем закладку с указанием workspace_id
+            bookmark = self.bookmark_manager.add_bookmark_with_metadata(
+                url=url,
+                tags=tags,
+                workspace_id=self.workspace_id  # Передаем workspace_id
+            )
+
+            if bookmark:
+                print(f"✅ Закладка добавлена в workspace {self.workspace_id}: {bookmark.title}")
+                self.bookmark_added.emit()
+                self.accept()
+            else:
+                QMessageBox.critical(self, "Ошибка", "Не удалось добавить закладку")
+
+        except Exception as e:
+            print(f"❌ Ошибка при добавлении закладки: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при добавлении закладки: {str(e)}")

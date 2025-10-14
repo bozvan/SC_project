@@ -82,28 +82,47 @@ class TagManager:
             print(f"Ошибка при получении тега с ID {tag_id}: {e}")
             return None
 
-    def get_all(self) -> List[Tag]:
+    def get_all(self, workspace_id: Optional[int] = None) -> List[Tag]:
         """
-        Возвращает список всех тегов
+        Возвращает список всех тегов или тегов для определенного workspace
+
+        Args:
+            workspace_id: ID рабочего пространства (опционально)
 
         Returns:
-            List[Tag]: Список всех тегов в базе данных
+            List[Tag]: Список тегов
         """
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, name FROM tags ORDER BY name")
+
+                if workspace_id is not None:
+                    # Получаем только теги, которые используются в заметках данного workspace
+                    cursor.execute("""
+                        SELECT DISTINCT t.id, t.name 
+                        FROM tags t
+                        JOIN note_tag_relation ntr ON t.id = ntr.tag_id
+                        JOIN notes n ON ntr.note_id = n.id
+                        WHERE n.workspace_id = ?
+                        ORDER BY t.name
+                    """, (workspace_id,))
+                    print(f"🔍 Загружаем теги для workspace {workspace_id}")
+                else:
+                    # Получаем все теги (для обратной совместимости)
+                    cursor.execute("SELECT id, name FROM tags ORDER BY name")
+                    print("🔍 Загружаем все теги")
+
                 results = cursor.fetchall()
 
                 tags = []
                 for tag_id, name in results:
                     tags.append(Tag(name=name, tag_id=tag_id))
 
-                print(f"Загружено тегов: {len(tags)}")
+                print(f"✅ Загружено тегов: {len(tags)}")
                 return tags
 
         except Exception as e:
-            print(f"Ошибка при получении списка тегов: {e}")
+            print(f"❌ Ошибка при получении списка тегов: {e}")
             return []
 
     def get_by_name(self, name: str) -> Optional[Tag]:
@@ -261,20 +280,97 @@ class TagManager:
             print(f"Ошибка при обновлении тега с ID {tag_id}: {e}")
             return False
 
-    def get_notes_by_tag(self, tag_name: str) -> List:
-        """Возвращает заметки с указанным тегом"""
+    def get_notes_by_tag(self, tag_name: str, workspace_id: Optional[int] = None) -> List:
+        """
+        Возвращает заметки с указанным тегом, опционально фильтруя по workspace
+
+        Args:
+            tag_name: Название тега
+            workspace_id: ID рабочего пространства (опционально)
+
+        Returns:
+            List: Список ID заметок
+        """
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT n.id 
-                    FROM notes n
-                    JOIN note_tag_relation ntr ON n.id = ntr.note_id
-                    JOIN tags t ON ntr.tag_id = t.id
-                    WHERE t.name = ?
-                """, (tag_name,))
+
+                if workspace_id is not None:
+                    cursor.execute("""
+                        SELECT DISTINCT n.id 
+                        FROM notes n
+                        JOIN note_tag_relation ntr ON n.id = ntr.note_id
+                        JOIN tags t ON ntr.tag_id = t.id
+                        WHERE t.name = ? AND n.workspace_id = ?
+                    """, (tag_name, workspace_id))
+                    print(f"🔍 Поиск заметок по тегу '{tag_name}' в workspace {workspace_id}")
+                else:
+                    cursor.execute("""
+                        SELECT n.id 
+                        FROM notes n
+                        JOIN note_tag_relation ntr ON n.id = ntr.note_id
+                        JOIN tags t ON ntr.tag_id = t.id
+                        WHERE t.name = ?
+                    """, (tag_name,))
+                    print(f"🔍 Поиск заметок по тегу '{tag_name}' во всех workspace")
+
                 results = cursor.fetchall()
+                print(f"✅ Найдено {len(results)} заметок с тегом '{tag_name}'")
                 return results
+
         except Exception as e:
             print(f"❌ Ошибка получения заметок по тегу {tag_name}: {e}")
+            return []
+
+    def get_popular_tags(self, workspace_id: Optional[int] = None, limit: int = 10) -> List[Tag]:
+        """
+        Возвращает самые популярные теги (по количеству использования)
+
+        Args:
+            workspace_id: ID рабочего пространства (опционально)
+            limit: Максимальное количество тегов
+
+        Returns:
+            List[Tag]: Список популярных тегов
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                if workspace_id is not None:
+                    cursor.execute("""
+                        SELECT t.id, t.name, COUNT(ntr.note_id) as usage_count
+                        FROM tags t
+                        JOIN note_tag_relation ntr ON t.id = ntr.tag_id
+                        JOIN notes n ON ntr.note_id = n.id
+                        WHERE n.workspace_id = ?
+                        GROUP BY t.id, t.name
+                        ORDER BY usage_count DESC, t.name
+                        LIMIT ?
+                    """, (workspace_id, limit))
+                    print(f"🔍 Получаем популярные теги для workspace {workspace_id}")
+                else:
+                    cursor.execute("""
+                        SELECT t.id, t.name, COUNT(ntr.note_id) as usage_count
+                        FROM tags t
+                        JOIN note_tag_relation ntr ON t.id = ntr.tag_id
+                        GROUP BY t.id, t.name
+                        ORDER BY usage_count DESC, t.name
+                        LIMIT ?
+                    """, (limit,))
+                    print("🔍 Получаем популярные теги для всех workspace")
+
+                results = cursor.fetchall()
+
+                tags = []
+                for tag_id, name, usage_count in results:
+                    tag = Tag(name=name, tag_id=tag_id)
+                    tag.usage_count = usage_count  # Добавляем счетчик использования
+                    tags.append(tag)
+
+                print(f"✅ Загружено {len(tags)} популярных тегов")
+                return tags
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении популярных тегов: {e}")
             return []

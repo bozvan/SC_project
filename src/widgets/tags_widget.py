@@ -12,11 +12,18 @@ class TagsWidget(QWidget):
     tag_created = pyqtSignal(str)  # Сигнал при создании тега
     tag_deleted = pyqtSignal(str)  # Сигнал при удалении тега
 
-    def __init__(self, tag_manager):
+    def __init__(self, tag_manager, workspace_id=1, parent=None):
         super().__init__()
         self.tag_manager = tag_manager
+        self.workspace_id = workspace_id
         self.selected_tag = None
         self.setup_ui()
+        self.load_tags()
+
+    def set_workspace(self, workspace_id):
+        """Обновляет workspace и перезагружает теги"""
+        self.workspace_id = workspace_id
+        self.clear_selection()
         self.load_tags()
 
     def setup_ui(self):
@@ -106,9 +113,11 @@ class TagsWidget(QWidget):
         self.add_button.setEnabled(bool(text.strip()))
 
     def load_tags(self):
-        """Загрузка и отображение всех тегов"""
+        """Загрузка и отображение тегов для текущего workspace"""
         self.tags_list.clear()
-        tags = self.tag_manager.get_all()
+
+        # Получаем теги только для текущего workspace
+        tags = self.tag_manager.get_all(self.workspace_id)
 
         # Сортируем теги по имени
         tags.sort(key=lambda x: x.name)
@@ -117,14 +126,14 @@ class TagsWidget(QWidget):
             item = QListWidgetItem(tag.name)
             item.setData(Qt.ItemDataRole.UserRole, tag.id)
 
-            # Получаем количество заметок с этим тегом
+            # Получаем количество заметок с этим тегом в текущем workspace
             note_count = self.get_note_count_for_tag(tag.name)
 
             if note_count > 0:
                 item.setText(f"{tag.name} ({note_count})")
-                item.setToolTip(f"{note_count} записей (заметки + закладки)")
+                item.setToolTip(f"{note_count} записей в workspace {self.workspace_id}")
             else:
-                item.setToolTip("Нет записей")
+                item.setToolTip("Нет записей в текущем workspace")
 
             self.tags_list.addItem(item)
 
@@ -133,17 +142,17 @@ class TagsWidget(QWidget):
             self.select_tag_by_name(self.selected_tag)
 
         # Обновляем статистику
-        self.stats_label.setText(f"Всего тегов: {len(tags)}")
+        self.stats_label.setText(f"Тегов в workspace {self.workspace_id}: {len(tags)}")
 
-        print(f"✅ Загружено тегов: {len(tags)}")
+        print(f"✅ Загружено {len(tags)} тегов для workspace {self.workspace_id}")
 
     def get_note_count_for_tag(self, tag_name):
-        """Получает количество заметок И закладок для тега"""
+        """Получает количество заметок И закладок для тега в текущем workspace"""
         try:
-            # Считаем заметки
-            notes_with_tag = self.tag_manager.get_notes_by_tag(tag_name)
+            # Считаем заметки в текущем workspace
+            notes_with_tag = self.tag_manager.get_notes_by_tag(tag_name, self.workspace_id)
 
-            # Считаем закладки - нужно добавить метод в tag_manager
+            # Считаем закладки в текущем workspace
             bookmarks_with_tag = self.get_bookmarks_by_tag(tag_name)
 
             return len(notes_with_tag) + len(bookmarks_with_tag)
@@ -152,7 +161,7 @@ class TagsWidget(QWidget):
             return 0
 
     def get_bookmarks_by_tag(self, tag_name):
-        """Вспомогательный метод для получения закладок по тегу"""
+        """Вспомогательный метод для получения закладок по тегу в текущем workspace"""
         # Временная реализация - можно вынести в tag_manager позже
         try:
             from src.core.database_manager import DatabaseManager
@@ -160,10 +169,15 @@ class TagsWidget(QWidget):
 
             db = DatabaseManager()
             bookmark_manager = BookmarkManager(db)
+            # Получаем все закладки и фильтруем по workspace и тегу
             all_bookmarks = bookmark_manager.get_all()
 
             bookmarks_with_tag = []
             for bookmark in all_bookmarks:
+                # Проверяем workspace закладки (если есть поле workspace_id)
+                if hasattr(bookmark, 'workspace_id') and bookmark.workspace_id != self.workspace_id:
+                    continue
+
                 bookmark_tags = [tag.name for tag in bookmark.tags]
                 if tag_name in bookmark_tags:
                     bookmarks_with_tag.append(bookmark)
@@ -205,11 +219,11 @@ class TagsWidget(QWidget):
         # Если кликаем на уже выбранный тег - снимаем выделение
         if self.selected_tag == tag_name:
             self.clear_selection()
-            print("🗑️ Сброшен фильтр по тегам")
+            print(f"🗑️ Сброшен фильтр по тегам в workspace {self.workspace_id}")
             self.tag_selected.emit("")  # Явно отправляем пустую строку
         else:
             self.set_selected_tag(tag_name)
-            print(f"🏷️ Выбран тег: {tag_name}")
+            print(f"🏷️ Выбран тег: {tag_name} в workspace {self.workspace_id}")
             self.tag_selected.emit(tag_name)  # Отправляем имя тега
 
     def set_selected_tag(self, tag_name):
@@ -256,7 +270,7 @@ class TagsWidget(QWidget):
         self.tags_list.clearSelection()
         self.clear_filter_btn.setVisible(False)
         self.tag_selected.emit("")  # Сигнал для сброса фильтра
-        print("🗑️ Сброшен фильтр по тегам")
+        print(f"🗑️ Сброшен фильтр по тегам в workspace {self.workspace_id}")
 
     def get_selected_tag(self):
         """Возвращает выбранный тег"""
@@ -290,7 +304,8 @@ class TagsWidget(QWidget):
         reply = QMessageBox.question(
             self,
             "Подтверждение удаления",
-            f"Вы уверены, что хотите удалить тег '{tag_name}'?",
+            f"Вы уверены, что хотите удалить тег '{tag_name}'?\n\n"
+            f"Это действие удалит тег из всех записей в workspace {self.workspace_id}.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -305,7 +320,7 @@ class TagsWidget(QWidget):
                 self.load_tags()
                 self.tag_deleted.emit(tag_name)
 
-                print(f"✅ Тег '{tag_name}' удален")
+                print(f"✅ Тег '{tag_name}' удален из workspace {self.workspace_id}")
             else:
                 QMessageBox.warning(self, "Ошибка", f"Не удалось удалить тег '{tag_name}'")
 

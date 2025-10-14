@@ -91,8 +91,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.load_notes()
 
     def set_workspace(self, workspace_id):
-        """Обновляет workspace и перезагружает заметки"""
+        """Обновляет workspace и перезагружает заметки и теги"""
         self.workspace_id = workspace_id
+        if hasattr(self, 'tags_widget'):
+            self.tags_widget.set_workspace(workspace_id)
         self.load_notes()
 
     def navigate_to_note_by_id(self, note_id):
@@ -171,7 +173,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.setup_rich_editor()
         self.setup_tasks_area()
 
-        self.tags_widget = TagsWidget(self.tag_manager)
+        self.tags_widget = TagsWidget(self.tag_manager, self.workspace_id)
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 

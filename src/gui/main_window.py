@@ -356,13 +356,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             print("✅ Состояние окна восстановлено")
 
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    app.setStyle('Fusion')
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
+# def main():
+#     app = QtWidgets.QApplication(sys.argv)
+#     app.setStyle('Fusion')
+#     window = MainWindow()
+#     window.show()
+#     sys.exit(app.exec())
+#
+#
+# if __name__ == "__main__":
+#     main()

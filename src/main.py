@@ -30,6 +30,7 @@ def main():
             QTimer.singleShot(1000, lambda: None)  # Даем время на завершение
 
         app = QApplication(sys.argv)
+        #app.setStyle('Fusion')
         app.setApplicationName("Smart Organizer")
         app.setApplicationVersion("1.0")
 

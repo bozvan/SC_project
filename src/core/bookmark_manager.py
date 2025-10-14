@@ -127,6 +127,119 @@ class BookmarkManager:
             print(f"❌ Ошибка при создании закладки: {e}")
             return None
 
+    def update_bookmark_description(self, bookmark_id: int, description: str) -> bool:
+        """
+        Обновляет описание закладки
+
+        Args:
+            bookmark_id: ID закладки
+            description: Новое описание
+
+        Returns:
+            bool: True если успешно, False если ошибка
+        """
+        if not bookmark_id:
+            print("❌ Ошибка: ID закладки не может быть пустым")
+            return False
+
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Проверяем существование закладки
+                cursor.execute("SELECT id FROM bookmarks WHERE id = ?", (bookmark_id,))
+                if not cursor.fetchone():
+                    print(f"❌ Закладка с ID {bookmark_id} не найдена")
+                    return False
+
+                # Обновляем описание
+                cursor.execute(
+                    "UPDATE bookmarks SET description = ? WHERE id = ?",
+                    (description.strip(), bookmark_id)
+                )
+                conn.commit()
+
+                success = cursor.rowcount > 0
+                if success:
+                    print(f"✅ Описание закладки {bookmark_id} обновлено: '{description[:50]}...'")
+                else:
+                    print(f"❌ Не удалось обновить описание закладки {bookmark_id}")
+
+                return success
+
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении описания закладки {bookmark_id}: {e}")
+            return False
+
+    def update_bookmark(self, bookmark_id: int, title: str = None, url: str = None,
+                        description: str = None, tags: list = None) -> bool:
+        """
+        Обновляет закладку
+
+        Args:
+            bookmark_id: ID закладки
+            title: Новое название
+            url: Новый URL
+            description: Новое описание
+            tags: Новый список тегов
+
+        Returns:
+            bool: True если успешно, False если ошибка
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Проверяем существование закладки
+                cursor.execute("SELECT id FROM bookmarks WHERE id = ?", (bookmark_id,))
+                if not cursor.fetchone():
+                    print(f"❌ Закладка с ID {bookmark_id} не найдена")
+                    return False
+
+                # Обновляем основные данные
+                update_fields = []
+                update_values = []
+
+                if title is not None:
+                    update_fields.append("title = ?")
+                    update_values.append(title)
+
+                if url is not None:
+                    update_fields.append("url = ?")
+                    update_values.append(url)
+
+                if description is not None:
+                    update_fields.append("description = ?")
+                    update_values.append(description)
+
+                if update_fields:
+                    update_values.append(bookmark_id)
+                    query = f"UPDATE bookmarks SET {', '.join(update_fields)} WHERE id = ?"
+                    cursor.execute(query, update_values)
+
+                # Обновляем теги
+                if tags is not None:
+                    # Удаляем старые теги - ИСПРАВЛЕНО: используем правильное имя таблицы
+                    cursor.execute("DELETE FROM bookmark_tag_relation WHERE bookmark_id = ?", (bookmark_id,))
+
+                    # Добавляем новые теги
+                    for tag_name in tags:
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name.strip())
+                        if tag and tag.id:
+                            cursor.execute(
+                                "INSERT INTO bookmark_tag_relation (bookmark_id, tag_id) VALUES (?, ?)",
+                                (bookmark_id, tag.id)
+                            )
+
+                conn.commit()
+                print(f"✅ Закладка {bookmark_id} успешно обновлена")
+                return True
+
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении закладки {bookmark_id}: {e}")
+            return False
+
+
     def update(self, bookmark_id: int, title: Optional[str] = None,
                description: Optional[str] = None, tags: Optional[List[str]] = None,
                url: Optional[str] = None, favicon_url: Optional[str] = None,

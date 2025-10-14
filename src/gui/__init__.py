@@ -4,5 +4,8 @@ from .splash_screen import SmoothProgressBar
 from .ui_main_window import Ui_MainWindow
 from .ui_notes_page import Ui_NotesPage
 from .ui_task_widget import Ui_TaskWidget
+from .ui_bookmark_item_widget import Ui_BookmarkItemWidget
+from .ui_bookmarks_widget import Ui_BookmarksWidget
 
-__all__ = ['MainWindow', 'NotesListWidget', 'SmoothProgressBar', 'Ui_MainWindow', 'Ui_NotesPage', 'Ui_TaskWidget']
+__all__ = ['MainWindow', 'NotesListWidget', 'SmoothProgressBar', 'Ui_MainWindow', 'Ui_NotesPage', 'Ui_TaskWidget',
+           'Ui_BookmarkItemWidget', 'Ui_BookmarksWidget']

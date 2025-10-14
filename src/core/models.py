@@ -15,7 +15,8 @@ class Note:
                  note_type: str = "note",  # "note" или "bookmark"
                  url: Optional[str] = None,
                  page_title: Optional[str] = None,
-                 page_description: Optional[str] = None):
+                 page_description: Optional[str] = None,
+                 workspace_id: Optional[int] = None):  # ← ДОБАВЛЕНО
         """
         Инициализация заметки или закладки
 
@@ -30,6 +31,7 @@ class Note:
             url: URL веб-страницы (только для закладок)
             page_title: Заголовок веб-страницы (только для закладок)
             page_description: Описание веб-страницы (только для закладок)
+            workspace_id: ID рабочего пространства ← ДОБАВЛЕНО
         """
         self.id = note_id
         self.title = title
@@ -41,6 +43,7 @@ class Note:
         self.url = url
         self.page_title = page_title
         self.page_description = page_description
+        self.workspace_id = workspace_id  # ← ДОБАВЛЕНО
         self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:
@@ -48,7 +51,8 @@ class Note:
         type_str = "🔖" if self.note_type == "bookmark" else "📝"
         content_type_str = f" ({self.content_type})" if self.content_type != "plain" else ""
         url_str = f" [URL: {self.url}]" if self.url else ""
-        return f"{type_str} Note(id={self.id}, title='{self.title}'{content_type_str}{url_str}, type={self.note_type})"
+        workspace_str = f" [Workspace: {self.workspace_id}]" if self.workspace_id else ""
+        return f"{type_str} Note(id={self.id}, title='{self.title}'{content_type_str}{url_str}{workspace_str}, type={self.note_type})"
 
     def __repr__(self) -> str:
         """Представление для отладки"""
@@ -127,7 +131,8 @@ class Task:
                  note_id: Optional[int] = None,
                  created_date: Optional[datetime] = None,
                  modified_date: Optional[datetime] = None,
-                 priority: str = "medium"):
+                 priority: str = "medium",
+                 workspace_id: Optional[int] = None):  # ← ДОБАВЛЕНО
         """
         Инициализация задачи
 
@@ -140,6 +145,7 @@ class Task:
             created_date: Дата создания
             modified_date: Дата обновления
             priority: Приоритет задачи
+            workspace_id: ID рабочего пространства ← ДОБАВЛЕНО
         """
         self.id = task_id
         self.description = description
@@ -149,6 +155,7 @@ class Task:
         self.created_date = created_date or datetime.now()
         self.modified_date = modified_date or datetime.now()
         self.priority = priority  # "high", "medium", "low"
+        self.workspace_id = workspace_id  # ← ДОБАВЛЕНО
         self.note_title = None  # Для отображения контекста в виджетах
 
     def __str__(self) -> str:
@@ -178,7 +185,8 @@ class WebBookmark:
                  bookmark_id: Optional[int] = None,
                  favicon_url: Optional[str] = None,
                  created_date: Optional[datetime] = None,
-                 updated_date: Optional[datetime] = None):
+                 updated_date: Optional[datetime] = None,
+                 workspace_id: Optional[int] = None):  # ← ДОБАВЛЕНО
         """
         Инициализация закладки
 
@@ -190,6 +198,7 @@ class WebBookmark:
             favicon_url: URL иконки сайта
             created_date: Дата создания
             updated_date: Дата обновления
+            workspace_id: ID рабочего пространства ← ДОБАВЛЕНО
         """
         self.id = bookmark_id
         self.url = url
@@ -198,6 +207,7 @@ class WebBookmark:
         self.favicon_url = favicon_url
         self.created_date = created_date if created_date else datetime.now()
         self.updated_date = updated_date if updated_date else datetime.now()
+        self.workspace_id = workspace_id  # ← ДОБАВЛЕНО
         self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:
@@ -215,3 +225,56 @@ class WebBookmark:
             return urlparse(self.url).netloc
         except:
             return self.url
+
+
+class Workspace:
+    """Класс, представляющий рабочее пространство"""
+
+    def __init__(self,
+                 name: str,
+                 description: str = "",
+                 workspace_id: Optional[int] = None,
+                 created_date: Optional[datetime] = None,
+                 is_default: bool = False):
+        """
+        Инициализация рабочего пространства
+
+        Args:
+            name: Название рабочего пространства
+            description: Описание рабочего пространства
+            workspace_id: Уникальный идентификатор
+            created_date: Дата создания
+            is_default: Является ли пространством по умолчанию
+        """
+        self.id = workspace_id
+        self.name = name
+        self.description = description
+        self.created_date = created_date if created_date else datetime.now()
+        self.is_default = is_default
+        self.notes: List[Note] = []
+        self.tasks: List[Task] = []
+        self.bookmarks: List[WebBookmark] = []
+
+    def __str__(self) -> str:
+        """Строковое представление рабочего пространства"""
+        default_str = " (по умолчанию)" if self.is_default else ""
+        return f"📁 Workspace(id={self.id}, name='{self.name}'{default_str})"
+
+    def __repr__(self) -> str:
+        """Представление для отладки"""
+        return f"Workspace(id={self.id}, name='{self.name}', is_default={self.is_default})"
+
+    def add_note(self, note: 'Note') -> None:
+        """Добавляет заметку в рабочее пространство"""
+        if note not in self.notes:
+            self.notes.append(note)
+
+    def add_task(self, task: 'Task') -> None:
+        """Добавляет задачу в рабочее пространство"""
+        if task not in self.tasks:
+            self.tasks.append(task)
+
+    def add_bookmark(self, bookmark: 'WebBookmark') -> None:
+        """Добавляет закладку в рабочее пространство"""
+        if bookmark not in self.bookmarks:
+            self.bookmarks.append(bookmark)

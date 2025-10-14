@@ -51,6 +51,13 @@ class TaskManager:
                             ALTER TABLE tasks 
                             ADD COLUMN due_date DATETIME
                         """)
+
+                    if 'workspace_id' not in columns:
+                        print("🔧 Добавляем колонку workspace_id в таблицу tasks")
+                        cursor.execute("""
+                            ALTER TABLE tasks 
+                            ADD COLUMN workspace_id INTEGER DEFAULT 1
+                        """)
                 else:
                     # Создаем таблицу с нуля
                     cursor.execute("""
@@ -61,12 +68,14 @@ class TaskManager:
                             is_completed BOOLEAN DEFAULT FALSE,
                             priority TEXT DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
                             due_date DATETIME,
+                            workspace_id INTEGER DEFAULT 1,
                             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE
+                            FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE,
+                            FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE SET DEFAULT
                         )
                     """)
-                    print("✅ Таблица задач создана с поддержкой приоритетов и сроков")
+                    print("✅ Таблица задач создана с поддержкой приоритетов, сроков и workspace")
 
                 conn.commit()
 
@@ -74,7 +83,7 @@ class TaskManager:
             print(f"❌ Ошибка при создании/обновлении таблицы задач: {e}")
 
     def create_task(self, note_id: int, description: str, due_date: Optional[datetime] = None,
-                    priority: str = "medium", is_completed: bool = False) -> Optional[Task]:
+                    priority: str = "medium", is_completed: bool = False, workspace_id: int = 1) -> Optional[Task]:
         """
         Создает новую задачу для указанной заметки
 
@@ -84,6 +93,7 @@ class TaskManager:
             due_date: Срок выполнения (опционально)
             priority: Приоритет задачи ('high', 'medium', 'low')
             is_completed: Статус выполнения (по умолчанию False)
+            workspace_id: ID рабочего пространства
 
         Returns:
             Task: Созданная задача или None при ошибке
@@ -104,18 +114,23 @@ class TaskManager:
                 cursor = conn.cursor()
 
                 # Проверяем существование заметки
-                cursor.execute("SELECT id, title FROM notes WHERE id = ?", (note_id,))
+                cursor.execute("SELECT id, title, workspace_id FROM notes WHERE id = ?", (note_id,))
                 note_result = cursor.fetchone()
                 if not note_result:
                     print(f"❌ Заметка с ID {note_id} не существует")
                     return None
 
+                # Используем workspace_id из заметки, если не указан явно
+                note_workspace_id = note_result[2]
+                if workspace_id == 1 and note_workspace_id != 1:  # Если используется default, но у заметки другой workspace
+                    workspace_id = note_workspace_id
+
                 # Вставляем задачу
                 cursor.execute(
-                    """INSERT INTO tasks (note_id, description, due_date, priority, is_completed, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+                    """INSERT INTO tasks (note_id, description, due_date, priority, is_completed, workspace_id, created_at, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
                     (note_id, description, due_date.isoformat() if due_date else None, priority,
-                     1 if is_completed else 0)
+                     1 if is_completed else 0, workspace_id)
                 )
                 task_id = cursor.lastrowid
                 conn.commit()
@@ -127,10 +142,11 @@ class TaskManager:
                         task_id=task_id,
                         due_date=due_date,
                         note_id=note_id,
-                        priority=priority
+                        priority=priority,
+                        workspace_id=workspace_id
                     )
                     task.note_title = note_result[1]
-                    print(f"✅ Задача создана: {task}")
+                    print(f"✅ Задача создана: {task} в workspace {workspace_id}")
                     return task
                 else:
                     print("❌ Ошибка: не удалось получить ID созданной задачи")
@@ -155,7 +171,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 cursor.execute(
                     """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
-                              t.created_at, t.updated_at, n.title
+                              t.created_at, t.updated_at, n.title, t.workspace_id
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.id = ?""",
@@ -165,7 +181,7 @@ class TaskManager:
 
                 if result:
                     (task_id, note_id, description, is_completed, priority, due_date_str,
-                     created_at, updated_at, note_title) = result
+                     created_at, updated_at, note_title, workspace_id) = result
 
                     # Преобразуем строки в datetime
                     due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
@@ -180,7 +196,8 @@ class TaskManager:
                         note_id=note_id,
                         created_date=created_date,
                         modified_date=updated_date,
-                        priority=priority or 'medium'  # Защита от None
+                        priority=priority or 'medium',
+                        workspace_id=workspace_id
                     )
                     task.note_title = note_title
 
@@ -208,7 +225,7 @@ class TaskManager:
                 cursor = conn.cursor()
                 cursor.execute(
                     """SELECT t.id, t.description, t.is_completed, t.priority, t.due_date, 
-                              t.created_at, t.updated_at, n.title
+                              t.created_at, t.updated_at, n.title, t.workspace_id
                     FROM tasks t
                     JOIN notes n ON t.note_id = n.id
                     WHERE t.note_id = ? 
@@ -226,7 +243,7 @@ class TaskManager:
 
                 tasks = []
                 for (task_id, description, is_completed, priority, due_date_str,
-                     created_at, updated_at, note_title) in results:
+                     created_at, updated_at, note_title, workspace_id) in results:
 
                     # ПРЕОБРАЗОВАНИЕ ДАТЫ
                     due_date = None
@@ -243,11 +260,12 @@ class TaskManager:
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
-                        due_date=due_date,  # УБЕДИТЕСЬ ЧТО ЭТО ПЕРЕДАЕТСЯ
+                        due_date=due_date,
                         note_id=note_id,
                         created_date=created_date,
                         modified_date=updated_date,
-                        priority=priority  # УБЕДИТЕСЬ ЧТО ЭТО ПЕРЕДАЕТСЯ
+                        priority=priority,
+                        workspace_id=workspace_id
                     )
                     task.note_title = note_title
                     tasks.append(task)
@@ -259,9 +277,75 @@ class TaskManager:
             print(f"❌ Ошибка при получении задач для заметки {note_id}: {e}")
             return []
 
+    def get_tasks_by_workspace(self, workspace_id: int) -> List[Task]:
+        """
+        Возвращает все задачи для указанного рабочего пространства
+
+        Args:
+            workspace_id: ID рабочего пространства
+
+        Returns:
+            List[Task]: Список задач workspace
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                              t.created_at, t.updated_at, n.title
+                    FROM tasks t
+                    JOIN notes n ON t.note_id = n.id
+                    WHERE t.workspace_id = ? 
+                    ORDER BY 
+                        CASE priority 
+                            WHEN 'high' THEN 1 
+                            WHEN 'medium' THEN 2 
+                            WHEN 'low' THEN 3 
+                        END,
+                        t.due_date ASC,
+                        t.created_at ASC""",
+                    (workspace_id,)
+                )
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
+                     created_at, updated_at, note_title) in results:
+
+                    due_date = None
+                    if due_date_str:
+                        try:
+                            due_date = datetime.fromisoformat(due_date_str)
+                        except ValueError as e:
+                            print(f"⚠️ Ошибка преобразования даты '{due_date_str}': {e}")
+
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=priority,
+                        workspace_id=workspace_id
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                print(f"✅ Загружено задач для workspace {workspace_id}: {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении задач для workspace {workspace_id}: {e}")
+            return []
+
     def update_task(self, task_id: int, description: Optional[str] = None,
                     is_completed: Optional[bool] = None, due_date: Optional[datetime] = None,
-                    priority: Optional[str] = None) -> bool:
+                    priority: Optional[str] = None, workspace_id: Optional[int] = None) -> bool:
         """
         Обновляет данные задачи
 
@@ -271,6 +355,7 @@ class TaskManager:
             is_completed: Новый статус выполнения
             due_date: Новый срок выполнения
             priority: Новый приоритет
+            workspace_id: Новый workspace
 
         Returns:
             bool: True если обновление успешно
@@ -300,36 +385,39 @@ class TaskManager:
                     update_fields.append("is_completed = ?")
                     update_values.append(1 if is_completed else 0)
 
-                # ИСПРАВЛЕНИЕ: Не сбрасываем due_date если он не указан явно
                 if due_date is not None:
                     update_fields.append("due_date = ?")
                     update_values.append(due_date.isoformat() if due_date else None)
-                # УБИРАЕМ эту часть - она сбрасывает дедлайн!
-                # elif due_date is None and existing_task.due_date is not None:
-                #     # Явное удаление due_date
-                #     update_fields.append("due_date = NULL")
 
                 if priority is not None:
                     update_fields.append("priority = ?")
                     update_values.append(priority)
 
+                if workspace_id is not None:
+                    update_fields.append("workspace_id = ?")
+                    update_values.append(workspace_id)
+
+                # Если нет изменений, выходим раньше
+                if not update_fields:
+                    print("⚠️  Нет изменений для сохранения")
+                    return True
+
                 # Всегда обновляем updated_at
                 update_fields.append("updated_at = CURRENT_TIMESTAMP")
+                update_values.append(task_id)
 
-                if update_fields:
-                    update_values.append(task_id)
-                    update_query = f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?"
-                    cursor.execute(update_query, update_values)
-                    conn.commit()
+                update_query = f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?"
+                cursor.execute(update_query, update_values)
+                conn.commit()
 
-                    print(f"✅ Задача с ID {task_id} обновлена")
-                    return True
-                else:
-                    print("⚠️  Нет полей для обновления")
-                    return True
+                print(f"✅ Задача {task_id} обновлена")
+                if workspace_id is not None:
+                    print(f"   📁 Workspace обновлен: {workspace_id}")
+
+                return True
 
         except Exception as e:
-            print(f"❌ Ошибка при обновлении задачи с ID {task_id}: {e}")
+            print(f"❌ Ошибка при обновлении задачи {task_id}: {e}")
             return False
 
     def get_tasks_by_priority(self, priority: str) -> List[Task]:
@@ -494,14 +582,14 @@ class TaskManager:
         Удаляет задачу
 
         Args:
-            task_id: ID задачи для удаления
+            task_id: ID задачи
 
         Returns:
             bool: True если удаление успешно
         """
-        # Проверяем существование задачи
         existing_task = self.get_task(task_id)
         if not existing_task:
+            print(f"❌ Задача с ID {task_id} не существует")
             return False
 
         try:
@@ -518,10 +606,211 @@ class TaskManager:
                     return False
 
         except Exception as e:
-            print(f"❌ Ошибка при удалении задачи с ID {task_id}: {e}")
+            print(f"❌ Ошибка при удалении задачи {task_id}: {e}")
             return False
 
-    def toggle_task_completion(self, task_id: int) -> Optional[Task]:
+    def get_all_tasks(self, workspace_id: Optional[int] = None) -> List[Task]:
+        """
+        Возвращает все задачи с возможностью фильтрации по workspace
+
+        Args:
+            workspace_id: ID рабочего пространства (опционально)
+
+        Returns:
+            List[Task]: Список всех задач
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                if workspace_id is not None:
+                    cursor.execute(
+                        """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                                  t.created_at, t.updated_at, n.title
+                        FROM tasks t
+                        JOIN notes n ON t.note_id = n.id
+                        WHERE t.workspace_id = ? 
+                        ORDER BY 
+                            CASE priority 
+                                WHEN 'high' THEN 1 
+                                WHEN 'medium' THEN 2 
+                                WHEN 'low' THEN 3 
+                            END,
+                            t.due_date ASC,
+                            t.created_at ASC""",
+                        (workspace_id,)
+                    )
+                else:
+                    cursor.execute(
+                        """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                                  t.created_at, t.updated_at, n.title, t.workspace_id
+                        FROM tasks t
+                        JOIN notes n ON t.note_id = n.id
+                        ORDER BY 
+                            CASE priority 
+                                WHEN 'high' THEN 1 
+                                WHEN 'medium' THEN 2 
+                                WHEN 'low' THEN 3 
+                            END,
+                            t.due_date ASC,
+                            t.created_at ASC"""
+                    )
+
+                results = cursor.fetchall()
+                tasks = []
+
+                for result in results:
+                    if workspace_id is not None:
+                        (task_id, note_id, description, is_completed, priority, due_date_str,
+                         created_at, updated_at, note_title) = result
+                        task_workspace_id = workspace_id
+                    else:
+                        (task_id, note_id, description, is_completed, priority, due_date_str,
+                         created_at, updated_at, note_title, task_workspace_id) = result
+
+                    due_date = None
+                    if due_date_str:
+                        try:
+                            due_date = datetime.fromisoformat(due_date_str)
+                        except ValueError as e:
+                            print(f"⚠️ Ошибка преобразования даты '{due_date_str}': {e}")
+
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=priority,
+                        workspace_id=task_workspace_id
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                workspace_info = f" в workspace {workspace_id}" if workspace_id is not None else ""
+                print(f"✅ Загружено задач{workspace_info}: {len(tasks)}")
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении всех задач: {e}")
+            return []
+
+    def search_tasks(self, search_text: str = "", priority: Optional[str] = None,
+                     completed: Optional[bool] = None, workspace_id: Optional[int] = None) -> List[Task]:
+        """
+        Ищет задачи по различным критериям
+
+        Args:
+            search_text: Текст для поиска в описании
+            priority: Фильтр по приоритету
+            completed: Фильтр по статусу выполнения
+            workspace_id: Фильтр по workspace
+
+        Returns:
+            List[Task]: Список найденных задач
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                query = """
+                SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
+                       t.created_at, t.updated_at, n.title, t.workspace_id
+                FROM tasks t
+                JOIN notes n ON t.note_id = n.id
+                WHERE 1=1
+                """
+                params = []
+
+                # Фильтр по workspace
+                if workspace_id is not None:
+                    query += " AND t.workspace_id = ?"
+                    params.append(workspace_id)
+
+                # Фильтр по тексту
+                if search_text.strip():
+                    search_pattern = f"%{search_text.strip()}%"
+                    query += " AND LOWER(t.description) LIKE LOWER(?)"
+                    params.append(search_pattern)
+
+                # Фильтр по приоритету
+                if priority:
+                    query += " AND t.priority = ?"
+                    params.append(priority)
+
+                # Фильтр по статусу выполнения
+                if completed is not None:
+                    query += " AND t.is_completed = ?"
+                    params.append(1 if completed else 0)
+
+                # Сортировка
+                query += """
+                ORDER BY 
+                    CASE priority 
+                        WHEN 'high' THEN 1 
+                        WHEN 'medium' THEN 2 
+                        WHEN 'low' THEN 3 
+                    END,
+                    t.due_date ASC,
+                    t.created_at ASC
+                """
+
+                cursor.execute(query, params)
+                results = cursor.fetchall()
+
+                tasks = []
+                for (task_id, note_id, description, is_completed, priority, due_date_str,
+                     created_at, updated_at, note_title, task_workspace_id) in results:
+
+                    due_date = None
+                    if due_date_str:
+                        try:
+                            due_date = datetime.fromisoformat(due_date_str)
+                        except ValueError as e:
+                            print(f"⚠️ Ошибка преобразования даты '{due_date_str}': {e}")
+
+                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
+                    updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
+
+                    task = Task(
+                        description=description,
+                        is_completed=bool(is_completed),
+                        task_id=task_id,
+                        due_date=due_date,
+                        note_id=note_id,
+                        created_date=created_date,
+                        modified_date=updated_date,
+                        priority=priority,
+                        workspace_id=task_workspace_id
+                    )
+                    task.note_title = note_title
+                    tasks.append(task)
+
+                filters = []
+                if search_text:
+                    filters.append(f"текст: '{search_text}'")
+                if priority:
+                    filters.append(f"приоритет: {priority}")
+                if completed is not None:
+                    filters.append(f"статус: {'выполнены' if completed else 'не выполнены'}")
+                if workspace_id is not None:
+                    filters.append(f"workspace: {workspace_id}")
+
+                filter_info = f" с фильтрами: {', '.join(filters)}" if filters else ""
+                print(f"✅ Найдено задач{filter_info}: {len(tasks)}")
+
+                return tasks
+
+        except Exception as e:
+            print(f"❌ Ошибка при поиске задач: {e}")
+            return []
+
+    def toggle_task_completion(self, task_id: int) -> Optional[bool]:
         """
         Переключает статус выполнения задачи
 
@@ -529,7 +818,7 @@ class TaskManager:
             task_id: ID задачи
 
         Returns:
-            Task: Обновленная задача или None при ошибке
+            Optional[bool]: Новый статус или None при ошибке
         """
         task = self.get_task(task_id)
         if not task:
@@ -538,14 +827,31 @@ class TaskManager:
         new_status = not task.is_completed
         success = self.update_task(task_id, is_completed=new_status)
 
-        if success:
-            task.is_completed = new_status
-            task.updated_date = datetime.now()
-            status_text = "выполнена" if new_status else "не выполнена"
-            print(f"✅ Задача '{task.description}' помечена как {status_text}")
-            return task
-        else:
-            return None
+        return new_status if success else None
+
+    def complete_task(self, task_id: int) -> bool:
+        """
+        Отмечает задачу как выполненную
+
+        Args:
+            task_id: ID задачи
+
+        Returns:
+            bool: True если успешно
+        """
+        return self.update_task(task_id, is_completed=True)
+
+    def uncomplete_task(self, task_id: int) -> bool:
+        """
+        Отмечает задачу как невыполненную
+
+        Args:
+            task_id: ID задачи
+
+        Returns:
+            bool: True если успешно
+        """
+        return self.update_task(task_id, is_completed=False)
 
     def get_all_incomplete_tasks(self) -> List[Task]:
         """Возвращает все невыполненные задачи из всех заметок"""

@@ -22,7 +22,7 @@ class NoteManager:
     def create(self, title: str, content: str = "", tags: Optional[List[str]] = None,
                content_type: str = "html", note_type: str = "note",
                url: Optional[str] = None, page_title: Optional[str] = None,
-               page_description: Optional[str] = None) -> Optional[Note]:
+               page_description: Optional[str] = None, workspace_id: int = 1) -> Optional[Note]:
         """
         Создает новую заметку или веб-закладку
         """
@@ -57,9 +57,9 @@ class NoteManager:
                 # Вставляем запись в таблицу notes
                 cursor.execute(
                     """INSERT INTO notes (title, content, content_type, note_type, 
-                              url, page_title, page_description) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (title, content, content_type, note_type, url, page_title, page_description)
+                              url, page_title, page_description, workspace_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (title, content, content_type, note_type, url, page_title, page_description, workspace_id)
                 )
                 note_id = cursor.lastrowid
 
@@ -92,12 +92,13 @@ class NoteManager:
                     note_type=note_type,
                     url=url,
                     page_title=page_title,
-                    page_description=page_description
+                    page_description=page_description,
+                    workspace_id=workspace_id
                 )
                 note.tags = tag_objects
 
                 record_type = "закладка" if note_type == "bookmark" else "заметка"
-                print(f"✅ {record_type} '{title}' создана с ID: {note_id}")
+                print(f"✅ {record_type} '{title}' создана с ID: {note_id} в workspace {workspace_id}")
                 if note_type == "bookmark":
                     print(f"   🔗 URL: {url}")
                 if tag_objects:
@@ -120,7 +121,7 @@ class NoteManager:
                 # Получаем данные записи
                 cursor.execute(
                     """SELECT id, title, content, content_type, note_type, 
-                              url, page_title, page_description, created_at, updated_at 
+                              url, page_title, page_description, created_at, updated_at, workspace_id 
                     FROM notes WHERE id = ?""",
                     (note_id,)
                 )
@@ -131,7 +132,7 @@ class NoteManager:
                     return None
 
                 (note_id, title, content, content_type, note_type, url,
-                 page_title, page_description, created_at, updated_at) = result
+                 page_title, page_description, created_at, updated_at, workspace_id) = result
 
                 # Получаем теги для этой записи
                 tag_objects = self.tag_manager.get_tags_for_note(note_id)
@@ -159,7 +160,8 @@ class NoteManager:
                     note_type=note_type,
                     url=url,
                     page_title=page_title,
-                    page_description=page_description
+                    page_description=page_description,
+                    workspace_id=workspace_id
                 )
                 note.tags = tag_objects
 
@@ -173,7 +175,7 @@ class NoteManager:
                content: Optional[str] = None, tags: Optional[List[str]] = None,
                content_type: Optional[str] = None, note_type: Optional[str] = None,
                url: Optional[str] = None, page_title: Optional[str] = None,
-               page_description: Optional[str] = None) -> bool:
+               page_description: Optional[str] = None, workspace_id: Optional[int] = None) -> bool:
         """
         Обновляет данные заметки или закладки с валидацией
         """
@@ -234,6 +236,10 @@ class NoteManager:
                     update_fields.append("page_description = ?")
                     update_values.append(page_description.strip() if page_description else None)
 
+                if workspace_id is not None:
+                    update_fields.append("workspace_id = ?")
+                    update_values.append(workspace_id)
+
                 # Если нет изменений, выходим раньше
                 if not update_fields:
                     print("⚠️  Нет изменений для сохранения")
@@ -263,6 +269,8 @@ class NoteManager:
                 print(f"✅ {record_type} с ID {note_id} обновлена")
                 if url is not None:
                     print(f"   🔗 URL обновлен: {url}")
+                if workspace_id is not None:
+                    print(f"   📁 Workspace обновлен: {workspace_id}")
 
                 return True
 
@@ -305,14 +313,7 @@ class NoteManager:
     def delete(self, note_id: int) -> bool:
         """
         Удаляет заметку и все ее связи с тегами
-
-        Args:
-            note_id: ID заметки для удаления
-
-        Returns:
-            bool: True если удаление успешно
         """
-        # Проверяем, существует ли заметка
         existing_note = self.get(note_id)
         if not existing_note:
             print(f"Заметка с ID {note_id} не существует")
@@ -322,8 +323,7 @@ class NoteManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Удаляем связи с тегами (благодаря ON DELETE CASCADE это может быть не нужно,
-                # но делаем для надежности)
+                # Удаляем связи с тегами
                 cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
 
                 # Удаляем саму заметку
@@ -341,16 +341,22 @@ class NoteManager:
             print(f"Ошибка при удалении заметки с ID {note_id}: {e}")
             return False
 
-    def search(self, search_text: str = "", tag_names: Optional[List[str]] = None) -> List[Note]:
+    def get_notes_by_workspace(self, workspace_id: int) -> List[Note]:
         """
-        Ищет заметки по тексту и/или тегам
+        Возвращает заметки для указанного рабочего пространства
 
         Args:
-            search_text: Текст для поиска в заголовке и содержимом (без учета регистра)
-            tag_names: Список тегов для фильтрации (ВСЕ теги должны присутствовать)
+            workspace_id: ID рабочего пространства
 
         Returns:
-            List[Note]: Список найденных заметок
+            List[Note]: Список заметок в workspace
+        """
+        return self.search(workspace_id=workspace_id)
+
+    def search(self, search_text: str = "", tag_names: Optional[List[str]] = None,
+               note_type: Optional[str] = None, workspace_id: Optional[int] = None) -> List[Note]:
+        """
+        Ищет записи по тексту и/или тегам с фильтрацией по типу и workspace
         """
         try:
             with self.db._get_connection() as conn:
@@ -358,23 +364,32 @@ class NoteManager:
 
                 # Базовый запрос
                 query = """
-                SELECT n.id, n.title, n.content, n.created_at, n.updated_at
+                SELECT n.id, n.title, n.content, n.created_at, n.updated_at,
+                       n.note_type, n.url, n.page_title, n.page_description, n.workspace_id
                 FROM notes n
                 WHERE 1=1
                 """
                 params = []
 
-                # Добавляем условие для текстового поиска (без учета регистра)
+                # Фильтр по типу записи
+                if note_type:
+                    query += " AND n.note_type = ?"
+                    params.append(note_type)
+
+                # Фильтр по workspace
+                if workspace_id is not None:
+                    query += " AND n.workspace_id = ?"
+                    params.append(workspace_id)
+
+                # Добавляем условие для текстового поиска
                 if search_text.strip():
                     search_pattern = f"%{search_text.strip()}%"
-                    query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?))"
-                    params.extend([search_pattern, search_pattern])
+                    query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?) OR LOWER(n.page_title) LIKE LOWER(?) OR LOWER(n.page_description) LIKE LOWER(?))"
+                    params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
 
-                # Добавляем условие для тегов (ВСЕ указанные теги должны присутствовать)
+                # Добавляем условие для тегов
                 if tag_names:
                     normalized_tag_names = [name.strip().lower() for name in tag_names]
-
-                    # Для каждого тега добавляем JOIN и условие
                     for i, tag_name in enumerate(normalized_tag_names):
                         query += f"""
                         AND EXISTS (
@@ -392,8 +407,9 @@ class NoteManager:
                 results = cursor.fetchall()
 
                 notes = []
-                for note_id, title, content, created_at, updated_at in results:
-                    # Получаем теги для каждой заметки
+                for (note_id, title, content, created_at, updated_at,
+                     note_type, url, page_title, page_description, workspace_id) in results:
+                    # Получаем теги для каждой записи
                     tag_objects = self.tag_manager.get_tags_for_note(note_id)
 
                     # Преобразуем даты
@@ -402,58 +418,49 @@ class NoteManager:
 
                     # Создаем объект Note
                     note = Note(
-                        title=title,  # Сохраняем оригинальный регистр
+                        title=title,
                         content=content or "",
                         note_id=note_id,
                         created_date=created_date,
-                        modified_date=modified_date
+                        modified_date=modified_date,
+                        note_type=note_type or "note",
+                        url=url,
+                        page_title=page_title,
+                        page_description=page_description,
+                        workspace_id=workspace_id
                     )
                     note.tags = tag_objects
                     notes.append(note)
 
-                print(f"Найдено заметок: {len(notes)}")
+                search_type = "закладок" if note_type == "bookmark" else "заметок" if note_type == "note" else "записей"
+                workspace_info = f" в workspace {workspace_id}" if workspace_id is not None else ""
+                print(f"Найдено {search_type}: {len(notes)}{workspace_info}")
                 if search_text:
-                    print(f"Поисковый запрос (без учета регистра): '{search_text}'")
+                    print(f"Поисковый запрос: '{search_text}'")
                 if tag_names:
-                    print(f"Теги для фильтрации (ВСЕ должны быть): {tag_names}")
+                    print(f"Теги для фильтрации: {tag_names}")
 
                 return notes
 
         except Exception as e:
-            print(f"Ошибка при поиске заметок: {e}")
+            print(f"Ошибка при поиске записей: {e}")
             return []
 
-    def get_all(self) -> List[Note]:
+    def get_all(self, workspace_id: Optional[int] = None) -> List[Note]:
         """
         Возвращает все заметки
-
-        Returns:
-            List[Note]: Список всех заметок
         """
-        return self.search("", None)
+        return self.search(workspace_id=workspace_id)
 
-    def get_notes_by_tag(self, tag_name: str) -> List[Note]:
+    def get_notes_by_tag(self, tag_name: str, workspace_id: Optional[int] = None) -> List[Note]:
         """
         Возвращает заметки по конкретному тегу
-
-        Args:
-            tag_name: Имя тега
-
-        Returns:
-            List[Note]: Список заметок с указанным тегом
         """
-        return self.search("", [tag_name])
+        return self.search("", [tag_name], workspace_id=workspace_id)
 
     def add_tag_to_note(self, note_id: int, tag_name: str) -> bool:
         """
         Добавляет тег к существующей заметке
-
-        Args:
-            note_id: ID заметки
-            tag_name: Имя тега для добавления
-
-        Returns:
-            bool: True если успешно
         """
         note = self.get(note_id)
         if not note:
@@ -490,33 +497,22 @@ class NoteManager:
             print(f"Ошибка при добавлении тега к заметке: {e}")
             return False
 
-    def search_by_tags(self, tag_names: List[str]) -> List[Note]:
+    def search_by_tags(self, tag_names: List[str], note_type: Optional[str] = None,
+                       workspace_id: Optional[int] = None) -> List[Note]:
         """
-        Ищет заметки только по тегам
-
-        Args:
-            tag_names: Список тегов для фильтрации
-
-        Returns:
-            List[Note]: Список найденных заметок
+        Ищет записи только по тегам с фильтрацией по типу
         """
-        return self.search("", tag_names)
+        return self.search("", tag_names, note_type, workspace_id)
 
-    def search_by_text_and_tags(self, search_text: str, tag_names: List[str]) -> List[Note]:
+    def search_by_text_and_tags(self, search_text: str, tag_names: List[str],
+                                note_type: Optional[str] = None, workspace_id: Optional[int] = None) -> List[Note]:
         """
-        Ищет заметки по тексту и тегам одновременно
-
-        Args:
-            search_text: Текст для поиска
-            tag_names: Список тегов для фильтрации
-
-        Returns:
-            List[Note]: Список найденных заметок
+        Ищет записи по тексту и тегам с фильтрацией по типу
         """
-        return self.search(search_text, tag_names)
+        return self.search(search_text, tag_names, note_type, workspace_id)
 
     def create_bookmark(self, url: str, title: str = "", description: str = "",
-                        tags: Optional[List[str]] = None) -> Optional[Note]:
+                        tags: Optional[List[str]] = None, workspace_id: int = 1) -> Optional[Note]:
         """
         Создает новую веб-закладку с валидацией URL
         """
@@ -545,106 +541,22 @@ class NoteManager:
             note_type="bookmark",
             url=normalized_url,
             page_title=title,
-            page_description=description
+            page_description=description,
+            workspace_id=workspace_id
         )
 
-    def get_all_bookmarks(self) -> List[Note]:
+    def get_all_bookmarks(self, workspace_id: Optional[int] = None) -> List[Note]:
         """
         Возвращает все веб-закладки
         """
-        return self.search(note_type="bookmark")
+        return self.search(note_type="bookmark", workspace_id=workspace_id)
 
-    def search_bookmarks(self, search_text: str = "", tag_names: Optional[List[str]] = None) -> List[Note]:
+    def search_bookmarks(self, search_text: str = "", tag_names: Optional[List[str]] = None,
+                         workspace_id: Optional[int] = None) -> List[Note]:
         """
         Ищет закладки по тексту и/или тегам
         """
-        return self.search(search_text, tag_names, note_type="bookmark")
-
-    def search(self, search_text: str = "", tag_names: Optional[List[str]] = None,
-               note_type: Optional[str] = None) -> List[Note]:
-        """
-        Ищет записи по тексту и/или тегам с фильтрацией по типу
-        """
-        try:
-            with self.db._get_connection() as conn:
-                cursor = conn.cursor()
-
-                # Базовый запрос
-                query = """
-                SELECT n.id, n.title, n.content, n.created_at, n.updated_at,
-                       n.note_type, n.url, n.page_title, n.page_description
-                FROM notes n
-                WHERE 1=1
-                """
-                params = []
-
-                # Фильтр по типу записи
-                if note_type:
-                    query += " AND n.note_type = ?"
-                    params.append(note_type)
-
-                # Добавляем условие для текстового поиска
-                if search_text.strip():
-                    search_pattern = f"%{search_text.strip()}%"
-                    query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?) OR LOWER(n.page_title) LIKE LOWER(?) OR LOWER(n.page_description) LIKE LOWER(?))"
-                    params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
-
-                # Добавляем условие для тегов
-                if tag_names:
-                    normalized_tag_names = [name.strip().lower() for name in tag_names]
-                    for i, tag_name in enumerate(normalized_tag_names):
-                        query += f"""
-                        AND EXISTS (
-                            SELECT 1 FROM note_tag_relation ntr{i}
-                            JOIN tags t{i} ON ntr{i}.tag_id = t{i}.id
-                            WHERE ntr{i}.note_id = n.id AND t{i}.name = ?
-                        )
-                        """
-                        params.append(tag_name)
-
-                # Сортируем по дате обновления (новые сначала)
-                query += " ORDER BY n.updated_at DESC"
-
-                cursor.execute(query, params)
-                results = cursor.fetchall()
-
-                notes = []
-                for (note_id, title, content, created_at, updated_at,
-                     note_type, url, page_title, page_description) in results:
-                    # Получаем теги для каждой записи
-                    tag_objects = self.tag_manager.get_tags_for_note(note_id)
-
-                    # Преобразуем даты
-                    created_date = datetime.fromisoformat(created_at) if created_at else datetime.now()
-                    modified_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
-
-                    # Создаем объект Note
-                    note = Note(
-                        title=title,
-                        content=content or "",
-                        note_id=note_id,
-                        created_date=created_date,
-                        modified_date=modified_date,
-                        note_type=note_type or "note",
-                        url=url,
-                        page_title=page_title,
-                        page_description=page_description
-                    )
-                    note.tags = tag_objects
-                    notes.append(note)
-
-                search_type = "закладок" if note_type == "bookmark" else "заметок" if note_type == "note" else "записей"
-                print(f"Найдено {search_type}: {len(notes)}")
-                if search_text:
-                    print(f"Поисковый запрос: '{search_text}'")
-                if tag_names:
-                    print(f"Теги для фильтрации: {tag_names}")
-
-                return notes
-
-        except Exception as e:
-            print(f"Ошибка при поиске записей: {e}")
-            return []
+        return self.search(search_text, tag_names, "bookmark", workspace_id)
 
     def _validate_url(self, url: str) -> bool:
         """
@@ -681,23 +593,3 @@ class NoteManager:
             return f'https://{url}'
 
         return url
-
-    def search_by_tags(self, tag_names: List[str], note_type: Optional[str] = None) -> List[Note]:
-        """
-        Ищет записи только по тегам с фильтрацией по типу
-
-        Args:
-            tag_names: Список тегов для фильтрации
-            note_type: 'note', 'bookmark' или None для всех
-
-        Returns:
-            List[Note]: Список найденных записей
-        """
-        return self.search("", tag_names, note_type)
-
-    def search_by_text_and_tags(self, search_text: str, tag_names: List[str],
-                                note_type: Optional[str] = None) -> List[Note]:
-        """
-        Ищет записи по тексту и тегам с фильтрацией по типу
-        """
-        return self.search(search_text, tag_names, note_type)

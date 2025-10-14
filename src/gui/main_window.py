@@ -117,8 +117,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.btnNotes,
             self.btnBookmarks,
             self.btnWorkspaces,
-            self.btnSettings,
-            self.btnChangetheme
+            self.btnSettings
         ]
 
         for button in buttons:
@@ -131,7 +130,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btnBookmarks.clicked.connect(self.show_bookmarks_widget)
         self.btnWorkspaces.clicked.connect(self.show_workspaces_widget)
         self.btnSettings.clicked.connect(self.show_settings_widget)
-        self.btnChangetheme.clicked.connect(self.toggle_theme)
 
     def set_content_widget(self, widget):
         """Установка виджета в контейнер"""
@@ -272,8 +270,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.btnTasks,
             self.btnBookmarks,
             self.btnWorkspaces,
-            self.btnSettings,
-            self.btnChangetheme
+            self.btnSettings
         ]
 
         # Сначала устанавливаем всем неактивный стиль
@@ -282,14 +279,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Затем устанавливаем активный стиль для выбранной кнопки
         active_button.setStyleSheet(self.active_style)
-
-    def toggle_theme(self):
-        """Переключение темы (заглушка)"""
-        QtWidgets.QMessageBox.information(
-            self,
-            "Смена темы",
-            "Функция смены темы будет реализована в будущем"
-        )
 
     def on_workspace_deleted(self, deleted_workspace_id: int):
         """Обрабатывает удаление рабочего пространства"""

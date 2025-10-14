@@ -12,16 +12,19 @@ from src.core.bookmark_manager import BookmarkManager
 from src.core.database_manager import DatabaseManager
 from src.core.tag_manager import TagManager
 from src.core.note_manager import NoteManager
+from src.core.workspace_manager import WorkspaceManager
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        self.workspace_manager = None
         self.bookmark_manager = None
         self.task_manager = None
         self.note_manager = None
         self.tag_manager = None
         self.db_manager = None
+        self.current_workspace_id = 1  # Глобальная переменная для текущего workspace
         self.setupUi(self)
         self.current_widget = None
         self.setup_ui()
@@ -49,6 +52,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         db_path = "smart_organizer.db"
         self.db_manager = DatabaseManager(db_path)
         self.tag_manager = TagManager(self.db_manager)
+        self.workspace_manager = WorkspaceManager(self.db_manager)
         self.note_manager = NoteManager(self.db_manager, self.tag_manager)
         self.task_manager = TaskManager(self.db_manager)
         self.bookmark_manager = BookmarkManager(self.db_manager)
@@ -134,7 +138,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_notes_widget(self):
         """Показать виджет заметок"""
         try:
-            notes_widget = NotesWidget()
+            # Передаем текущий workspace_id в виджет заметок
+            notes_widget = NotesWidget(
+                workspace_id=self.current_workspace_id
+            )
             self.set_content_widget(notes_widget)
             self.reset_other_buttons(self.btnNotes)
         except Exception as e:
@@ -144,8 +151,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_tasks_widget(self):
         """Показать виджет задач"""
         try:
-            # Передаем только 2 аргумента
-            tasks_widget = UpcomingTasksWidget(self.task_manager, self.note_manager)
+            # Передаем текущий workspace_id в виджет задач
+            tasks_widget = UpcomingTasksWidget(
+                self.task_manager,
+                self.note_manager,
+                workspace_id=self.current_workspace_id
+            )
 
             # Устанавливаем parent после создания
             tasks_widget.setParent(self)
@@ -182,7 +193,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_bookmarks_widget(self):
         """Показать виджет закладок"""
         try:
-            bookmarks_widget = BookmarksWidget()
+            # Передаем текущий workspace_id в виджет закладок
+            bookmarks_widget = BookmarksWidget(
+                bookmark_manager=self.bookmark_manager,
+                workspace_id=self.current_workspace_id
+            )
             self.set_content_widget(bookmarks_widget)
             self.reset_other_buttons(self.btnBookmarks)
         except Exception as e:
@@ -192,12 +207,32 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def show_workspaces_widget(self):
         """Показать виджет рабочих пространств"""
         try:
-            workspaces_widget = WorkspacesWidget()
+            # Передаем workspace_manager и текущий workspace_id
+            workspaces_widget = WorkspacesWidget(
+                workspace_manager=self.workspace_manager,
+                current_workspace_id=self.current_workspace_id
+            )
+
+            # Подключаем сигнал изменения workspace
+            workspaces_widget.workspaceChanged.connect(self.on_workspace_changed)
+
             self.set_content_widget(workspaces_widget)
             self.reset_other_buttons(self.btnWorkspaces)
         except Exception as e:
             print(f"Ошибка при создании виджета рабочих пространств: {e}")
+            import traceback
+            traceback.print_exc()
             self.show_placeholder("Виджет рабочих пространств")
+
+    def on_workspace_changed(self, workspace_id):
+        """Обрабатывает изменение рабочего пространства"""
+        print(f"🔄 Изменение workspace: {self.current_workspace_id} -> {workspace_id}")
+        self.current_workspace_id = workspace_id
+
+        # Обновляем текущий виджет, если он поддерживает обновление workspace
+        if self.current_widget and hasattr(self.current_widget, 'set_workspace'):
+            self.current_widget.set_workspace(workspace_id)
+            print(f"✅ Текущий виджет обновлен для workspace {workspace_id}")
 
     def show_settings_widget(self):
         """Показать виджет настроек"""

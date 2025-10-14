@@ -11,10 +11,11 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
     task_toggled = pyqtSignal(int, bool)  # task_id, is_completed
     navigate_to_note = pyqtSignal(int)  # note_id
 
-    def __init__(self, task_manager, note_manager):
+    def __init__(self, task_manager, note_manager, workspace_id=1, parent=None):
         super().__init__()
         self.task_manager = task_manager
         self.note_manager = note_manager
+        self.workspace_id = workspace_id
         self.setupUi(self)
 
         # Настройка дополнительных параметров UI
@@ -46,6 +47,11 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
     def connect_signals(self):
         """Подключение сигналов"""
         self.pushButton.clicked.connect(self.refresh)
+
+    def set_workspace(self, workspace_id):
+        """Обновляет workspace и перезагружает задачи"""
+        self.workspace_id = workspace_id
+        self.load_tasks()
 
     def load_tasks(self):
         """Загрузка и отображение задач"""
@@ -86,12 +92,13 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
         self.update_stats(tasks)
 
     def get_all_tasks_with_details(self):
-        """Получает ВСЕ задачи с полной информацией о приоритетах и дедлайнах"""
+        """Получает ВСЕ задачи с полной информацией о приоритетах и дедлайнах для текущего workspace"""
         try:
             all_tasks = []
-            all_notes = self.note_manager.get_all()
+            # Получаем только заметки текущего workspace
+            all_notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
 
-            print(f"🔍 Загружаем задачи для {len(all_notes)} заметок")
+            print(f"🔍 Загружаем задачи для {len(all_notes)} заметок workspace {self.workspace_id}")
 
             for note in all_notes:
                 # Используем метод, который загружает задачи с приоритетами и дедлайнами
@@ -106,114 +113,102 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
                     print(f"   ✅ Задача: '{task.description}'{due_info}{priority_info}")
 
                     task.note_title = note.title
+                    task.note_id = note.id  # Убедимся, что note_id установлен
                     all_tasks.append(task)
 
-            print(f"📊 Всего загружено задач: {len(all_tasks)}")
+            print(f"📊 Всего загружено задач в workspace {self.workspace_id}: {len(all_tasks)}")
             return all_tasks
 
         except Exception as e:
-            print(f"❌ Ошибка при получении всех задач: {e}")
+            print(f"❌ Ошибка при получении всех задач для workspace {self.workspace_id}: {e}")
             import traceback
             traceback.print_exc()
             return []
 
     def get_all_incomplete_tasks_with_details(self):
-        """Получает невыполненные задачи с полной информацией"""
+        """Получает невыполненные задачи с полной информацией для текущего workspace"""
         try:
             all_tasks = []
-            all_notes = self.note_manager.get_all()
+            # Получаем только заметки текущего workspace
+            all_notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
 
             for note in all_notes:
                 note_tasks = self.task_manager.get_tasks_for_note(note.id)
                 for task in note_tasks:
                     if not task.is_completed:
                         task.note_title = note.title
+                        task.note_id = note.id
                         all_tasks.append(task)
 
             return all_tasks
 
         except Exception as e:
-            print(f"Ошибка при получении невыполненных задач: {e}")
+            print(f"Ошибка при получении невыполненных задач для workspace {self.workspace_id}: {e}")
             return []
 
     def get_completed_tasks_with_details(self):
-        """Получает выполненные задачи с полной информацией"""
+        """Получает выполненные задачи с полной информацией для текущего workspace"""
         try:
             all_tasks = []
-            all_notes = self.note_manager.get_all()
+            # Получаем только заметки текущего workspace
+            all_notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
 
             for note in all_notes:
                 note_tasks = self.task_manager.get_tasks_for_note(note.id)
                 for task in note_tasks:
                     if task.is_completed:
                         task.note_title = note.title
+                        task.note_id = note.id
                         all_tasks.append(task)
 
             return all_tasks
 
         except Exception as e:
-            print(f"Ошибка при получении выполненных задач: {e}")
-            return []
-
-    # def get_overdue_tasks(self):
-    #     """Получает просроченные задачи"""
-    #     try:
-    #         from datetime import datetime
-    #         all_tasks = []
-    #         all_notes = self.note_manager.get_all()
-    #
-    #         for note in all_notes:
-    #             note_tasks = self.task_manager.get_tasks_for_note(note.id)
-    #             for task in note_tasks:
-    #                 if (not task.is_completed and
-    #                         task.due_date and
-    #                         task.due_date < datetime.now()):
-    #                     task.note_title = note.title
-    #                     all_tasks.append(task)
-    #
-    #         return all_tasks
-
-        except Exception as e:
-            print(f"Ошибка при получении просроченных задач: {e}")
+            print(f"Ошибка при получении выполненных задач для workspace {self.workspace_id}: {e}")
             return []
 
     def get_tasks_with_due_dates(self):
-        """Получает задачи с установленными дедлайнами (ВСЕ, включая выполненные)"""
+        """Получает задачи с установленными дедлайнами (ВСЕ, включая выполненные) для текущего workspace"""
         try:
             all_tasks = []
-            all_notes = self.note_manager.get_all()
+            # Получаем только заметки текущего workspace
+            all_notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
 
             for note in all_notes:
                 note_tasks = self.task_manager.get_tasks_for_note(note.id)
                 for task in note_tasks:
                     if task.due_date:  # УБИРАЕМ проверку на is_completed
                         task.note_title = note.title
+                        task.note_id = note.id
                         all_tasks.append(task)
 
-            print(f"✅ Найдено задач с дедлайнами: {len(all_tasks)} (включая выполненные)")
+            print(
+                f"✅ Найдено задач с дедлайнами в workspace {self.workspace_id}: {len(all_tasks)} (включая выполненные)")
             return all_tasks
 
         except Exception as e:
-            print(f"Ошибка при получении задач с дедлайнами: {e}")
+            print(f"Ошибка при получении задач с дедлайнами для workspace {self.workspace_id}: {e}")
             return []
 
     def get_high_priority_tasks(self):
-        """Получает задачи с высоким приоритетом"""
+        """Получает задачи с высоким приоритетом для текущего workspace"""
         try:
             all_tasks = []
-            all_notes = self.note_manager.get_all()
+            # Получаем только заметки текущего workspace
+            all_notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
 
             for note in all_notes:
                 note_tasks = self.task_manager.get_tasks_for_note(note.id)
                 for task in note_tasks:
                     if task.priority == "high" and not task.is_completed:
                         task.note_title = note.title
+                        task.note_id = note.id
                         all_tasks.append(task)
 
             return all_tasks
 
         except Exception as e:
-            print(f"Ошибка при получении задач с высоким приоритетом: {e}")
+            print(f"Ошибка при получении задач с высоким приоритетом для workspace {self.workspace_id}: {e}")
             return []
 
     def sort_tasks_by_priority_and_due_date(self, tasks):
@@ -470,7 +465,7 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
         self.completed_label.setText(f"Выполнено: {completed}")
 
         # Вывод отладочной информации
-        print(f"📊 Статистика: {total} всего, {active} активных, {completed} выполненных")
+        print(f"📊 Статистика workspace {self.workspace_id}: {total} всего, {active} активных, {completed} выполненных")
         print(f"📊 Детали: {high_priority} высокого приоритета, {overdue} просроченных")
 
     def on_filter_changed(self):

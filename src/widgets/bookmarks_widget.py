@@ -6,13 +6,19 @@ from PyQt6.QtGui import QAction, QIcon, QFont
 import webbrowser
 
 class BookmarksWidget(QWidget):
-    def __init__(self):
+    def __init__(self, workspace_id=1, parent=None):
         super().__init__()
         # Создаем простой интерфейс для закладок
         layout = QVBoxLayout(self)
+        self.workspace_id = workspace_id
         label = QLabel("<h1>Закладки</h1><p>Раздел в разработке</p>")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
+
+    def set_workspace(self, workspace_id):
+        """Обновляет workspace и перезагружает закладки"""
+        self.workspace_id = workspace_id
+        self.load_bookmarks()
 
 # class BookmarksWidget(QWidget):
 #     """Виджет для отображения и управления веб-закладками"""

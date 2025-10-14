@@ -30,6 +30,9 @@ class NoteManager:
             print("❌ Ошибка: заголовок не может быть пустым")
             return None
 
+        # ДОБАВЬТЕ ЭТУ ОТЛАДКУ
+        print(f"🔧 CREATE CALLED: workspace_id = {workspace_id}, title = '{title}'")
+
         # Валидация типов
         if note_type not in ["note", "bookmark"]:
             print(f"⚠️  Неподдерживаемый note_type: {note_type}. Используется 'note'")
@@ -53,6 +56,9 @@ class NoteManager:
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
+
+                # ДОБАВЬТЕ ОТЛАДКУ ПЕРЕД ВСТАВКОЙ
+                print(f"🔧 INSERTING INTO DB: workspace_id = {workspace_id}")
 
                 # Вставляем запись в таблицу notes
                 cursor.execute(

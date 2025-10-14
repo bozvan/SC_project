@@ -23,6 +23,7 @@ try:
     from src.core.note_manager import NoteManager
     from src.widgets.rich_text_editor import RichTextEditor
     from src.widgets.note_editor import NoteEditorWindow
+
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
@@ -51,7 +52,7 @@ def parse_search_query(query):
 
 
 class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
-    def __init__(self):
+    def __init__(self, workspace_id=1, parent=None):
         super().__init__()
         self.content_editor = None
         self.rich_editor = None
@@ -65,6 +66,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.bookmark_manager = None
         self.task_manager = None
         self.note_manager = None
+        self.workspace_id = workspace_id
         self.tag_manager = None
         self.db_manager = None
         self.setupUi(self)
@@ -88,9 +90,14 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.load_notes()
 
+    def set_workspace(self, workspace_id):
+        """Обновляет workspace и перезагружает заметки"""
+        self.workspace_id = workspace_id
+        self.load_notes()
+
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID (вызывается извне)"""
-        print(f"🔍 Навигация к заметке {note_id}")
+        print(f"🔍 Навигация к заметке {note_id} в workspace {self.workspace_id}")
 
         # Ищем заметку в текущем списке
         for i in range(self.notes_list.count()):
@@ -111,7 +118,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 print(f"✅ Найдена заметка после перезагрузки: {item.text()}")
                 return
 
-        print(f"❌ Заметка с ID {note_id} не найдена")
+        print(f"❌ Заметка с ID {note_id} не найдена в workspace {self.workspace_id}")
         QMessageBox.warning(self, "Ошибка", f"Заметка с ID {note_id} не найдена")
 
     def closeEvent(self, event):
@@ -284,11 +291,11 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
         if success:
-            print(f"✅ Заметка {self.current_note_id} сохранена")
+            print(f"✅ Заметка {self.current_note_id} сохранена в workspace {self.workspace_id}")
             self.save_btn.setEnabled(False)
             # Обновляем список заметок
             self.load_notes(self.search_input.text())
-            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось сохранить заметку")
 
@@ -324,7 +331,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.save_btn.setEnabled(False)
             # Обновляем список закладок
             # self.bookmarks_widget.refresh() # РАССКОМЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ЗАКЛАДОК
-            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось сохранить закладку")
 
@@ -340,14 +347,28 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
         tags = [tag for tag in tags if tag]
 
-        note = self.note_manager.create(title, content, tags, "html")
+        # ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
+        print(f"🔧 SAVE_NEW_NOTE: current workspace_id = {self.workspace_id}")
+        print(f"🔧 Calling note_manager.create with workspace_id = {self.workspace_id}")
+
+        # ПЕРЕДАЕМ workspace_id ПРИ СОЗДАНИИ ЗАМЕТКИ
+        note = self.note_manager.create(
+            title=title,
+            content=content,
+            tags=tags,
+            content_type="html",
+            note_type="note",
+            workspace_id=self.workspace_id  # УБЕДИТЕСЬ, что передается правильно
+        )
+
         if note:
-            print(f"✅ Новая заметка создана: {note.id}")
+            print(f"✅ Новая заметка создана в workspace {self.workspace_id}: {note.id}")
             self.save_btn.setEnabled(False)
             self.current_note_id = note.id
             # Обновляем список заметок
             self.load_notes(self.search_input.text())
-            self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+            if hasattr(self, 'tags_widget'):
+                self.tags_widget.refresh()
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
 
@@ -412,11 +433,11 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         # Обновляем список заметок, чтобы показать новую закладку
         self.load_notes(self.search_input.text())
         # Обновляем теги
-        self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+        self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
 
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID"""
-        print(f"🔍 Переход к заметке {note_id}")
+        print(f"🔍 Переход к заметке {note_id} в workspace {self.workspace_id}")
 
         # Ищем заметку в списке
         for i in range(self.notes_list.count()):
@@ -437,7 +458,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 print(f"✅ Найдена заметка после перезагрузки: {item.text()}")
                 return
 
-        print(f"❌ Заметка с ID {note_id} не найдена")
+        print(f"❌ Заметка с ID {note_id} не найдена в workspace {self.workspace_id}")
 
     def on_task_toggled_from_widget(self, task_id, is_completed):
         """Обработчик изменения задачи из виджета предстоящих задач"""
@@ -932,10 +953,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.tasks_layout.addWidget(task_widget)
 
-    def add_task_widget(self, task):
-        """Добавляет виджет задачи и сортирует список"""
-        self.add_task_widget_without_sort(task)
-        self.sort_tasks()  # Теперь просто перезагружает с сортировкой из БД
+    # def add_task_widget(self, task):
+    #     """Добавляет виджет задачи и сортирует список"""
+    #     self.add_task_widget_without_sort(task)
+    #     self.sort_tasks()  # Теперь просто перезагружает с сортировкой из БД
 
     def setup_rich_editor(self):
         """Замена стандартного QTextEdit на наш RichTextEditor"""
@@ -993,7 +1014,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
-                print(f"✅ Автосохранение заметки {self.current_note_id}")
+                print(f"✅ Автосохранение заметки {self.current_note_id} в workspace {self.workspace_id}")
             else:
                 print(f"❌ Ошибка автосохранения заметки {self.current_note_id}")
 
@@ -1022,7 +1043,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
-                print(f"✅ Автосохранение заметки {self.current_note_id}")
+                print(f"✅ Автосохранение заметки {self.current_note_id} в workspace {self.workspace_id}")
 
                 # Обновляем список предстоящих задач после сохранения заметки
                 self.refresh_upcoming_tasks()
@@ -1037,24 +1058,24 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             return False
 
     def load_notes(self, search_query=""):
-        """Загружает заметки с учетом поискового запроса"""
+        """Загружает заметки с учетом поискового запроса и workspace"""
         try:
             search_text, tags = parse_search_query(search_query)
 
             if tags and search_text:
-                notes = self.note_manager.search_by_text_and_tags(search_text, tags)
+                notes = self.note_manager.search_by_text_and_tags(search_text, tags, self.workspace_id)
             elif tags:
-                notes = self.note_manager.search_by_tags(tags)
+                notes = self.note_manager.search_by_tags(tags, self.workspace_id)
             elif search_text:
-                notes = self.note_manager.search(search_text)
+                notes = self.note_manager.search(search_text, self.workspace_id)
             else:
-                notes = self.note_manager.get_all()
-                print("📚 Показаны все заметки")
+                notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
+                print(f"📚 Показаны все заметки workspace {self.workspace_id}")
 
             self.display_notes(notes)
 
         except Exception as e:
-            print(f"❌ Ошибка загрузки заметок: {e}")
+            print(f"❌ Ошибка загрузки заметок для workspace {self.workspace_id}: {e}")
 
     def display_notes(self, notes):
         """Отображает список заметок"""
@@ -1071,7 +1092,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             item.setToolTip("\n".join(tooltip_parts))
             self.notes_list.addItem(item)
 
-        print(f"✅ Отображено заметок: {len(notes)}")
+        print(f"✅ Отображено заметок в workspace {self.workspace_id}: {len(notes)}")
 
         # Автоматически выбираем первую заметку если есть заметки
         if notes and self.notes_list.count() > 0:
@@ -1147,6 +1168,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     def on_new_note(self):
         """Создание новой заметки"""
+        print(f"🔧 ON_NEW_NOTE: current workspace_id = {self.workspace_id}")
+
         # Автосохранение текущей заметки если есть изменения
         if (hasattr(self, 'current_note_id') and
                 self.current_note_id and
@@ -1206,8 +1229,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         try:
             success = self.note_manager.delete(self.current_note_id)
             if success:
-                print(f"✅ Заметка {self.current_note_id} удалена")
-                self.tags_widget.refresh() # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+                print(f"✅ Заметка {self.current_note_id} удалена из workspace {self.workspace_id}")
+                self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
                 self.load_notes(self.search_input.text())
                 self.set_editor_enabled(True)
                 self.title_input.clear()

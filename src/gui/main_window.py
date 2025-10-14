@@ -1,6 +1,8 @@
 import sys
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt
+
+from core.settings_manager import QtSettingsManager
 from src.gui.ui_main_window import Ui_MainWindow
 from src.widgets.notes_widget import NotesWidget
 from src.widgets.bookmarks_widget import BookmarksWidget
@@ -24,9 +26,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.note_manager = None
         self.tag_manager = None
         self.db_manager = None
-        self.current_workspace_id = 1  # Глобальная переменная для текущего workspace
+
+        # Инициализация менеджера настроек ПЕРВЫМ делом
+        self.settings_manager = QtSettingsManager()
+
+        # Загружаем последний workspace из настроек
+        self.current_workspace_id = self.settings_manager.get_last_workspace()
+
         self.setupUi(self)
         self.current_widget = None
+
         self.setup_ui()
         self.setup_managers()
         self.connect_signals()
@@ -56,6 +65,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.note_manager = NoteManager(self.db_manager, self.tag_manager)
         self.task_manager = TaskManager(self.db_manager)
         self.bookmark_manager = BookmarkManager(self.db_manager)
+        self.workspace_manager.workspaceDeleted.connect(self.on_workspace_deleted)
         print("✅ Все менеджеры инициализированы")
 
     def apply_styles(self):
@@ -227,6 +237,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_workspace_changed(self, workspace_id):
         """Обрабатывает изменение рабочего пространства"""
         print(f"🔄 Изменение workspace: {self.current_workspace_id} -> {workspace_id}")
+
+        # Сохраняем новый workspace в настройках сразу при изменении
+        self.settings_manager.set_last_workspace(workspace_id)
+
+        # Обновляем текущий workspace
         self.current_workspace_id = workspace_id
 
         # Обновляем текущий виджет, если он поддерживает обновление workspace
@@ -275,6 +290,70 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             "Смена темы",
             "Функция смены темы будет реализована в будущем"
         )
+
+    def on_workspace_deleted(self, deleted_workspace_id: int):
+        """Обрабатывает удаление рабочего пространства"""
+        print(f"🗑️ Workspace {deleted_workspace_id} был удален")
+
+        # Если удалили текущий workspace, переключаемся на default
+        if deleted_workspace_id == self.current_workspace_id:
+            default_workspace = self.workspace_manager.get_default_workspace()
+            if default_workspace:
+                self.current_workspace_id = default_workspace.id
+                print(f"🔄 Переключение на workspace по умолчанию: {self.current_workspace_id}")
+
+                # Сохраняем новый workspace в настройках
+                self.settings_manager.set_last_workspace(self.current_workspace_id)
+
+                # Обновляем текущий виджет
+                if self.current_widget and hasattr(self.current_widget, 'set_workspace'):
+                    self.current_widget.set_workspace(self.current_workspace_id)
+
+        # ОСОБОЕ ОБНОВЛЕНИЕ: если текущий виджет - WorkspacesWidget, перезагружаем его
+        if (self.current_widget and
+                hasattr(self.current_widget, '__class__') and
+                self.current_widget.__class__.__name__ == 'WorkspacesWidget'):
+            print("🔄 Перезагружаем виджет рабочих пространств...")
+            self.current_widget.load_workspaces()
+
+        # Обновляем все виджеты которые могут показывать workspace-зависимые данные
+        self.refresh_all_widgets()
+
+    def refresh_all_widgets(self):
+        """Обновляет все виджеты которые зависят от workspace"""
+        # Если текущий виджет поддерживает обновление - обновляем его
+        if self.current_widget and hasattr(self.current_widget, 'refresh'):
+            self.current_widget.refresh()
+            print("✅ Текущий виджет обновлен")
+
+    def closeEvent(self, event):
+        """Обработчик закрытия окна"""
+        print("🔴 Закрытие приложения...")
+
+        # Сохраняем текущий workspace (на всякий случай, хотя он уже сохраняется при изменении)
+        if hasattr(self, 'current_workspace_id'):
+            self.settings_manager.set_last_workspace(self.current_workspace_id)
+            print(f"💾 Сохранен workspace {self.current_workspace_id}")
+
+        # Сохраняем состояние окна
+        self.settings_manager.set_window_geometry(self.saveGeometry())
+        self.settings_manager.set_window_state(self.saveState())
+
+        print("💾 Настройки сохранены")
+
+        event.accept()
+
+    def restore_window_state(self):
+        """Восстанавливает состояние окна"""
+        geometry = self.settings_manager.get_window_geometry()
+        state = self.settings_manager.get_window_state()
+
+        if geometry:
+            self.restoreGeometry(geometry)
+            print("✅ Геометрия окна восстановлена")
+        if state:
+            self.restoreState(state)
+            print("✅ Состояние окна восстановлено")
 
 
 def main():

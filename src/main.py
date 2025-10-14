@@ -16,7 +16,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     traceback.print_exception(exc_type, exc_value, exc_traceback)
     sys.exit(1)
 
+
 sys.excepthook = handle_exception
+
 
 def main():
     try:
@@ -39,6 +41,9 @@ def main():
         window.setWindowIcon(QIcon("assets/icons/icon3.png"))
         print("✅ MainWindow создан")
 
+        # Восстанавливаем состояние окна
+        window.restore_window_state()
+
         window.show()
         print("✅ Окно показано")
 
@@ -51,6 +56,7 @@ def main():
         print(f"❌ Критическая ошибка при запуске: {e}")
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

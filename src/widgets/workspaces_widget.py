@@ -10,6 +10,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
     """Виджет управления рабочими пространствами"""
 
     workspaceChanged = pyqtSignal(int)  # ID нового текущего workspace
+    workspaceDeleted = pyqtSignal(int)  # Новый сигнал при удалении workspace
 
     def __init__(self, workspace_manager, current_workspace_id=1, parent=None):
         super().__init__(parent)

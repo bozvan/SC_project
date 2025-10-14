@@ -1,13 +1,18 @@
 from typing import List, Optional
 from datetime import datetime
+
+from PyQt6.QtCore import pyqtSignal, QObject
+
 from .models import Workspace, Note, Task, WebBookmark
 from .database_manager import DatabaseManager
 
 
-class WorkspaceManager:
+class WorkspaceManager(QObject):
     """Менеджер для работы с рабочими пространствами"""
+    workspaceDeleted = pyqtSignal(int)  # Сигнал при удалении workspace
 
     def __init__(self, db_manager: DatabaseManager):
+        super().__init__()
         self.db = db_manager
         self._create_default_workspace()
         print("✅ Менеджер рабочих пространств инициализирован")
@@ -151,7 +156,7 @@ class WorkspaceManager:
             return False
 
     def delete_workspace(self, workspace_id: int) -> bool:
-        """Удаляет рабочее пространство"""
+        """Удаляет рабочее пространство и все связанные данные"""
         # Нельзя удалить рабочее пространство по умолчанию
         workspace = self.get_workspace(workspace_id)
         if workspace and workspace.is_default:
@@ -162,23 +167,63 @@ class WorkspaceManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Удаляем все связанные данные (благодаря CASCADE в БД это должно происходить автоматически)
-                # Но для безопасности можно добавить явное удаление
+                # 1. Сначала получаем статистику для информации
+                stats = self.get_workspace_stats(workspace_id)
+                print(f"🗑️ Удаление workspace {workspace_id}: {stats['notes_count']} заметок, "
+                      f"{stats['tasks_count']} задач, {stats['bookmarks_count']} закладок")
 
-                # Удаляем само рабочее пространство
+                # 2. Явно удаляем связанные данные (на случай если CASCADE не работает)
+
+                # Удаляем теги, связанные с заметками этого workspace
+                cursor.execute("""
+                    DELETE FROM note_tag_relation 
+                    WHERE note_id IN (SELECT id FROM notes WHERE workspace_id = ?)
+                """, (workspace_id,))
+                print(f"✅ Удалено связей тегов: {cursor.rowcount}")
+
+                # Удаляем заметки
+                cursor.execute("DELETE FROM notes WHERE workspace_id = ?", (workspace_id,))
+                notes_deleted = cursor.rowcount
+                print(f"✅ Удалено заметок: {notes_deleted}")
+
+                # Удаляем задачи
+                cursor.execute("DELETE FROM tasks WHERE workspace_id = ?", (workspace_id,))
+                tasks_deleted = cursor.rowcount
+                print(f"✅ Удалено задач: {tasks_deleted}")
+
+                # Удаляем закладки
+                cursor.execute("DELETE FROM bookmarks WHERE workspace_id = ?", (workspace_id,))
+                bookmarks_deleted = cursor.rowcount
+                print(f"✅ Удалено закладок: {bookmarks_deleted}")
+
+                # 3. Удаляем само рабочее пространство
                 cursor.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
-                conn.commit()
+                workspace_deleted = cursor.rowcount > 0
 
-                success = cursor.rowcount > 0
-                if success:
-                    print(f"✅ Рабочее пространство {workspace_id} удалено")
+                if workspace_deleted:
+                    conn.commit()
+                    print(f"✅ Рабочее пространство {workspace_id} полностью удалено")
+                    print(f"📊 Итог: {notes_deleted} заметок, {tasks_deleted} задач, "
+                          f"{bookmarks_deleted} закладок удалено")
+
+                    # Отправляем сигнал об удалении
+                    self.workspaceDeleted.emit(workspace_id)
+
+                    return True
                 else:
+                    conn.rollback()
                     print(f"❌ Рабочее пространство {workspace_id} не найдено")
-                return success
+                    return False
 
         except Exception as e:
             print(f"❌ Ошибка при удалении рабочего пространства: {e}")
             return False
+
+    def _notify_workspace_deleted(self, deleted_workspace_id: int):
+        """Уведомляет о удалении workspace (для обновления UI)"""
+        # Этот метод будет вызываться из UI компонентов
+        # В реальной реализации здесь может быть PyQt сигнал
+        print(f"🔄 Workspace {deleted_workspace_id} удален, требуется обновление UI")
 
     def get_workspace_stats(self, workspace_id: int) -> dict:
         """Возвращает статистику по рабочему пространству"""

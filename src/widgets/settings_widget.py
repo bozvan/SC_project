@@ -187,6 +187,21 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
             print(f"🔧 ИМПОРТ: начинаем импорт в workspace {current_workspace_id}")
 
+            # Получаем существующие данные для проверки дубликатов
+            print("🔍 Проверяем существующие данные...")
+            existing_notes = self.get_existing_notes(current_workspace_id)
+            existing_bookmarks = self.get_existing_bookmarks(current_workspace_id)
+            existing_web_bookmarks = self.get_existing_web_bookmarks(current_workspace_id)
+            existing_tasks = self.get_existing_tasks(current_workspace_id)
+
+            # Подсчитываем элементы для импорта (после фильтрации дубликатов)
+            notes_to_import = self.filter_duplicate_notes(data.get('notes', []), existing_notes, current_workspace_id)
+            bookmarks_to_import = self.filter_duplicate_bookmarks(data.get('bookmarks', []), existing_bookmarks,
+                                                                  current_workspace_id)
+            web_bookmarks_to_import = self.filter_duplicate_web_bookmarks(data.get('web_bookmarks', []),
+                                                                          existing_web_bookmarks, current_workspace_id)
+            tasks_to_import = self.filter_duplicate_tasks(data.get('tasks', []), existing_tasks, current_workspace_id)
+
             # Подсчитываем элементы для импорта
             notes_count = len(data.get('notes', []))
             bookmarks_count = len(data.get('bookmarks', []))
@@ -199,31 +214,19 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                 QMessageBox.information(self, "Информация", "В файле нет данных для импорта")
                 return
 
-            # ИЗМЕНЕНИЕ: предупреждение о смене workspace_id
+            # Подтверждение импорта с информацией о дубликатах
             file_workspace_id = data.get('workspace_id', 'unknown')
-            if file_workspace_id != current_workspace_id:
-                reply = QMessageBox.question(
-                    self,
-                    "Разные workspace",
-                    f"Файл был экспортирован из workspace {file_workspace_id}, "
-                    f"но вы импортируете в workspace {current_workspace_id}.\n\n"
-                    "Все данные будут импортированы в текущий workspace.\n\n"
-                    "Продолжить?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                if reply != QMessageBox.StandardButton.Yes:
-                    return
+            duplicate_info = self.get_duplicate_info(data, existing_notes, existing_bookmarks,
+                                                     existing_web_bookmarks, existing_tasks, current_workspace_id)
 
-            # Подтверждение импорта
             reply = QMessageBox.question(
                 self,
                 "Подтверждение импорта",
                 f"Будет импортировано в workspace {current_workspace_id}:\n"
-                f"• Заметок: {notes_count}\n"
-                f"• Закладок (из notes): {bookmarks_count}\n"
-                f"• Закладок (из bookmarks): {web_bookmarks_count}\n"
-                f"• Задач: {tasks_count}\n\n"
-                "Существующие данные не будут удалены.\n\n"
+                f"• Заметок: {notes_count} (пропущено {duplicate_info['notes_skipped']} дубликатов)\n"
+                f"• Закладок (из notes): {bookmarks_count} (пропущено {duplicate_info['bookmarks_skipped']} дубликатов)\n"
+                f"• Закладок (из bookmarks): {web_bookmarks_count} (пропущено {duplicate_info['web_bookmarks_skipped']} дубликатов)\n"
+                f"• Задач: {tasks_count} (пропущено {duplicate_info['tasks_skipped']} дубликатов)\n\n"
                 "Продолжить?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
@@ -238,16 +241,15 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
             imported_tasks = 0
 
             # Импорт заметок - ИГНОРИРУЕМ workspace_id из файла
-            for note_data in data.get('notes', []):
+            for note_data in notes_to_import:
                 try:
-                    # ИЗМЕНЕНИЕ: импортируем ВСЕ заметки независимо от workspace_id
                     note = self.note_manager.create(
                         title=note_data.get('title', 'Без названия'),
                         content=note_data.get('content', ''),
                         tags=note_data.get('tags', []),
                         content_type=note_data.get('content_type', 'plain'),
                         note_type='note',
-                        workspace_id=current_workspace_id  # Используем текущий workspace
+                        workspace_id=current_workspace_id
                     )
                     if note:
                         imported_notes += 1
@@ -258,15 +260,14 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                     print(f"❌ Ошибка при импорте заметки: {e}")
 
             # Импорт закладок из таблицы notes - ИГНОРИРУЕМ workspace_id из файла
-            for bookmark_data in data.get('bookmarks', []):
+            for bookmark_data in bookmarks_to_import:
                 try:
-                    # ИЗМЕНЕНИЕ: импортируем ВСЕ закладки независимо от workspace_id
                     bookmark = self.note_manager.create_bookmark(
                         url=bookmark_data.get('url', ''),
                         title=bookmark_data.get('title', ''),
                         description=bookmark_data.get('description', ''),
                         tags=bookmark_data.get('tags', []),
-                        workspace_id=current_workspace_id  # Используем текущий workspace
+                        workspace_id=current_workspace_id
                     )
                     if bookmark:
                         imported_bookmarks += 1
@@ -277,9 +278,8 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                     print(f"❌ Ошибка при импорте закладки из notes: {e}")
 
             # Импорт закладок из таблицы bookmarks - ИГНОРИРУЕМ workspace_id из файла
-            for web_bookmark_data in data.get('web_bookmarks', []):
+            for web_bookmark_data in web_bookmarks_to_import:
                 try:
-                    # ИЗМЕНЕНИЕ: импортируем ВСЕ закладки независимо от workspace_id
                     web_bookmark = None
                     if hasattr(self.note_manager, 'bookmark_manager') and self.note_manager.bookmark_manager:
                         web_bookmark = self.note_manager.bookmark_manager.create(
@@ -288,7 +288,7 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                             description=web_bookmark_data.get('description', ''),
                             tags=web_bookmark_data.get('tags', []),
                             favicon_url=web_bookmark_data.get('favicon_url'),
-                            workspace_id=current_workspace_id  # Используем текущий workspace
+                            workspace_id=current_workspace_id
                         )
 
                     if web_bookmark:
@@ -300,25 +300,12 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                     print(f"❌ Ошибка при импорте закладки из bookmarks: {e}")
 
             # Импорт задач - ИГНОРИРУЕМ workspace_id из файла
-            # В функции импорта, в разделе импорта задач:
-            # В функции import_notes, в разделе импорта задач:
-            for task_data in data.get('tasks', []):
+            for task_data in tasks_to_import:
                 try:
-                    # ИСПРАВЛЕНИЕ: находим заметку для привязки задачи
-                    task_title = task_data.get('title', '')
-                    if not task_title or not task_title.strip():
-                        task_description = task_data.get('description', '')
-                        if task_description:
-                            task_title = task_description[:50] + '...' if len(
-                                task_description) > 50 else task_description
-                        else:
-                            task_title = 'Задача без названия'
-
-                    # ИЩЕМ ЗАМЕТКУ ДЛЯ ПРИВЯЗКИ ЗАДАЧИ
+                    # Находим заметку для привязки задачи
                     note_id = self.find_note_for_task(task_data, current_workspace_id)
 
                     if note_id:
-                        # Создаем задачу ПРИВЯЗАННУЮ К ЗАМЕТКЕ
                         task = self.note_manager.task_manager.create_task(
                             note_id=note_id,
                             description=task_data.get('description', ''),
@@ -331,11 +318,11 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
                         if task:
                             imported_tasks += 1
-                            print(f"   ✅ Импортирована задача: '{task.description}' (привязана к заметке {note_id})")
+                            print(f"   ✅ Импортирована задача: '{task.description}'")
                         else:
-                            print(f"   ❌ Не удалось импортировать задачу: {task_title}")
+                            print(f"   ❌ Не удалось импортировать задачу")
                     else:
-                        print(f"   ⚠️  Не найдена заметка для задачи: {task_title}")
+                        print(f"   ⚠️  Не найдена заметка для задачи")
 
                 except Exception as e:
                     print(f"❌ Ошибка при импорте задачи: {e}")
@@ -346,7 +333,11 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
                 f"✅ Заметок: {imported_notes}/{notes_count}\n"
                 f"✅ Закладок (из notes): {imported_bookmarks}/{bookmarks_count}\n"
                 f"✅ Закладок (из bookmarks): {imported_web_bookmarks}/{web_bookmarks_count}\n"
-                f"✅ Задач: {imported_tasks}/{tasks_count}"
+                f"✅ Задач: {imported_tasks}/{tasks_count}\n\n"
+                f"📊 Пропущено дубликатов:\n"
+                f"• Заметок: {duplicate_info['notes_skipped']}\n"
+                f"• Закладок: {duplicate_info['bookmarks_skipped'] + duplicate_info['web_bookmarks_skipped']}\n"
+                f"• Задач: {duplicate_info['tasks_skipped']}"
             )
 
             # Проверка данных после импорта
@@ -396,6 +387,153 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
             print(f"❌ Ошибка импорта: {e}")
             import traceback
             traceback.print_exc()
+
+    def get_existing_notes(self, workspace_id):
+        """Возвращает существующие заметки для проверки дубликатов"""
+        try:
+            return self.note_manager.get_notes_by_workspace(workspace_id)
+        except:
+            return []
+
+    def get_existing_bookmarks(self, workspace_id):
+        """Возвращает существующие закладки из notes для проверки дубликатов"""
+        try:
+            return self.note_manager.get_all_bookmarks(workspace_id)
+        except:
+            return []
+
+    def get_existing_web_bookmarks(self, workspace_id):
+        """Возвращает существующие закладки из bookmarks для проверки дубликатов"""
+        try:
+            if hasattr(self.note_manager, 'bookmark_manager'):
+                return self.note_manager.bookmark_manager.get_all(workspace_id)
+            return []
+        except:
+            return []
+
+    def get_existing_tasks(self, workspace_id):
+        """Возвращает существующие задачи для проверки дубликатов"""
+        try:
+            return self.note_manager.task_manager.get_tasks_by_workspace(workspace_id)
+        except:
+            return []
+
+    def filter_duplicate_notes(self, notes_data, existing_notes, workspace_id):
+        """Фильтрует дубликаты заметок - ИГНОРИРУЕТ workspace_id из файла"""
+        filtered_notes = []
+
+        for note_data in notes_data:
+            # ВСЕГДА импортируем, независимо от workspace_id в файле
+            is_duplicate = False
+            title = note_data.get('title', '').strip().lower()
+            content = note_data.get('content', '').strip()
+
+            # Проверяем на дубликаты по заголовку и содержанию
+            for existing_note in existing_notes:
+                if (existing_note.title.strip().lower() == title and
+                        existing_note.content.strip() == content):
+                    is_duplicate = True
+                    print(f"   ⏩ Пропущена дублирующая заметка: '{title}'")
+                    break
+
+            if not is_duplicate:
+                filtered_notes.append(note_data)
+
+        print(f"🔍 Заметок после фильтрации: {len(filtered_notes)} из {len(notes_data)}")
+        return filtered_notes
+
+    def filter_duplicate_bookmarks(self, bookmarks_data, existing_bookmarks, workspace_id):
+        """Фильтрует дубликаты закладок из notes - ИГНОРИРУЕТ workspace_id из файла"""
+        filtered_bookmarks = []
+
+        for bookmark_data in bookmarks_data:
+            # ВСЕГДА импортируем, независимо от workspace_id в файле
+            is_duplicate = False
+            url = bookmark_data.get('url', '').strip().lower()
+            title = bookmark_data.get('title', '').strip().lower()
+
+            # Проверяем на дубликаты по URL и заголовку
+            for existing_bookmark in existing_bookmarks:
+                if (existing_bookmark.url.strip().lower() == url and
+                        existing_bookmark.title.strip().lower() == title):
+                    is_duplicate = True
+                    print(f"   ⏩ Пропущена дублирующая закладка из notes: '{title}'")
+                    break
+
+            if not is_duplicate:
+                filtered_bookmarks.append(bookmark_data)
+
+        print(f"🔍 Закладок из notes после фильтрации: {len(filtered_bookmarks)} из {len(bookmarks_data)}")
+        return filtered_bookmarks
+
+    def filter_duplicate_web_bookmarks(self, web_bookmarks_data, existing_web_bookmarks, workspace_id):
+        """Фильтрует дубликаты закладок из bookmarks - ИГНОРИРУЕТ workspace_id из файла"""
+        filtered_bookmarks = []
+
+        for bookmark_data in web_bookmarks_data:
+            # ВСЕГДА импортируем, независимо от workspace_id в файле
+            is_duplicate = False
+            url = bookmark_data.get('url', '').strip().lower()
+
+            # Проверяем на дубликаты по URL (основной критерий для закладок)
+            for existing_bookmark in existing_web_bookmarks:
+                if existing_bookmark.url.strip().lower() == url:
+                    is_duplicate = True
+                    print(f"   ⏩ Пропущена дублирующая закладка из bookmarks: '{bookmark_data.get('title')}'")
+                    break
+
+            if not is_duplicate:
+                filtered_bookmarks.append(bookmark_data)
+
+        print(f"🔍 Закладок из bookmarks после фильтрации: {len(filtered_bookmarks)} из {len(web_bookmarks_data)}")
+        return filtered_bookmarks
+
+    def filter_duplicate_tasks(self, tasks_data, existing_tasks, workspace_id):
+        """Фильтрует дубликаты задач - ИГНОРИРУЕТ workspace_id из файла"""
+        filtered_tasks = []
+
+        for task_data in tasks_data:
+            # ВСЕГДА импортируем, независимо от workspace_id в файле
+            is_duplicate = False
+            description = task_data.get('description', '').strip().lower()
+
+            # Проверяем на дубликаты по описанию
+            for existing_task in existing_tasks:
+                if existing_task.description.strip().lower() == description:
+                    is_duplicate = True
+                    print(f"   ⏩ Пропущена дублирующая задача: '{description}'")
+                    break
+
+            if not is_duplicate:
+                filtered_tasks.append(task_data)
+
+        print(f"🔍 Задач после фильтрации: {len(filtered_tasks)} из {len(tasks_data)}")
+        return filtered_tasks
+
+    def get_duplicate_info(self, data, existing_notes, existing_bookmarks, existing_web_bookmarks, existing_tasks,
+                           workspace_id):
+        """Возвращает информацию о количестве дубликатов - ИГНОРИРУЕТ workspace_id из файла"""
+        # ИГНОРИРУЕМ workspace_id при подсчете - считаем ВСЕ элементы из файла
+        notes_total = len(data.get('notes', []))
+        bookmarks_total = len(data.get('bookmarks', []))
+        web_bookmarks_total = len(data.get('web_bookmarks', []))
+        tasks_total = len(data.get('tasks', []))
+
+        notes_skipped = notes_total - len(
+            self.filter_duplicate_notes(data.get('notes', []), existing_notes, workspace_id))
+        bookmarks_skipped = bookmarks_total - len(
+            self.filter_duplicate_bookmarks(data.get('bookmarks', []), existing_bookmarks, workspace_id))
+        web_bookmarks_skipped = web_bookmarks_total - len(
+            self.filter_duplicate_web_bookmarks(data.get('web_bookmarks', []), existing_web_bookmarks, workspace_id))
+        tasks_skipped = tasks_total - len(
+            self.filter_duplicate_tasks(data.get('tasks', []), existing_tasks, workspace_id))
+
+        return {
+            'notes_skipped': notes_skipped,
+            'bookmarks_skipped': bookmarks_skipped,
+            'web_bookmarks_skipped': web_bookmarks_skipped,
+            'tasks_skipped': tasks_skipped
+        }
 
     def find_note_for_task(self, task_data, workspace_id):
         """Находит подходящую заметку для привязки задачи"""

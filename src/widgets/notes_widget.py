@@ -670,6 +670,11 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.upcoming_tasks_widget.refresh()
             print("✅ Список предстоящих задач обновлен")
 
+    def refresh(self):
+        """Обновляет данные виджета"""
+        print("🔄 Обновление виджета заметок...")
+        self.load_notes()
+
     def add_task_widget(self, task):
         """Добавляет виджет задачи с отображением приоритета и срока"""
         task_widget = QWidget()

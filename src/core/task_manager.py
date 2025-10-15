@@ -32,24 +32,16 @@ class TaskManager:
                 table_exists = cursor.fetchone()
 
                 if table_exists:
-                    # Проверяем существование колонки priority
+                    # Проверяем существование колонок
                     cursor.execute("PRAGMA table_info(tasks)")
                     columns = [column[1] for column in cursor.fetchall()]
 
-                    if 'priority' not in columns:
-                        print("🔧 Добавляем колонку priority в таблицу tasks")
+                    # Добавляем недостающие колонки
+                    if 'title' not in columns:
+                        print("🔧 Добавляем колонку title в таблицу tasks")
                         cursor.execute("""
                             ALTER TABLE tasks 
-                            ADD COLUMN priority TEXT DEFAULT 'medium' 
-                            CHECK(priority IN ('high', 'medium', 'low'))
-                        """)
-
-                    # Также проверяем другие необходимые колонки
-                    if 'due_date' not in columns:
-                        print("🔧 Добавляем колонку due_date в таблицу tasks")
-                        cursor.execute("""
-                            ALTER TABLE tasks 
-                            ADD COLUMN due_date DATETIME
+                            ADD COLUMN title TEXT NOT NULL DEFAULT ''
                         """)
 
                     if 'workspace_id' not in columns:
@@ -58,24 +50,81 @@ class TaskManager:
                             ALTER TABLE tasks 
                             ADD COLUMN workspace_id INTEGER DEFAULT 1
                         """)
+
+                    # Делаем note_id опциональным
+                    cursor.execute("PRAGMA table_info(tasks)")
+                    columns_info = cursor.fetchall()
+                    note_id_column = next((col for col in columns_info if col[1] == 'note_id'), None)
+                    if note_id_column and note_id_column[3] == 1:  # NOT NULL constraint
+                        print("🔧 Делаем note_id опциональным")
+                        # Создаем временную таблицу
+                        cursor.execute("""
+                            CREATE TABLE tasks_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title TEXT NOT NULL DEFAULT '',
+                                description TEXT NOT NULL,
+                                note_id INTEGER,
+                                is_completed BOOLEAN DEFAULT FALSE,
+                                priority TEXT DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
+                                due_date DATETIME,
+                                workspace_id INTEGER DEFAULT 1,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE SET NULL
+                            )
+                        """)
+
+                        # Копируем данные
+                        cursor.execute("""
+                            INSERT INTO tasks_new 
+                            (id, description, note_id, is_completed, priority, due_date, workspace_id, created_at, updated_at)
+                            SELECT id, description, note_id, is_completed, priority, due_date, workspace_id, created_at, updated_at
+                            FROM tasks
+                        """)
+
+                        # Заменяем таблицу
+                        cursor.execute("DROP TABLE tasks")
+                        cursor.execute("ALTER TABLE tasks_new RENAME TO tasks")
+
                 else:
                     # Создаем таблицу с нуля
                     cursor.execute("""
                         CREATE TABLE tasks (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            note_id INTEGER NOT NULL,
+                            title TEXT NOT NULL DEFAULT '',
                             description TEXT NOT NULL,
+                            note_id INTEGER,
                             is_completed BOOLEAN DEFAULT FALSE,
                             priority TEXT DEFAULT 'medium' CHECK(priority IN ('high', 'medium', 'low')),
                             due_date DATETIME,
                             workspace_id INTEGER DEFAULT 1,
                             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE CASCADE,
+                            FOREIGN KEY (note_id) REFERENCES notes (id) ON DELETE SET NULL,
                             FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE SET DEFAULT
                         )
                     """)
-                    print("✅ Таблица задач создана с поддержкой приоритетов, сроков и workspace")
+                    print("✅ Таблица задач создана с поддержкой заголовков и workspace")
+
+                # Создаем таблицу для связи задач с тегами если не существует
+                cursor.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='task_tag_relation'
+                """)
+                task_tag_table_exists = cursor.fetchone()
+
+                if not task_tag_table_exists:
+                    cursor.execute("""
+                        CREATE TABLE task_tag_relation (
+                            task_id INTEGER NOT NULL,
+                            tag_id INTEGER NOT NULL,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (task_id, tag_id),
+                            FOREIGN KEY (task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+                            FOREIGN KEY (tag_id) REFERENCES tags (id) ON DELETE CASCADE
+                        )
+                    """)
+                    print("✅ Таблица связи задач с тегами создана")
 
                 conn.commit()
 
@@ -277,24 +326,133 @@ class TaskManager:
             print(f"❌ Ошибка при получении задач для заметки {note_id}: {e}")
             return []
 
-    def get_tasks_by_workspace(self, workspace_id: int) -> List[Task]:
+    def create_standalone_task(self, title: str, description: str = "", due_date: Optional[datetime] = None,
+                               priority: str = "medium", is_completed: bool = False,
+                               tags: Optional[List[str]] = None, workspace_id: int = 1) -> Optional[Task]:
         """
-        Возвращает все задачи для указанного рабочего пространства
+        Создает независимую задачу (без привязки к заметке)
 
         Args:
+            title: Заголовок задачи
+            description: Описание задачи
+            due_date: Срок выполнения
+            priority: Приоритет
+            is_completed: Статус выполнения
+            tags: Список тегов
             workspace_id: ID рабочего пространства
 
         Returns:
-            List[Task]: Список задач workspace
+            Task: Созданная задача
+        """
+        if not title or not title.strip():
+            print("❌ Ошибка: заголовок задачи не может быть пустым")
+            return None
+
+        if not description or not description.strip():
+            print("❌ Ошибка: описание задачи не может быть пустым")
+            return None
+
+        # Валидация приоритета
+        if priority not in ['high', 'medium', 'low']:
+            print(f"⚠️  Неверный приоритет '{priority}', установлен 'medium'")
+            priority = 'medium'
+
+        title = title.strip()
+        description = description.strip()
+
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Вставляем задачу
+                cursor.execute(
+                    """INSERT INTO tasks (title, description, due_date, priority, is_completed, workspace_id) 
+                    VALUES (?, ?, ?, ?, ?, ?)""",
+                    (title, description, due_date.isoformat() if due_date else None, priority,
+                     1 if is_completed else 0, workspace_id)
+                )
+                task_id = cursor.lastrowid
+
+                # Обрабатываем теги
+                tag_objects = []
+                if tags:
+                    for tag_name in tags:
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
+                        if tag and tag.id:
+                            cursor.execute(
+                                "INSERT INTO task_tag_relation (task_id, tag_id) VALUES (?, ?)",
+                                (task_id, tag.id)
+                            )
+                            tag_objects.append(tag)
+
+                conn.commit()
+
+                if task_id:
+                    task = Task(
+                        title=title,
+                        description=description,
+                        is_completed=is_completed,
+                        task_id=task_id,
+                        due_date=due_date,
+                        priority=priority,
+                        workspace_id=workspace_id
+                    )
+                    task.tags = tag_objects
+                    print(f"✅ Независимая задача '{title}' создана с ID: {task_id} в workspace {workspace_id}")
+                    if tag_objects:
+                        print(f"   🏷️ Привязаны теги: {[tag.name for tag in tag_objects]}")
+                    return task
+                else:
+                    print("❌ Ошибка: не удалось получить ID созданной задачи")
+                    return None
+
+        except Exception as e:
+            print(f"❌ Ошибка при создании независимой задачи: {e}")
+            return None
+
+    def _get_or_create_tag_with_connection(self, cursor, tag_name: str):
+        """
+        Вспомогательный метод для получения или создания тега
+        """
+        if not tag_name or not tag_name.strip():
+            return None
+
+        normalized_name = tag_name.strip().lower()
+
+        try:
+            # Сначала ищем существующий тег
+            cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+            result = cursor.fetchone()
+
+            if result:
+                tag_id, name = result
+                return type('Tag', (), {'id': tag_id, 'name': name})()
+            else:
+                # Создаем новый тег
+                cursor.execute("INSERT INTO tags (name) VALUES (?)", (normalized_name,))
+                tag_id = cursor.lastrowid
+                if tag_id:
+                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id}")
+                    return type('Tag', (), {'id': tag_id, 'name': normalized_name})()
+                else:
+                    print(f"❌ Ошибка при создании тега '{normalized_name}'")
+                    return None
+
+        except Exception as e:
+            print(f"❌ Ошибка при работе с тегом '{tag_name}': {e}")
+            return None
+
+    def get_tasks_by_workspace(self, workspace_id: int) -> List[Task]:
+        """
+        Возвращает все задачи для указанного рабочего пространства
         """
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """SELECT t.id, t.note_id, t.description, t.is_completed, t.priority, t.due_date, 
-                              t.created_at, t.updated_at, n.title
+                    """SELECT t.id, t.title, t.description, t.is_completed, t.priority, t.due_date, 
+                              t.created_at, t.updated_at, t.workspace_id
                     FROM tasks t
-                    JOIN notes n ON t.note_id = n.id
                     WHERE t.workspace_id = ? 
                     ORDER BY 
                         CASE priority 
@@ -309,8 +467,8 @@ class TaskManager:
                 results = cursor.fetchall()
 
                 tasks = []
-                for (task_id, note_id, description, is_completed, priority, due_date_str,
-                     created_at, updated_at, note_title) in results:
+                for (task_id, title, description, is_completed, priority, due_date_str,
+                     created_at, updated_at, task_workspace_id) in results:
 
                     due_date = None
                     if due_date_str:
@@ -323,17 +481,17 @@ class TaskManager:
                     updated_date = datetime.fromisoformat(updated_at) if updated_at else datetime.now()
 
                     task = Task(
+                        title=title or "",  # Добавляем заголовок
                         description=description,
                         is_completed=bool(is_completed),
                         task_id=task_id,
                         due_date=due_date,
-                        note_id=note_id,
-                        created_date=created_date,
-                        modified_date=updated_date,
                         priority=priority,
-                        workspace_id=workspace_id
+                        workspace_id=task_workspace_id
                     )
-                    task.note_title = note_title
+
+                    # Получаем теги для задачи
+                    task.tags = self.get_tags_for_task(task_id)
                     tasks.append(task)
 
                 print(f"✅ Загружено задач для workspace {workspace_id}: {len(tasks)}")
@@ -341,6 +499,32 @@ class TaskManager:
 
         except Exception as e:
             print(f"❌ Ошибка при получении задач для workspace {workspace_id}: {e}")
+            return []
+
+    def get_tags_for_task(self, task_id: int):
+        """
+        Возвращает теги для задачи
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT t.id, t.name 
+                    FROM tags t
+                    JOIN task_tag_relation ttr ON t.id = ttr.tag_id
+                    WHERE ttr.task_id = ?
+                """, (task_id,))
+
+                results = cursor.fetchall()
+                tags = []
+
+                for tag_id, tag_name in results:
+                    tags.append(type('Tag', (), {'id': tag_id, 'name': tag_name})())
+
+                return tags
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении тегов для задачи {task_id}: {e}")
             return []
 
     def update_task(self, task_id: int, description: Optional[str] = None,

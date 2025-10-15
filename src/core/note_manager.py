@@ -2,6 +2,8 @@ import re
 from urllib.parse import urlparse
 from typing import List, Optional
 from datetime import datetime
+
+from .bookmark_manager import BookmarkManager
 from .models import Note, Tag
 from .database_manager import DatabaseManager
 from .tag_manager import TagManager
@@ -15,6 +17,7 @@ class NoteManager:
         self.db = db_manager
         self.tag_manager = tag_manager
         self.task_manager = TaskManager(db_manager)
+        self.bookmark_manager = BookmarkManager(db_manager)
 
         # Выполняем миграцию при инициализации
         self.db.migrate_database()
@@ -516,6 +519,17 @@ class NoteManager:
         Ищет записи по тексту и тегам с фильтрацией по типу
         """
         return self.search(search_text, tag_names, note_type, workspace_id)
+
+    def get_current_workspace_id(self) -> int:
+        """Возвращает ID текущего рабочего пространства"""
+        # Пробуем получить из настроек или используем по умолчанию
+        try:
+            from PyQt6.QtCore import QSettings
+            settings = QSettings("SmartOrganizer", "SmartOrganizer")
+            workspace_id = settings.value("current_workspace", 1, type=int)
+            return workspace_id
+        except:
+            return 1
 
     def create_bookmark(self, url: str, title: str = "", description: str = "",
                         tags: Optional[List[str]] = None, workspace_id: int = 1) -> Optional[Note]:

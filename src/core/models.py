@@ -123,16 +123,11 @@ class Tag:
 class Task:
     """Класс, представляющий задачу внутри заметки"""
 
-    def __init__(self,
-                 description: str,
-                 is_completed: bool = False,
-                 task_id: Optional[int] = None,
-                 due_date: Optional[datetime] = None,
-                 note_id: Optional[int] = None,
-                 created_date: Optional[datetime] = None,
-                 modified_date: Optional[datetime] = None,
-                 priority: str = "medium",
-                 workspace_id: Optional[int] = None):  # ← ДОБАВЛЕНО
+    def __init__(self, title: str = "", description: str = "", task_id: Optional[int] = None,
+                 is_completed: bool = False, due_date: Optional[datetime] = None,
+                 note_id: Optional[int] = None, priority: str = "medium",
+                 workspace_id: int = 1, created_date: Optional[datetime] = None,
+                 modified_date: Optional[datetime] = None):
         """
         Инициализация задачи
 
@@ -148,15 +143,17 @@ class Task:
             workspace_id: ID рабочего пространства ← ДОБАВЛЕНО
         """
         self.id = task_id
+        self.title = title  # Добавляем заголовок
         self.description = description
         self.is_completed = is_completed
         self.due_date = due_date
         self.note_id = note_id
-        self.created_date = created_date or datetime.now()
-        self.modified_date = modified_date or datetime.now()
-        self.priority = priority  # "high", "medium", "low"
-        self.workspace_id = workspace_id  # ← ДОБАВЛЕНО
-        self.note_title = None  # Для отображения контекста в виджетах
+        self.priority = priority
+        self.workspace_id = workspace_id
+        self.created_date = created_date if created_date else datetime.now()
+        self.modified_date = modified_date if modified_date else datetime.now()
+        self.tags = []  # Добавляем поддержку тегов
+        self.note_title = None
 
     def __str__(self) -> str:
         """Строковое представление задачи"""

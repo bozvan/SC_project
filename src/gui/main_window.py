@@ -32,6 +32,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Загружаем последний workspace из настроек
         self.current_workspace_id = self.settings_manager.get_last_workspace()
+        print(f"🔧 MainWindow инициализирован с workspace_id: {self.current_workspace_id}")
 
         self.setupUi(self)
         self.current_widget = None
@@ -218,8 +219,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             # Передаем workspace_manager и текущий workspace_id
             workspaces_widget = WorkspacesWidget(
                 workspace_manager=self.workspace_manager,
-                current_workspace_id=self.current_workspace_id
+                current_workspace_id=self.current_workspace_id  # Убедитесь, что передается актуальный
             )
+
+            # ДОБАВЬТЕ ОТЛАДКУ
+            print(f"🔧 Создание WorkspacesWidget с workspace_id: {self.current_workspace_id}")
 
             # Подключаем сигнал изменения workspace
             workspaces_widget.workspaceChanged.connect(self.on_workspace_changed)
@@ -242,19 +246,98 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Обновляем текущий workspace
         self.current_workspace_id = workspace_id
 
+        # ДОБАВЬТЕ ПРОВЕРКУ
+        print(f"🔧 Текущий workspace после изменения: {self.current_workspace_id}")
+
+        # ОБНОВЛЯЕМ SettingsWidget если он активен
+        if (self.current_widget and
+                hasattr(self.current_widget, '__class__') and
+                self.current_widget.__class__.__name__ == 'SettingsWidget'):
+            self.current_widget.update_workspace_id(workspace_id)
+            print(f"✅ SettingsWidget обновлен с новым workspace_id: {workspace_id}")
+
         # Обновляем текущий виджет, если он поддерживает обновление workspace
         if self.current_widget and hasattr(self.current_widget, 'set_workspace'):
             self.current_widget.set_workspace(workspace_id)
             print(f"✅ Текущий виджет обновлен для workspace {workspace_id}")
 
+    def setup_settings_tab(self):
+        """Создает и настраивает вкладку настроек"""
+        from src.widgets.settings_widget import SettingsWidget
+
+        # Создаем виджет настроек
+        self.settings_widget = SettingsWidget(self.note_manager, self.current_workspace_id, self)
+
+        # Подключаем сигналы
+        self.settings_widget.settings_changed.connect(self.on_settings_changed)
+        self.settings_widget.data_imported.connect(self.on_data_imported)
+        self.settings_widget.theme_changed.connect(self.on_theme_changed)
+
+        # Добавляем вкладку настроек (если используется QTabWidget)
+        if hasattr(self, 'main_tabs'):
+            self.main_tabs.addTab(self.settings_widget, "⚙️ Настройки")
+
+        # Или добавляем в stacked widget (если используется QStackedWidget)
+        elif hasattr(self, 'content_stack'):
+            self.content_stack.addWidget(self.settings_widget)
+
+    def on_settings_changed(self):
+        """Обработчик изменения настроек"""
+        print("✅ Настройки изменены")
+        # Можно обновить что-то в интерфейсе
+
+    def on_data_imported(self):
+        """Обработчик импорта данных"""
+        print("✅ Данные импортированы")
+        self.refresh_all_data()  # Обновляем интерфейс
+
+    def on_theme_changed(self, theme_name):
+        """Обработчик изменения темы"""
+        print(f"🎨 Тема изменена на: {theme_name}")
+        # Здесь можно реализовать смену темы
+        self.apply_theme(theme_name)
+
+    def apply_theme(self, theme_name):
+        """Применяет выбранную тему к приложению"""
+        # Реализация смены темы будет зависеть от вашей архитектуры
+        if theme_name == "dark":
+            self.apply_dark_theme()
+        elif theme_name == "light":
+            self.apply_light_theme()
+        else:
+            self.apply_system_theme()
+
+    def show_settings(self):
+        """Переключает на вкладку настроек"""
+        if hasattr(self, 'main_tabs'):
+            # Находим индекс вкладки настроек
+            for i in range(self.main_tabs.count()):
+                if self.main_tabs.tabText(i) == "⚙️ Настройки":
+                    self.main_tabs.setCurrentIndex(i)
+                    break
+        elif hasattr(self, 'content_stack'):
+            # Переключаем на виджет настроек в stacked widget
+            self.content_stack.setCurrentWidget(self.settings_widget)
+
     def show_settings_widget(self):
         """Показать виджет настроек"""
         try:
-            settings_widget = SettingsWidget()
+            # ИСПРАВЛЕНИЕ: передаем АКТУАЛЬНЫЙ workspace_id
+            settings_widget = SettingsWidget(
+                note_manager=self.note_manager,
+                current_workspace_id=self.current_workspace_id,  # Используем текущий workspace
+                parent=self
+            )
+
+            # ДОБАВЬТЕ ОТЛАДКУ
+            print(f"🔧 Создание SettingsWidget с workspace_id: {self.current_workspace_id}")
+
             self.set_content_widget(settings_widget)
             self.reset_other_buttons(self.btnSettings)
         except Exception as e:
             print(f"Ошибка при создании виджета настроек: {e}")
+            import traceback
+            traceback.print_exc()
             self.show_placeholder("Виджет настроек")
 
     def show_placeholder(self, text):
@@ -310,27 +393,28 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def refresh_all_widgets(self):
         """Обновляет все виджеты которые зависят от workspace"""
+        print("🔄 ОБНОВЛЕНИЕ ВСЕХ ВИДЖЕТОВ...")
+
         # Если текущий виджет поддерживает обновление - обновляем его
         if self.current_widget and hasattr(self.current_widget, 'refresh'):
+            print(f"🔄 Обновляем текущий виджет: {self.current_widget.__class__.__name__}")
             self.current_widget.refresh()
-            print("✅ Текущий виджет обновлен")
 
-    def closeEvent(self, event):
-        """Обработчик закрытия окна"""
-        print("🔴 Закрытие приложения...")
+        # Также обновляем другие виджеты которые могут быть открыты
+        # Например, если открыт виджет заметок, обновляем его данные
+        if hasattr(self, 'notes_widget') and self.notes_widget:
+            if hasattr(self.notes_widget, 'refresh'):
+                self.notes_widget.refresh()
 
-        # Сохраняем текущий workspace (на всякий случай, хотя он уже сохраняется при изменении)
-        if hasattr(self, 'current_workspace_id'):
-            self.settings_manager.set_last_workspace(self.current_workspace_id)
-            print(f"💾 Сохранен workspace {self.current_workspace_id}")
+        if hasattr(self, 'bookmarks_widget') and self.bookmarks_widget:
+            if hasattr(self.bookmarks_widget, 'refresh'):
+                self.bookmarks_widget.refresh()
 
-        # Сохраняем состояние окна
-        self.settings_manager.set_window_geometry(self.saveGeometry())
-        self.settings_manager.set_window_state(self.saveState())
+        if hasattr(self, 'tasks_widget') and self.tasks_widget:
+            if hasattr(self.tasks_widget, 'refresh'):
+                self.tasks_widget.refresh()
 
-        print("💾 Настройки сохранены")
-
-        event.accept()
+        print("✅ Все виджеты обновлены")
 
     def restore_window_state(self):
         """Восстанавливает состояние окна"""

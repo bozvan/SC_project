@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingsWidget</class>
+ <widget class="QWidget" name="SettingsWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Настройки</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">SettingsWidget {
+    background-color: palette(window);
+}
+QGroupBox {
+    font-weight: bold;
+    margin-top: 10px;
+    padding-top: 10px;
+    border: 1px solid palette(mid);
+    border-radius: 5px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px 0 5px;
+    color: palette(text);
+}
+QLabel {
+    font-weight: normal;
+}
+QCheckBox {
+    font-weight: normal;
+}
+QComboBox {
+    font-weight: normal;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>20</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="title_label">
+     <property name="text">
+      <string>⚙️ Настройки приложения</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font-size: 18px; font-weight: bold; color: palette(text);</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="appearance_group">
+     <property name="title">
+      <string>Внешний вид</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="spacing">
+       <number>15</number>
+      </property>
+      <property name="leftMargin">
+       <number>15</number>
+      </property>
+      <property name="topMargin">
+       <number>20</number>
+      </property>
+      <property name="rightMargin">
+       <number>15</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="spacing">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="theme_label">
+          <property name="text">
+           <string>Тема оформления:</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">font-weight: normal;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="theme_combo">
+          <property name="styleSheet">
+           <string notr="true">font-weight: normal;</string>
+          </property>
+          <item>
+           <property name="text">
+            <string>🌓 Системная</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>☀️ Светлая</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>🌙 Темная</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="theme_info_label">
+        <property name="text">
+         <string>💡 Изменение темы вступит в силу после перезапуска приложения</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 11px; color: palette(mid); font-style: italic;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="behavior_group">
+     <property name="title">
+      <string>Поведение приложения</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <property name="spacing">
+       <number>12</number>
+      </property>
+      <property name="leftMargin">
+       <number>15</number>
+      </property>
+      <property name="topMargin">
+       <number>20</number>
+      </property>
+      <property name="rightMargin">
+       <number>15</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="auto_save_check">
+        <property name="text">
+         <string>Автоматическое сохранение заметок</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-weight: normal;</string>
+        </property>
+        <property name="toolTip">
+         <string>Автоматически сохранять изменения в заметках</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="load_session_check">
+        <property name="text">
+         <string>Загружать последнюю сессию при запуске</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-weight: normal;</string>
+        </property>
+        <property name="toolTip">
+         <string>Восстанавливать открытые заметки и workspace при запуске приложения</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="data_group">
+     <property name="title">
+      <string>Управление данными</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <property name="spacing">
+       <number>15</number>
+      </property>
+      <property name="leftMargin">
+       <number>15</number>
+      </property>
+      <property name="topMargin">
+       <number>20</number>
+      </property>
+      <property name="rightMargin">
+       <number>15</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <property name="spacing">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="import_btn">
+          <property name="text">
+           <string>📥 Импорт заметок из JSON</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-weight: normal;
+}
+QPushButton:hover {
+    background-color: #bbdefb;
+}
+QPushButton:pressed {
+    background-color: #90caf9;
+}</string>
+          </property>
+          <property name="toolTip">
+           <string>Импортировать заметки из JSON файла</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="export_btn">
+          <property name="text">
+           <string>📤 Экспорт заметок в JSON</string>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-weight: normal;
+}
+QPushButton:hover {
+    background-color: #c8e6c9;
+}
+QPushButton:pressed {
+    background-color: #a5d6a7;
+}</string>
+          </property>
+          <property name="toolTip">
+           <string>Экспортировать заметки в JSON файл</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="data_info_label">
+        <property name="text">
+         <string>💡 Импорт/экспорт включает заметки, теги и связанные данные. Рекомендуется делать бэкап перед импортом.</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 11px; color: palette(mid); font-style: italic;</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="apply_btn">
+       <property name="text">
+        <string>Применить</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>35</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #4caf50;
+    color: white;
+    border: 1px solid #45a049;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #45a049;
+}
+QPushButton:pressed {
+    background-color: #3d8b40;
+}
+QPushButton:disabled {
+    background-color: #a5d6a7;
+    color: #e8f5e9;
+}</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="reset_btn">
+       <property name="text">
+        <string>Сбросить</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>35</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #ff9800;
+    color: white;
+    border: 1px solid #f57c00;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-weight: normal;
+}
+QPushButton:hover {
+    background-color: #f57c00;
+}
+QPushButton:pressed {
+    background-color: #ef6c00;
+}</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

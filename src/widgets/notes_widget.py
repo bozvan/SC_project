@@ -44,10 +44,12 @@ def parse_search_query(query):
         if word.startswith('#') and len(word) > 1:
             tag_name = word[1:]
             tags.append(tag_name.lower())
+            print(f"🏷️ Обнаружен тег в запросе: #{tag_name}")
         else:
             text_parts.append(word)
 
     search_text = " ".join(text_parts)
+    print(f"🔍 Парсинг запроса: '{query}' -> текст: '{search_text}', теги: {tags}")
     return search_text, tags
 
 
@@ -1069,12 +1071,15 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         try:
             search_text, tags = parse_search_query(search_query)
 
+            print(f"🔍 Поиск в workspace {self.workspace_id}: текст='{search_text}', теги={tags}")
+
+            # ВАЖНО: Убедитесь, что передаем правильные параметры
             if tags and search_text:
-                notes = self.note_manager.search_by_text_and_tags(search_text, tags, self.workspace_id)
+                notes = self.note_manager.search_by_text_and_tags(search_text, tags, workspace_id=self.workspace_id)
             elif tags:
-                notes = self.note_manager.search_by_tags(tags, self.workspace_id)
+                notes = self.note_manager.search_by_tags(tags, workspace_id=self.workspace_id)
             elif search_text:
-                notes = self.note_manager.search(search_text, self.workspace_id)
+                notes = self.note_manager.search(search_text, workspace_id=self.workspace_id)
             else:
                 notes = self.note_manager.get_notes_by_workspace(self.workspace_id)
                 print(f"📚 Показаны все заметки workspace {self.workspace_id}")
@@ -1083,6 +1088,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         except Exception as e:
             print(f"❌ Ошибка загрузки заметок для workspace {self.workspace_id}: {e}")
+            import traceback
+            traceback.print_exc()
 
     def display_notes(self, notes):
         """Отображает список заметок"""

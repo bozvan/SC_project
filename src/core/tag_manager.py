@@ -315,8 +315,9 @@ class TagManager:
                     print(f"🔍 Поиск заметок по тегу '{tag_name}' во всех workspace")
 
                 results = cursor.fetchall()
-                print(f"✅ Найдено {len(results)} заметок с тегом '{tag_name}'")
-                return results
+                note_ids = [row[0] for row in results]  # ИЗВЛЕКАЕМ ТОЛЬКО ID
+                print(f"✅ Найдено {len(note_ids)} заметок с тегом '{tag_name}'")
+                return note_ids
 
         except Exception as e:
             print(f"❌ Ошибка получения заметок по тегу {tag_name}: {e}")

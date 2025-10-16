@@ -373,8 +373,9 @@ class NoteManager:
 
                 # Базовый запрос
                 query = """
-                SELECT n.id, n.title, n.content, n.created_at, n.updated_at,
-                       n.note_type, n.url, n.page_title, n.page_description, n.workspace_id
+                SELECT DISTINCT n.id, n.title, n.content, n.created_at, n.updated_at,
+                       n.note_type, n.url, n.page_title, n.page_description, n.workspace_id,
+                       n.content_type
                 FROM notes n
                 WHERE 1=1
                 """
@@ -396,28 +397,31 @@ class NoteManager:
                     query += " AND (LOWER(n.title) LIKE LOWER(?) OR LOWER(n.content) LIKE LOWER(?) OR LOWER(n.page_title) LIKE LOWER(?) OR LOWER(n.page_description) LIKE LOWER(?))"
                     params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
 
-                # Добавляем условие для тегов
+                # Добавляем условие для тегов - ВАЖНОЕ ИСПРАВЛЕНИЕ
                 if tag_names:
-                    normalized_tag_names = [name.strip().lower() for name in tag_names]
-                    for i, tag_name in enumerate(normalized_tag_names):
+                    # Для каждого тега добавляем JOIN и условие
+                    for i, tag_name in enumerate(tag_names):
                         query += f"""
                         AND EXISTS (
                             SELECT 1 FROM note_tag_relation ntr{i}
                             JOIN tags t{i} ON ntr{i}.tag_id = t{i}.id
-                            WHERE ntr{i}.note_id = n.id AND t{i}.name = ?
+                            WHERE ntr{i}.note_id = n.id AND LOWER(t{i}.name) = LOWER(?)
                         )
                         """
-                        params.append(tag_name)
+                        params.append(tag_name.strip())
 
                 # Сортируем по дате обновления (новые сначала)
                 query += " ORDER BY n.updated_at DESC"
+
+                print(f"🔍 SQL запрос: {query}")
+                print(f"🔍 Параметры: {params}")
 
                 cursor.execute(query, params)
                 results = cursor.fetchall()
 
                 notes = []
                 for (note_id, title, content, created_at, updated_at,
-                     note_type, url, page_title, page_description, workspace_id) in results:
+                     note_type, url, page_title, page_description, workspace_id, content_type) in results:
                     # Получаем теги для каждой записи
                     tag_objects = self.tag_manager.get_tags_for_note(note_id)
 
@@ -436,23 +440,26 @@ class NoteManager:
                         url=url,
                         page_title=page_title,
                         page_description=page_description,
-                        workspace_id=workspace_id
+                        workspace_id=workspace_id,
+                        content_type=content_type or "plain"
                     )
                     note.tags = tag_objects
                     notes.append(note)
 
                 search_type = "закладок" if note_type == "bookmark" else "заметок" if note_type == "note" else "записей"
                 workspace_info = f" в workspace {workspace_id}" if workspace_id is not None else ""
-                print(f"Найдено {search_type}: {len(notes)}{workspace_info}")
+                print(f"✅ Найдено {len(notes)} {search_type}{workspace_info}")
                 if search_text:
-                    print(f"Поисковый запрос: '{search_text}'")
+                    print(f"   Поисковый запрос: '{search_text}'")
                 if tag_names:
-                    print(f"Теги для фильтрации: {tag_names}")
+                    print(f"   Теги для фильтрации: {tag_names}")
 
                 return notes
 
         except Exception as e:
-            print(f"Ошибка при поиске записей: {e}")
+            print(f"❌ Ошибка при поиске записей: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def get_all(self, workspace_id: Optional[int] = None) -> List[Note]:

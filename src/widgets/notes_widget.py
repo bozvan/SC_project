@@ -1102,8 +1102,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         print(f"✅ Отображено заметок в workspace {self.workspace_id}: {len(notes)}")
 
         # Автоматически выбираем первую заметку если есть заметки
-        if notes and self.notes_list.count() > 0:
-            self.notes_list.setCurrentRow(0)
+        # if notes and self.notes_list.count() > 0:
+        #     self.notes_list.setCurrentRow(0)
 
     def on_note_selected(self, current, previous):
         """Обработчик выбора заметки"""

@@ -220,26 +220,6 @@ class ThemeManager:
 
     def get_system_theme(self):
         """Определяет системную тему"""
-        try:
-            # Способ 1: через QApplication palette (наиболее надежный для Qt)
-            app = QApplication.instance()
-            if app:
-                # Получаем цвет фона палитры
-                background_color = app.palette().color(QPalette.ColorRole.Window)
-                brightness = (background_color.red() * 0.299 +
-                              background_color.green() * 0.587 +
-                              background_color.blue() * 0.114)
-
-                # Если яркость меньше 128 - считаем темной темой
-                if brightness < 128:
-                    print("🎨 Системная тема определена как: dark (по палитре Qt)")
-                    return "dark"
-                else:
-                    print("🎨 Системная тема определена как: light (по палитре Qt)")
-                    return "light"
-
-        except Exception as e:
-            print(f"⚠️ Не удалось определить тему через Qt: {e}")
 
         # Способ 2: через системные настройки (для разных ОС)
         try:
@@ -284,10 +264,6 @@ class ThemeManager:
 
         except Exception as e:
             print(f"⚠️ Не удалось определить тему через системные настройки: {e}")
-
-        # Способ 3: резервный - по умолчанию считаем светлой
-        print("🎨 Системная тема не определена, используется по умолчанию: light")
-        return "light"
 
     def apply_theme(self, theme_name=None):
         """Применяет указанную тему ко всему приложению"""

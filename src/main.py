@@ -39,7 +39,7 @@ def main():
         from src.gui.main_window import MainWindow
 
         window = MainWindow()
-        window.setWindowIcon(QIcon("assets/icons/icon3.png"))
+        window.setWindowIcon(QIcon("assets/icons/app_icon.png"))
         print("✅ MainWindow создан")
 
         # Восстанавливаем состояние окна

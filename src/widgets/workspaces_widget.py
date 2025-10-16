@@ -2,8 +2,8 @@ from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox, QInputDialog
 
-from src.gui.ui_workspaces_widget import Ui_WorkspaceWidget
-from src.widgets.workspace_card import WorkspaceCard
+from gui.ui_workspaces_widget import Ui_WorkspaceWidget
+from widgets.workspace_card import WorkspaceCard
 
 
 class WorkspacesWidget(QtWidgets.QWidget):

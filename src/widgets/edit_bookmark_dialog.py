@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QMessageBox
 from PyQt6.QtCore import pyqtSignal
 
-from src.gui.ui_edit_bookmark_dialog import Ui_EditBookmarkDialog
+from gui.ui_edit_bookmark_dialog import Ui_EditBookmarkDialog
 
 
 class EditBookmarkDialog(QDialog, Ui_EditBookmarkDialog):

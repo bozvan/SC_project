@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QPushButton, QScrollArea,
                              QLabel, QFrame)
 from PyQt6.QtCore import Qt, pyqtSignal
-from src.widgets.task_widget import TaskWidget
+from widgets.task_widget import TaskWidget
 
 
 class TasksEditor(QWidget):

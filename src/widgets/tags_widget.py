@@ -164,8 +164,8 @@ class TagsWidget(QWidget):
         """Вспомогательный метод для получения закладок по тегу в текущем workspace"""
         # Временная реализация - можно вынести в tag_manager позже
         try:
-            from src.core.database_manager import DatabaseManager
-            from src.core.bookmark_manager import BookmarkManager
+            from core.database_manager import DatabaseManager
+            from core.bookmark_manager import BookmarkManager
 
             db = DatabaseManager()
             bookmark_manager = BookmarkManager(db)

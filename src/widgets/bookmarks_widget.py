@@ -4,8 +4,8 @@ from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QAction
 import webbrowser
 
-from src.gui.ui_bookmarks_widget import Ui_BookmarksWidget
-from src.widgets.bookmark_item_widget import BookmarkItemWidget  # Импортируем из отдельного файла
+from gui.ui_bookmarks_widget import Ui_BookmarksWidget
+from widgets.bookmark_item_widget import BookmarkItemWidget  # Импортируем из отдельного файла
 
 
 class BookmarksWidget(QWidget, Ui_BookmarksWidget):
@@ -146,7 +146,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
 
     def edit_bookmark(self, bookmark_id: int):
         """Открывает диалог редактирования закладки"""
-        from src.widgets.edit_bookmark_dialog import EditBookmarkDialog
+        from widgets.edit_bookmark_dialog import EditBookmarkDialog
 
         bookmark = self.bookmark_manager.get(bookmark_id)
         if not bookmark:
@@ -209,7 +209,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
 
     def on_add_bookmark(self):
         """Обработчик добавления новой закладки"""
-        from src.widgets.add_bookmark_dialog import AddBookmarkDialog
+        from widgets.add_bookmark_dialog import AddBookmarkDialog
 
         try:
             # ОТЛАДОЧНАЯ ИНФОРМАЦИЯ

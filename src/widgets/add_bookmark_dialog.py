@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QDialog, QMessageBox
 from PyQt6.QtCore import pyqtSignal, Qt
 
 from core.models import WebBookmark
-from src.gui.ui_add_bookmark_dialog import Ui_AddBookmarkDialog
+from gui.ui_add_bookmark_dialog import Ui_AddBookmarkDialog
 
 
 class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):

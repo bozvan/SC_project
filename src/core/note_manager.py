@@ -19,6 +19,7 @@ class NoteManager:
         self.task_manager = TaskManager(db_manager)
         self.bookmark_manager = BookmarkManager(db_manager)
 
+        self.check_database_structure()
         # Выполняем миграцию при инициализации
         self.db.migrate_database()
 
@@ -33,8 +34,17 @@ class NoteManager:
             print("❌ Ошибка: заголовок не может быть пустым")
             return None
 
-        # ДОБАВЬТЕ ЭТУ ОТЛАДКУ
-        print(f"🔧 CREATE CALLED: workspace_id = {workspace_id}, title = '{title}'")
+        # ДЕТАЛЬНАЯ ОТЛАДКА
+        print(f"🔧 CREATE CALLED:")
+        print(f"   - Title: '{title}'")
+        print(f"   - Content length: {len(content)}")
+        print(f"   - Tags: {tags}")
+        print(f"   - Content type: {content_type}")
+        print(f"   - Note type: {note_type}")
+        print(f"   - URL: {url}")
+        print(f"   - Page title: {page_title}")
+        print(f"   - Page description: {page_description}")
+        print(f"   - Workspace ID: {workspace_id}")
 
         # Валидация типов
         if note_type not in ["note", "bookmark"]:
@@ -60,8 +70,12 @@ class NoteManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # ДОБАВЬТЕ ОТЛАДКУ ПЕРЕД ВСТАВКОЙ
-                print(f"🔧 INSERTING INTO DB: workspace_id = {workspace_id}")
+                # ОТЛАДКА ПЕРЕД ВСТАВКОЙ
+                print(f"🔧 INSERTING INTO DB:")
+                print(f"   - Title: '{title}'")
+                print(f"   - Workspace ID: {workspace_id}")
+                print(f"   - Note type: {note_type}")
+                print(f"   - Content type: {content_type}")
 
                 # Вставляем запись в таблицу notes
                 cursor.execute(
@@ -76,9 +90,12 @@ class NoteManager:
                     print("❌ Ошибка: не удалось получить ID созданной записи")
                     return None
 
+                print(f"✅ Запись создана с ID: {note_id}")
+
                 # Обрабатываем теги в ТОМ ЖЕ соединении
                 tag_objects = []
                 if tags:
+                    print(f"🔧 Обработка тегов: {tags}")
                     for tag_name in tags:
                         tag = self._get_or_create_tag_with_connection(cursor, tag_name)
                         if tag:
@@ -87,6 +104,9 @@ class NoteManager:
                                 (note_id, tag.id)
                             )
                             tag_objects.append(tag)
+                            print(f"✅ Тег '{tag_name}' привязан к заметке {note_id}")
+                else:
+                    print("🔧 Теги не указаны")
 
                 conn.commit()
 
@@ -117,7 +137,32 @@ class NoteManager:
 
         except Exception as e:
             print(f"❌ Ошибка при создании записи '{title}': {e}")
+            import traceback
+            traceback.print_exc()
             return None
+
+    def check_database_structure(self):
+        """Проверяет структуру базы данных"""
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+
+                # Проверяем таблицу workspaces
+                cursor.execute("SELECT * FROM workspaces")
+                workspaces = cursor.fetchall()
+                print(f"🔍 Workspaces в БД: {workspaces}")
+
+                # Проверяем структуру таблицы notes
+                cursor.execute("PRAGMA table_info(notes)")
+                notes_columns = cursor.fetchall()
+                print("🔍 Структура таблицы notes:")
+                for column in notes_columns:
+                    print(f"   - {column}")
+
+                return True
+        except Exception as e:
+            print(f"❌ Ошибка проверки структуры БД: {e}")
+            return False
 
     def get(self, note_id: int) -> Optional[Note]:
         """

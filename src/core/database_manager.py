@@ -130,6 +130,11 @@ class DatabaseManager:
                     ("all", "Все заметки и задачи", True)
                 )
 
+                # Проверяем, что workspace создан
+                cursor.execute("SELECT * FROM workspaces")
+                workspaces = cursor.fetchall()
+                print(f"✅ Workspaces после создания: {workspaces}")
+
                 # Миграция: добавляем workspace_id если его нет
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN workspace_id INTEGER DEFAULT 1")

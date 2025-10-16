@@ -2,7 +2,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (QMainWindow, QVBoxLayout, QWidget, QLineEdit,
                              QPushButton, QLabel, QHBoxLayout, QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from src.gui.ui_note_editor import Ui_NoteEditorWindow
+from gui.ui_note_editor import Ui_NoteEditorWindow
 import traceback
 
 
@@ -41,7 +41,7 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
     def setup_rich_editor(self):
         """Заменяет стандартный QTextEdit на RichTextEditor"""
         try:
-            from src.widgets.rich_text_editor import RichTextEditor
+            from widgets.rich_text_editor import RichTextEditor
 
             # Сохраняем позицию текущего редактора в layout
             old_editor = self.content_editor

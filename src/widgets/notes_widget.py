@@ -14,15 +14,15 @@ project_root = os.path.dirname(current_dir)  # Поднимаемся на ур�
 sc_project_root = os.path.dirname(project_root)  # Еще выше - в SC_project
 
 try:
-    from src.gui.ui_main_window import Ui_MainWindow
-    from src.gui.ui_notes_page import Ui_NotesPage
-    from src.core.database_manager import DatabaseManager
-    from src.core.task_manager import TaskManager
-    from src.core.tag_manager import TagManager
-    from src.widgets.tags_widget import TagsWidget
-    from src.core.note_manager import NoteManager
-    from src.widgets.rich_text_editor import RichTextEditor
-    from src.widgets.note_editor import NoteEditorWindow
+    from gui.ui_main_window import Ui_MainWindow
+    from gui.ui_notes_page import Ui_NotesPage
+    from core.database_manager import DatabaseManager
+    from core.task_manager import TaskManager
+    from core.tag_manager import TagManager
+    from widgets.tags_widget import TagsWidget
+    from core.note_manager import NoteManager
+    from widgets.rich_text_editor import RichTextEditor
+    from widgets.note_editor import NoteEditorWindow
 
     print("✅ Все модули успешно импортированы")
 except ImportError as e:
@@ -425,7 +425,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     def show_add_bookmark_dialog(self):
         """Показывает диалог добавления закладки"""
-        from src.widgets.add_bookmark_dialog import AddBookmarkDialog
+        from widgets.add_bookmark_dialog import AddBookmarkDialog
 
         dialog = AddBookmarkDialog(self.bookmark_manager, self)
         dialog.bookmark_added.connect(self.on_bookmark_added)

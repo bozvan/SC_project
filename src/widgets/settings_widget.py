@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QWidget, QMessageBox, QFileDialog, QApplication)
 from PyQt6.QtCore import pyqtSignal, QSettings, QDateTime, Qt, QDate
 import json
 import os
-from src.gui.ui_settings_widget import Ui_SettingsWidget
+from gui.ui_settings_widget import Ui_SettingsWidget
 
 class SettingsWidget(QWidget, Ui_SettingsWidget):
     """Виджет настроек приложения для встраивания в главное окно"""
@@ -73,7 +73,7 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
             # ДОБАВЬТЕ ОТЛАДОЧНУЮ ИНФОРМАЦИЮ
             if new_theme == "system":
-                from src.core.theme_manager import ThemeManager
+                from core.theme_manager import ThemeManager
                 temp_manager = ThemeManager()
                 system_theme = temp_manager.get_system_theme()
                 print(f"🎨 Системная тема определена как: {system_theme}")

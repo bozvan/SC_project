@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QListWidgetItem, QWidget, QHBoxLayout, QCheckBox, QLabel, QPushButton, QVBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from src.gui.ui_task_widget import Ui_TaskWidget
+from gui.ui_task_widget import Ui_TaskWidget
 
 
 class UpcomingTasksWidget(QWidget, Ui_TaskWidget):

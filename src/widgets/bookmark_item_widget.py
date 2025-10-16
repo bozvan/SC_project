@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QFrame, QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSignal
 
-from src.gui.ui_bookmark_item_widget import Ui_BookmarkItemWidget
+from gui.ui_bookmark_item_widget import Ui_BookmarkItemWidget
 
 
 class BookmarkItemWidget(QFrame, Ui_BookmarkItemWidget):
@@ -80,7 +80,7 @@ class BookmarkItemWidget(QFrame, Ui_BookmarkItemWidget):
             self.edit_requested.emit(self.bookmark.id)
         else:
             # Если в родительском виджете нет сигнала, открываем диалог напрямую
-            from src.widgets.edit_bookmark_dialog import EditBookmarkDialog
+            from widgets.edit_bookmark_dialog import EditBookmarkDialog
             dialog = EditBookmarkDialog(self.bookmark_manager, self.bookmark, self)
             if dialog.exec():
                 # Обновляем данные в виджете

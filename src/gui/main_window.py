@@ -2,19 +2,19 @@ from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt
 
 from core.settings_manager import QtSettingsManager
-from src.core.theme_manager import ThemeManager  # ДОБАВЬТЕ ЭТОТ ИМПОРТ
-from src.gui.ui_main_window import Ui_MainWindow
-from src.widgets.notes_widget import NotesWidget
-from src.widgets.bookmarks_widget import BookmarksWidget
-from src.widgets.upcoming_tasks_widget import UpcomingTasksWidget
-from src.widgets.settings_widget import SettingsWidget
-from src.widgets.workspaces_widget import WorkspacesWidget
-from src.core.task_manager import TaskManager
-from src.core.bookmark_manager import BookmarkManager
-from src.core.database_manager import DatabaseManager
-from src.core.tag_manager import TagManager
-from src.core.note_manager import NoteManager
-from src.core.workspace_manager import WorkspaceManager
+from core.theme_manager import ThemeManager  # ДОБАВЬТЕ ЭТОТ ИМПОРТ
+from gui.ui_main_window import Ui_MainWindow
+from widgets.notes_widget import NotesWidget
+from widgets.bookmarks_widget import BookmarksWidget
+from widgets.upcoming_tasks_widget import UpcomingTasksWidget
+from widgets.settings_widget import SettingsWidget
+from widgets.workspaces_widget import WorkspacesWidget
+from core.task_manager import TaskManager
+from core.bookmark_manager import BookmarkManager
+from core.database_manager import DatabaseManager
+from core.tag_manager import TagManager
+from core.note_manager import NoteManager
+from core.workspace_manager import WorkspaceManager
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -283,7 +283,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def setup_settings_tab(self):
         """Создает и настраивает вкладку настроек"""
-        from src.widgets.settings_widget import SettingsWidget
+        from widgets.settings_widget import SettingsWidget
 
         # Создаем виджет настроек
         self.settings_widget = SettingsWidget(self.note_manager, self.current_workspace_id, self)

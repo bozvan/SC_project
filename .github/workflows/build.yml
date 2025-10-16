@@ -2,12 +2,13 @@ name: Build SmartOrganizer for All Platforms
 
 on:
   push:
-    tags: [ 'v*' ]  # Запускать при создании тегов (v1.0.0, v1.1.0 и т.д.)
-  workflow_dispatch:  # Разрешить ручной запуск
+    tags: ['v*']  # Только при тегах v*
+  workflow_dispatch:  # Ручной запуск
 
 jobs:
   build:
     strategy:
+      fail-fast: false  # Важно: не отменять другие jobs при ошибке одной
       matrix:
         include:
           - os: ubuntu-latest
@@ -23,62 +24,81 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # Шаг 1: Получить код из репозитория
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # Шаг 2: Установить Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      # Шаг 3: Установить зависимости
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        if [ -f "src/requirements.txt" ]; then
           pip install -r src/requirements.txt
+        else
+          echo "requirements.txt not found, installing basic dependencies"
+          pip install PyQt6
+        fi
 
-      # Шаг 4: Сборка приложения
-      - name: Build application
-        run: |
-          if [ "${{ matrix.name }}" == "windows" ]; then
-            echo "Building Windows version..."
-            pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data "src/assets;assets" --add-data "src/ui;ui" --add-data "src/*.db;." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
-          elif [ "${{ matrix.name }}" == "linux" ]; then
-            echo "Building Linux version..."
-            pyinstaller --onefile --name ${{ matrix.artifact_name }} --add-data "src/assets:assets" --add-data "src/ui:ui" --add-data "src/*.db:." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
-            chmod +x dist/${{ matrix.artifact_name }}
-          elif [ "${{ matrix.name }}" == "macos" ]; then
-            echo "Building macOS version..."
-            pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data "src/assets:assets" --add-data "src/ui:ui" --add-data "src/*.db:." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
-          fi
+    - name: Debug - List files
+      run: |
+        echo "=== Project structure ==="
+        find . -type f -name "*.py" | head -20
+        echo "=== src directory ==="
+        ls -la src/ || echo "src/ not found"
+        echo "=== requirements.txt ==="
+        cat src/requirements.txt || echo "requirements.txt not found"
 
-      # Шаг 5: Загрузить артефакты
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}
-          path: dist/
-          retention-days: 30
+    - name: Build application
+      run: |
+        echo "Building ${{ matrix.name }} version..."
+        
+        # Базовые параметры PyInstaller
+        PYINSTALLER_CMD="pyinstaller --onefile --name ${{ matrix.artifact_name }}"
+        
+        # Параметры для разных ОС
+        if [ "${{ matrix.name }}" == "windows" ]; then
+          PYINSTALLER_CMD="$PYINSTALLER_CMD --windowed"
+          DATA_SEPARATOR=";"
+        else
+          DATA_SEPARATOR=":"
+        fi
+        
+        # Добавляем данные если папки существуют
+        if [ -d "src/assets" ]; then
+          PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/assets${DATA_SEPARATOR}assets"
+        fi
+        
+        if [ -d "src/ui" ]; then
+          PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/ui${DATA_SEPARATOR}ui"
+        fi
+        
+        # Добавляем основные файлы
+        PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/*.db${DATA_SEPARATOR}."
+        PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/*.json${DATA_SEPARATOR}."
+        
+        # Скрытые импорты
+        PYINSTALLER_CMD="$PYINSTALLER_CMD --hidden-import core --hidden-import gui --hidden-import widgets"
+        
+        # Основной файл
+        PYINSTALLER_CMD="$PYINSTALLER_CMD src/main.py"
+        
+        echo "Command: $PYINSTALLER_CMD"
+        $PYINSTALLER_CMD
+        
+        # Для Linux даем права на выполнение
+        if [ "${{ matrix.name }}" == "linux" ]; then
+          chmod +x dist/${{ matrix.artifact_name }}
+        fi
+        
+        echo "Build completed for ${{ matrix.name }}"
 
-  # Дополнительный job для создания релиза
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            SmartOrganizer-linux/*
-            SmartOrganizer-windows/*
-            SmartOrganizer-macos/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: dist/
+        retention-days: 30

@@ -43,16 +43,30 @@ jobs:
       # Шаг 4: Сборка приложения
       - name: Build application
         run: |
+          # Собираем список конкретных DB файлов
+          DB_FILES=$(find src -name "*.db" -printf "%f " 2>/dev/null || echo "")
+          JSON_FILES=$(find src -name "*.json" -printf "%f " 2>/dev/null || echo "")
+
+          echo "Found DB files: $DB_FILES"
+          echo "Found JSON files: $JSON_FILES"
+
           if [ "${{ matrix.name }}" == "windows" ]; then
-            echo "Building Windows version..."
-            pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data "src/assets;assets" --add-data "src/ui;ui" --add-data "src/*.db;." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
-          elif [ "${{ matrix.name }}" == "linux" ]; then
-            echo "Building Linux version..."
-            pyinstaller --onefile --name ${{ matrix.artifact_name }} --add-data "src/assets:assets" --add-data "src/ui:ui" --add-data "src/*.db:." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
+            CMD="pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data src/assets;assets --add-data src/ui;ui"
+            for file in $DB_FILES; do CMD="$CMD --add-data src/$file;."; done
+            for file in $JSON_FILES; do CMD="$CMD --add-data src/$file;."; done
+            CMD="$CMD --hidden-import core --hidden-import gui --hidden-import widgets src/main.py"
+          else
+            CMD="pyinstaller --onefile --name ${{ matrix.artifact_name }} --add-data src/assets:assets --add-data src/ui:ui"
+            for file in $DB_FILES; do CMD="$CMD --add-data src/$file:."; done
+            for file in $JSON_FILES; do CMD="$CMD --add-data src/$file:."; done
+            CMD="$CMD --hidden-import core --hidden-import gui --hidden-import widgets src/main.py"
+          fi
+
+          echo "Running: $CMD"
+          $CMD
+
+          if [ "${{ matrix.name }}" == "linux" ]; then
             chmod +x dist/${{ matrix.artifact_name }}
-          elif [ "${{ matrix.name }}" == "macos" ]; then
-            echo "Building macOS version..."
-            pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data "src/assets:assets" --add-data "src/ui:ui" --add-data "src/*.db:." --hidden-import core --hidden-import gui --hidden-import widgets src/main.py
           fi
 
       # Шаг 5: Загрузить артефакты

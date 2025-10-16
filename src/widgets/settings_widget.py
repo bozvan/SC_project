@@ -50,8 +50,6 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
         # Отслеживаем изменения для кнопки "Применить"
         self.theme_combo.currentIndexChanged.connect(self.on_setting_changed)
-        self.auto_save_check.stateChanged.connect(self.on_setting_changed)
-        self.load_session_check.stateChanged.connect(self.on_setting_changed)
 
     def load_settings(self):
         """Загружает текущие настройки"""
@@ -62,11 +60,9 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
         # Автосохранение
         auto_save = self.settings.value("behavior/auto_save", True, type=bool)
-        self.auto_save_check.setChecked(auto_save)
 
         # Загрузка сессии
         load_session = self.settings.value("behavior/load_session", True, type=bool)
-        self.load_session_check.setChecked(load_session)
 
         # Сохраняем оригинальные настройки для сравнения
         self.original_settings = self.get_current_settings()

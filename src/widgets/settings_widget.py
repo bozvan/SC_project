@@ -141,7 +141,7 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
             # Отправляем сигналы
             self.settings_changed.emit()
-            self.theme_changed.emit(current_settings["theme"])
+            self.theme_changed.emit(current_settings["theme"])  # ВАЖНО: отправляем сигнал об изменении темы
 
             QMessageBox.information(self, "Успех", "Настройки применены!")
 

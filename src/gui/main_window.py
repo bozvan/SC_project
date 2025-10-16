@@ -1,8 +1,8 @@
-import sys
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt
 
 from core.settings_manager import QtSettingsManager
+from src.core.theme_manager import ThemeManager  # ДОБАВЬТЕ ЭТОТ ИМПОРТ
 from src.gui.ui_main_window import Ui_MainWindow
 from src.widgets.notes_widget import NotesWidget
 from src.widgets.bookmarks_widget import BookmarksWidget
@@ -30,6 +30,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Инициализация менеджера настроек ПЕРВЫМ делом
         self.settings_manager = QtSettingsManager()
 
+        # Инициализация менеджера тем ВТОРЫМ делом
+        self.theme_manager = ThemeManager()
+
         # Загружаем последний workspace из настроек
         self.current_workspace_id = self.settings_manager.get_last_workspace()
         print(f"🔧 MainWindow инициализирован с workspace_id: {self.current_workspace_id}")
@@ -43,6 +46,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         # Применяем стили ДО показа виджета заметок
         self.apply_styles()
+
+        # ПРИМЕНЯЕМ ТЕМУ ПРИ ЗАПУСКЕ
+        # РАССКОМЕНТИРОВАТЬ, КОГДА НАЧНЁТСЯ РАБОТА С ВНЕШНИМ ВИДОМ ИНТЕРФЕЙСА
+        #self.apply_theme_on_startup()
+
         self.show_notes_widget()
 
     def setup_ui(self):
@@ -68,6 +76,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.bookmark_manager = BookmarkManager(self.db_manager)
         self.workspace_manager.workspaceDeleted.connect(self.on_workspace_deleted)
         print("✅ Все менеджеры инициализированы")
+
+    def apply_theme_on_startup(self):
+        """Применяет тему при запуске приложения"""
+        # Получаем сохраненную тему из настроек
+        saved_theme = self.theme_manager.get_current_theme()
+        print(f"🎨 Загружена тема из настроек: {saved_theme}")
+
+        # Применяем тему
+        self.theme_manager.apply_theme(saved_theme)
 
     def apply_styles(self):
         """Принудительное применение стилей"""
@@ -289,23 +306,18 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_data_imported(self):
         """Обработчик импорта данных"""
         print("✅ Данные импортированы")
-        self.refresh_all_data()  # Обновляем интерфейс
+        self.refresh_all_widgets()  # Обновляем интерфейс
 
     def on_theme_changed(self, theme_name):
         """Обработчик изменения темы"""
         print(f"🎨 Тема изменена на: {theme_name}")
-        # Здесь можно реализовать смену темы
-        self.apply_theme(theme_name)
+        # Применяем новую тему через ThemeManager
+        self.theme_manager.set_theme(theme_name)
 
     def apply_theme(self, theme_name):
-        """Применяет выбранную тему к приложению"""
-        # Реализация смены темы будет зависеть от вашей архитектуры
-        if theme_name == "dark":
-            self.apply_dark_theme()
-        elif theme_name == "light":
-            self.apply_light_theme()
-        else:
-            self.apply_system_theme()
+        """Устаревший метод - используйте theme_manager вместо этого"""
+        print(f"⚠️  Используется устаревший метод apply_theme, используйте theme_manager")
+        self.theme_manager.set_theme(theme_name)
 
     def show_settings(self):
         """Переключает на вкладку настроек"""
@@ -331,6 +343,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
             # ДОБАВЬТЕ ОТЛАДКУ
             print(f"🔧 Создание SettingsWidget с workspace_id: {self.current_workspace_id}")
+
+            # ПОДКЛЮЧАЕМ СИГНАЛ ИЗМЕНЕНИЯ ТЕМЫ
+            settings_widget.theme_changed.connect(self.on_theme_changed)
 
             self.set_content_widget(settings_widget)
             self.reset_other_buttons(self.btnSettings)
@@ -427,15 +442,3 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if state:
             self.restoreState(state)
             print("✅ Состояние окна восстановлено")
-
-
-# def main():
-#     app = QtWidgets.QApplication(sys.argv)
-#     app.setStyle('Fusion')
-#     window = MainWindow()
-#     window.show()
-#     sys.exit(app.exec())
-#
-#
-# if __name__ == "__main__":
-#     main()

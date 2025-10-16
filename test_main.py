@@ -121,7 +121,7 @@ def main():
 
     try:
         # Пробуем загрузить PNG иконку
-        pixmap = QPixmap("src/assets/icons/icon3.png")  # Убедитесь что файл logo.png в той же папке
+        pixmap = QPixmap("src/assets/icons/app_icon.png")  # Убедитесь что файл logo.png в той же папке
         pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio,
                                      Qt.TransformationMode.SmoothTransformation)
 

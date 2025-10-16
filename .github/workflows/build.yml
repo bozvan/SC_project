@@ -22,6 +22,9 @@ jobs:
           - os: macos-latest
             name: macos
             artifact_name: SmartOrganizer-macos
+          - os: windows-latest
+            name: windows-debug
+            artifact_name: SmartOrganizer-windows-debug
 
     runs-on: ${{ matrix.os }}
 

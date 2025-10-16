@@ -1,9 +1,37 @@
 import sys
 import traceback
+from pathlib import Path
 
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
+
+
+def get_base_path():
+    """Определяет базовый путь для ресурсов"""
+    if getattr(sys, 'frozen', False):
+        # Запуск из собранного приложения
+        return Path(sys.executable).parent
+    else:
+        # Запуск из исходного кода
+        return Path(__file__).parent
+
+
+def setup_paths():
+    """Настраивает пути импорта"""
+    base_path = get_base_path()
+
+    # Добавляем пути для импорта модулей
+    if str(base_path) not in sys.path:
+        sys.path.insert(0, str(base_path))
+
+    # Добавляем подпапки
+    for folder in ['core', 'gui', 'widgets']:
+        folder_path = base_path / folder
+        if folder_path.exists() and str(folder_path) not in sys.path:
+            sys.path.insert(0, str(folder_path))
+
+    return base_path
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -19,6 +47,9 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 sys.excepthook = handle_exception
 
+# Инициализация путей
+app_base_path = setup_paths()
+
 
 def main():
     try:
@@ -30,7 +61,7 @@ def main():
             QTimer.singleShot(1000, lambda: None)  # Даем время на завершение
 
         app = QApplication(sys.argv)
-        #app.setStyle('Fusion')
+        # app.setStyle('Fusion')
         app.setApplicationName("Smart Organizer")
         app.setApplicationVersion("1.0")
 

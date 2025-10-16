@@ -77,9 +77,7 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
         """Возвращает текущие настройки из UI"""
         theme_map = {0: "system", 1: "light", 2: "dark"}
         return {
-            "theme": theme_map[self.theme_combo.currentIndex()],
-            "auto_save": self.auto_save_check.isChecked(),
-            "load_session": self.load_session_check.isChecked()
+            "theme": theme_map[self.theme_combo.currentIndex()]
         }
 
     def on_setting_changed(self):

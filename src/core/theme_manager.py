@@ -3,6 +3,7 @@ from PyQt6.QtGui import QPalette, QColor
 from PyQt6.QtWidgets import QApplication
 import json
 import os
+import platform
 
 
 class ThemeManager:
@@ -218,10 +219,75 @@ class ThemeManager:
         self.stylesheets["system"] = ""
 
     def get_system_theme(self):
-        """Определяет системную тему (упрощенная версия)"""
-        # В реальном приложении здесь можно использовать более сложную логику
-        # для определения системной темы
-        return "light"  # По умолчанию считаем, что системная тема светлая
+        """Определяет системную тему"""
+        try:
+            # Способ 1: через QApplication palette (наиболее надежный для Qt)
+            app = QApplication.instance()
+            if app:
+                # Получаем цвет фона палитры
+                background_color = app.palette().color(QPalette.ColorRole.Window)
+                brightness = (background_color.red() * 0.299 +
+                              background_color.green() * 0.587 +
+                              background_color.blue() * 0.114)
+
+                # Если яркость меньше 128 - считаем темной темой
+                if brightness < 128:
+                    print("🎨 Системная тема определена как: dark (по палитре Qt)")
+                    return "dark"
+                else:
+                    print("🎨 Системная тема определена как: light (по палитре Qt)")
+                    return "light"
+
+        except Exception as e:
+            print(f"⚠️ Не удалось определить тему через Qt: {e}")
+
+        # Способ 2: через системные настройки (для разных ОС)
+        try:
+            system = platform.system().lower()
+
+            if system == "windows":
+                # Для Windows можно попробовать через реестр
+                import winreg
+                try:
+                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                         r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    winreg.CloseKey(key)
+                    if value == 0:
+                        print("🎨 Системная тема определена как: dark (по реестру Windows)")
+                        return "dark"
+                    else:
+                        print("🎨 Системная тема определена как: light (по реестру Windows)")
+                        return "light"
+                except:
+                    pass
+
+            elif system == "darwin":  # macOS
+                # Для macOS можно использовать терминальные команды
+                import subprocess
+                try:
+                    result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'],
+                                            capture_output=True, text=True)
+                    if 'Dark' in result.stdout:
+                        print("🎨 Системная тема определена как: dark (по настройкам macOS)")
+                        return "dark"
+                except:
+                    pass
+
+            elif system == "linux":
+                # Для Linux можно попробовать через переменные окружения или gsettings
+                import os
+                gtk_theme = os.environ.get('GTK_THEME', '').lower()
+                if 'dark' in gtk_theme:
+                    print("🎨 Системная тема определена как: dark (по GTK_THEME)")
+                    return "dark"
+
+        except Exception as e:
+            print(f"⚠️ Не удалось определить тему через системные настройки: {e}")
+
+        # Способ 3: резервный - по умолчанию считаем светлой
+        print("🎨 Системная тема не определена, используется по умолчанию: light")
+        return "light"
 
     def apply_theme(self, theme_name=None):
         """Применяет указанную тему ко всему приложению"""
@@ -233,17 +299,21 @@ class ThemeManager:
 
         app = QApplication.instance()
 
+        # Для системной темы определяем актуальную тему
+        effective_theme = theme_name
         if theme_name == "system":
-            theme_name = self.get_system_theme()
+            effective_theme = self.get_system_theme()
 
-        if theme_name in self.stylesheets:
-            stylesheet = self.stylesheets[theme_name]
+        print(f"🎨 Применение темы: {theme_name} -> {effective_theme}")
+
+        if effective_theme in self.stylesheets:
+            stylesheet = self.stylesheets[effective_theme]
             app.setStyleSheet(stylesheet)
 
             # Также применяем палитру для лучшей совместимости
-            self.apply_palette(theme_name)
+            self.apply_palette(effective_theme)
 
-        print(f"🎨 Применена тема: {theme_name}")
+        print(f"✅ Применена тема: {theme_name} (эффективная: {effective_theme})")
 
     def apply_palette(self, theme_name):
         """Применяет цветовую палитру для темы"""
@@ -291,3 +361,9 @@ class ThemeManager:
         """Устанавливает новую тему"""
         self.current_theme = theme_name
         self.apply_theme(theme_name)
+
+    def get_effective_theme(self):
+        """Возвращает эффективную тему (для системной темы определяет актуальную)"""
+        if self.current_theme == "system":
+            return self.get_system_theme()
+        return self.current_theme

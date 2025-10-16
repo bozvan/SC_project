@@ -81,7 +81,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Применяет тему при запуске приложения"""
         # Получаем сохраненную тему из настроек
         saved_theme = self.theme_manager.get_current_theme()
+        effective_theme = self.theme_manager.get_effective_theme()
+
         print(f"🎨 Загружена тема из настроек: {saved_theme}")
+        print(f"🎨 Эффективная тема: {effective_theme}")
 
         # Применяем тему
         self.theme_manager.apply_theme(saved_theme)

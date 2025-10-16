@@ -48,8 +48,38 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
         self.import_btn.clicked.connect(self.import_notes)
         self.export_btn.clicked.connect(self.export_notes)
 
-        # Отслеживаем изменения для кнопки "Применить"
-        self.theme_combo.currentIndexChanged.connect(self.on_setting_changed)
+        # ОТСЛЕЖИВАЕМ ИЗМЕНЕНИЕ ТЕМЫ ОТДЕЛЬНО - применяем сразу
+        self.theme_combo.currentIndexChanged.connect(self.on_theme_changed_immediately)
+
+    def on_theme_changed_immediately(self):
+        """Немедленно применяет тему при изменении в комбобоксе"""
+        try:
+            # Получаем новую тему
+            theme_map = {0: "system", 1: "light", 2: "dark"}
+            new_theme = theme_map[self.theme_combo.currentIndex()]
+
+            print(f"🎨 Немедленное применение темы: {new_theme}")
+
+            # Сохраняем настройку
+            self.settings.setValue("appearance/theme", new_theme)
+            self.settings.sync()
+
+            # Отправляем сигнал для применения темы
+            self.theme_changed.emit(new_theme)
+
+            # Обновляем оригинальные настройки для корректной работы кнопки "Применить"
+            self.original_settings = self.get_current_settings()
+            self.update_apply_button()
+
+            # ДОБАВЬТЕ ОТЛАДОЧНУЮ ИНФОРМАЦИЮ
+            if new_theme == "system":
+                from src.core.theme_manager import ThemeManager
+                temp_manager = ThemeManager()
+                system_theme = temp_manager.get_system_theme()
+                print(f"🎨 Системная тема определена как: {system_theme}")
+
+        except Exception as e:
+            print(f"❌ Ошибка при немедленном применении темы: {e}")
 
     def load_settings(self):
         """Загружает текущие настройки"""
@@ -66,6 +96,8 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
         # Сохраняем оригинальные настройки для сравнения
         self.original_settings = self.get_current_settings()
+
+        print(f"⚙️ Загружены настройки: тема={theme}, автосохранение={auto_save}, загрузка сессии={load_session}")
 
     def get_current_workspace_id(self) -> int:
         """Возвращает ID текущего рабочего пространства"""
@@ -118,11 +150,11 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
             """)
 
     def apply_settings(self):
-        """Применяет настройки"""
+        """Применяет настройки (кроме темы, которая уже применена)"""
         try:
             current_settings = self.get_current_settings()
 
-            # Сохраняем настройки
+            # Сохраняем настройки (тема уже сохранена, но на всякий случай)
             self.settings.setValue("appearance/theme", current_settings["theme"])
             self.settings.setValue("behavior/auto_save", current_settings["auto_save"])
             self.settings.setValue("behavior/load_session", current_settings["load_session"])
@@ -133,9 +165,8 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
             self.original_settings = current_settings
             self.update_apply_button()
 
-            # Отправляем сигналы
+            # Отправляем сигналы (сигнал темы уже отправлен, но отправляем общий)
             self.settings_changed.emit()
-            self.theme_changed.emit(current_settings["theme"])  # ВАЖНО: отправляем сигнал об изменении темы
 
             QMessageBox.information(self, "Успех", "Настройки применены!")
 
@@ -152,7 +183,22 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            self.load_settings()  # Перезагружаем оригинальные настройки
+            # Сохраняем старую тему для сравнения
+            old_theme = self.get_current_settings()["theme"]
+
+            # Перезагружаем настройки
+            self.load_settings()
+
+            # Получаем новую тему
+            new_theme = self.get_current_settings()["theme"]
+
+            # Если тема изменилась, применяем ее немедленно
+            if old_theme != new_theme:
+                print(f"🎨 Сброс темы: {old_theme} -> {new_theme}")
+                self.settings.setValue("appearance/theme", new_theme)
+                self.settings.sync()
+                self.theme_changed.emit(new_theme)
+
             self.update_apply_button()
             QMessageBox.information(self, "Успех", "Настройки сброшены!")
 

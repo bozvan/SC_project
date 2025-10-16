@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>500</width>
-    <height>400</height>
+    <height>341</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -31,11 +31,11 @@
    </property>
    <item>
     <widget class="QLabel" name="url_label">
-     <property name="text">
-      <string>URL:</string>
-     </property>
      <property name="styleSheet">
       <string notr="true">font-weight: bold;</string>
+     </property>
+     <property name="text">
+      <string>URL:</string>
      </property>
     </widget>
    </item>
@@ -48,11 +48,11 @@
    </item>
    <item>
     <widget class="QLabel" name="title_label">
-     <property name="text">
-      <string>Название (опционально):</string>
-     </property>
      <property name="styleSheet">
       <string notr="true">font-weight: bold;</string>
+     </property>
+     <property name="text">
+      <string>Название (опционально):</string>
      </property>
     </widget>
    </item>
@@ -65,34 +65,31 @@
    </item>
    <item>
     <widget class="QLabel" name="description_label">
-     <property name="text">
-      <string>Описание (опционально):</string>
-     </property>
      <property name="styleSheet">
       <string notr="true">font-weight: bold;</string>
+     </property>
+     <property name="text">
+      <string>Описание (опционально):</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QTextEdit" name="description_edit">
-     <property name="maximumHeight">
-      <number>80</number>
+     <property name="acceptRichText">
+      <bool>false</bool>
      </property>
      <property name="placeholderText">
       <string>Добавьте описание закладки...</string>
-     </property>
-     <property name="acceptRichText">
-      <bool>false</bool>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QLabel" name="tags_label">
-     <property name="text">
-      <string>Теги (через запятую, опционально):</string>
-     </property>
      <property name="styleSheet">
       <string notr="true">font-weight: bold;</string>
+     </property>
+     <property name="text">
+      <string>Теги (через запятую, опционально):</string>
      </property>
     </widget>
    </item>
@@ -143,11 +140,11 @@
      </item>
      <item>
       <widget class="QPushButton" name="add_btn">
-       <property name="text">
-        <string>Добавить</string>
-       </property>
        <property name="styleSheet">
         <string notr="true">font-weight: bold;</string>
+       </property>
+       <property name="text">
+        <string>Добавить</string>
        </property>
       </widget>
      </item>

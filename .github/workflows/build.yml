@@ -2,8 +2,8 @@ name: Build SmartOrganizer for All Platforms
 
 on:
   push:
-    tags: [ 'v*' ]  # Запускать при создании тегов (v1.0.0, v1.1.0 и т.д.)
-  workflow_dispatch:  # Разрешить ручной запуск
+    tags: [ 'v*' ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,53 +23,58 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # Шаг 1: Получить код из репозитория
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Шаг 2: Установить Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # Шаг 3: Установить зависимости
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install -r requirements.txt
 
-      # Шаг 4: Сборка приложения
       - name: Build application
+        shell: bash  # Важно: явно указываем bash для всех ОС
         run: |
-          # Собираем список конкретных DB файлов
-          DB_FILES=$(find src -name "*.db" -printf "%f " 2>/dev/null || echo "")
-          JSON_FILES=$(find src -name "*.json" -printf "%f " 2>/dev/null || echo "")
-
-          echo "Found DB files: $DB_FILES"
-          echo "Found JSON files: $JSON_FILES"
-
+          echo "=== Building ${{ matrix.name }} version ==="
+          
+          # Базовая команда
           if [ "${{ matrix.name }}" == "windows" ]; then
-            CMD="pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }} --add-data src/assets;assets --add-data src/ui;ui"
-            for file in $DB_FILES; do CMD="$CMD --add-data src/$file;."; done
-            for file in $JSON_FILES; do CMD="$CMD --add-data src/$file;."; done
-            CMD="$CMD --hidden-import core --hidden-import gui --hidden-import widgets src/main.py"
+            PYINSTALLER_CMD="pyinstaller --onefile --windowed --name ${{ matrix.artifact_name }}"
+            SEPARATOR=";"
           else
-            CMD="pyinstaller --onefile --name ${{ matrix.artifact_name }} --add-data src/assets:assets --add-data src/ui:ui"
-            for file in $DB_FILES; do CMD="$CMD --add-data src/$file:."; done
-            for file in $JSON_FILES; do CMD="$CMD --add-data src/$file:."; done
-            CMD="$CMD --hidden-import core --hidden-import gui --hidden-import widgets src/main.py"
+            PYINSTALLER_CMD="pyinstaller --onefile --name ${{ matrix.artifact_name }}"
+            SEPARATOR=":"
           fi
-
-          echo "Running: $CMD"
-          $CMD
-
+          
+          # Добавляем только то что точно существует
+          if [ -d "src/assets" ]; then
+            PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/assets${SEPARATOR}assets"
+          fi
+          
+          if [ -d "src/ui" ]; then
+            PYINSTALLER_CMD="$PYINSTALLER_CMD --add-data src/ui${SEPARATOR}ui"
+          fi
+          
+          PYINSTALLER_CMD="$PYINSTALLER_CMD --hidden-import core --hidden-import gui --hidden-import widgets"
+          PYINSTALLER_CMD="$PYINSTALLER_CMD src/main.py"
+          
+          echo "Command: $PYINSTALLER_CMD"
+          $PYINSTALLER_CMD
+          
+          # Копируем DB и JSON файлы вручную
+          echo "Copying additional files..."
+          cp src/*.db dist/ 2>/dev/null || echo "No .db files to copy"
+          cp src/*.json dist/ 2>/dev/null || echo "No .json files to copy"
+          
           if [ "${{ matrix.name }}" == "linux" ]; then
             chmod +x dist/${{ matrix.artifact_name }}
           fi
 
-      # Шаг 5: Загрузить артефакты
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -77,7 +82,6 @@ jobs:
           path: dist/
           retention-days: 30
 
-  # Дополнительный job для создания релиза
   create-release:
     needs: build
     runs-on: ubuntu-latest

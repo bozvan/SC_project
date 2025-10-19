@@ -19,3 +19,15 @@ __pycache__/
 # Файлы с чувствительными данными (пароли, ключи API)
 .env
 secrets.py
+
+# Другое
+test.spec
+setup.py
+smart_organizer.spec
+build_all.py
+build_linux.sh
+build_windows.bat
+build
+dist
+build_crossplatform.py
+*.spec

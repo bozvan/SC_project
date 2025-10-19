@@ -111,6 +111,7 @@ def main():
 
         window = MainWindow()
 
+
         if icon_path.exists():
             window.setWindowIcon(QIcon(str(icon_path)))
             print("✅ Иконка установлена")

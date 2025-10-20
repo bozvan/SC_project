@@ -124,13 +124,13 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Умный Органайзер"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "MINDSPACE"))
         self.btnWorkspaces.setText(_translate("MainWindow", "Рабочие пространства"))
         self.btnSettings.setText(_translate("MainWindow", "Настройки"))
         self.btnTasks.setText(_translate("MainWindow", "Задачи"))
         self.btnNotes.setText(_translate("MainWindow", "Заметки"))
         self.btnBookmarks.setText(_translate("MainWindow", "Закладки"))
-        self.titleLabel.setText(_translate("MainWindow", "Smart Organizer"))
+        self.titleLabel.setText(_translate("MainWindow", "MINDSPACE"))
         self.actionNewNote.setText(_translate("MainWindow", "Новая заметка"))
         self.actionExit.setText(_translate("MainWindow", "Выход"))
         self.actionRefresh.setText(_translate("MainWindow", "Обновить список"))

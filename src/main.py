@@ -1,3 +1,6 @@
+"""
+Главный файл запуска приложения
+"""
 import os
 import sys
 import traceback
@@ -7,13 +10,10 @@ from pathlib import Path
 def setup_paths():
     """Настройка путей для импорта модулей"""
     if getattr(sys, 'frozen', False):
-        # Запуск из собранного приложения
         base_path = Path(sys.executable).parent
     else:
-        # Запуск из исходного кода
         base_path = Path(__file__).parent
 
-    # Добавляем пути для импорта
     paths_to_add = [
         str(base_path),
         str(base_path / 'core'),
@@ -37,7 +37,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     print("❌ Критическая ошибка:")
     traceback.print_exception(exc_type, exc_value, exc_traceback)
 
-    # В собранном приложении ждем ввод перед закрытием
     if getattr(sys, 'frozen', False):
         input("Нажмите Enter для выхода...")
 
@@ -45,48 +44,23 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 
 sys.excepthook = handle_exception
-
-# Инициализация путей ДО всех импортов
 app_base_path = setup_paths()
 
 
 def main():
+    """Метод запуска приложения"""
     try:
         print("🚀 Запуск приложения...")
         print(f"✅ Base path: {app_base_path}")
         print(f"✅ Sys.path: {sys.path}")
 
-        # Импорты PyQt6
+        # pylint: disable=unused-import, no-name-in-module
         from PyQt6.QtWidgets import QApplication
         from PyQt6.QtGui import QIcon
-        from PyQt6.QtCore import QTimer, Qt
+        from PyQt6.QtCore import QTimer
+        # pylint: enable=unused-import, no-name-in-module
 
         print("✅ PyQt6 модули импортированы")
-
-        # Пробуем импортировать свои модули
-        try:
-            # Импортируем по одному модулю для отладки
-            from core import database_manager
-            print("✅ database_manager импортирован")
-
-            from core import settings_manager
-            print("✅ settings_manager импортирован")
-
-            # Добавьте остальные по одному
-        except ImportError as e:
-            print(f"⚠️ Ошибка импорта core: {e}")
-
-        try:
-            from gui import main_window
-            print("✅ main_window импортирован")
-        except ImportError as e:
-            print(f"⚠️ Ошибка импорта gui: {e}")
-
-        try:
-            from widgets import bookmarks_widget
-            print("✅ bookmarks_widget импортирован")
-        except ImportError as e:
-            print(f"⚠️ Ошибка импорта widgets: {e}")
 
         # Пересоздаем QApplication если нужно
         app = QApplication.instance()
@@ -97,20 +71,15 @@ def main():
 
         # Создаем новое приложение
         app = QApplication(sys.argv)
-        app.setApplicationName("Smart Organizer")
+        app.setApplicationName("MINDSPACE")
         app.setApplicationVersion("1.0")
         print("✅ QApplication создан")
 
-        # 👇 ИСПРАВЛЕННЫЙ ИМПОРТ - без src.
-        from gui.main_window import MainWindow
-
         # Проверяем путь к иконке
         icon_path = app_base_path / "assets" / "icons" / "app_icon.png"
-        print(f"🔍 Ищем иконку по пути: {icon_path}")
-        print(f"📁 Существует: {icon_path.exists()}")
 
+        from gui.main_window import MainWindow
         window = MainWindow()
-
 
         if icon_path.exists():
             window.setWindowIcon(QIcon(str(icon_path)))
@@ -139,7 +108,6 @@ def main():
         print(f"❌ Критическая ошибка при запуске: {e}")
         traceback.print_exc()
 
-        # В собранном приложении ждем ввод перед закрытием
         if getattr(sys, 'frozen', False):
             input("Нажмите Enter для выхода...")
 

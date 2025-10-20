@@ -1,8 +1,11 @@
+import os
+
 from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtWidgets import QApplication
 
 from core.settings_manager import QtSettingsManager
-from core.theme_manager import ThemeManager  # ДОБАВЬТЕ ЭТОТ ИМПОРТ
 from gui.ui_main_window import Ui_MainWindow
 from widgets.notes_widget import NotesWidget
 from widgets.bookmarks_widget import BookmarksWidget
@@ -15,6 +18,7 @@ from core.database_manager import DatabaseManager
 from core.tag_manager import TagManager
 from core.note_manager import NoteManager
 from core.workspace_manager import WorkspaceManager
+from core.theme_manager import ThemeManager
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
@@ -26,6 +30,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.note_manager = None
         self.tag_manager = None
         self.db_manager = None
+        self.theme_manager = None
 
         # Инициализация менеджера настроек ПЕРВЫМ делом
         self.settings_manager = QtSettingsManager()
@@ -41,21 +46,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.current_widget = None
 
         self.setup_ui()
+        self.setup_icons()
         self.setup_managers()
         self.connect_signals()
 
-        # Применяем стили ДО показа виджета заметок
-        self.apply_styles()
-
         # ПРИМЕНЯЕМ ТЕМУ ПРИ ЗАПУСКЕ
-        # РАССКОМЕНТИРОВАТЬ, КОГДА НАЧНЁТСЯ РАБОТА С ВНЕШНИМ ВИДОМ ИНТЕРФЕЙСА
-        #self.apply_theme_on_startup()
+        self.apply_theme_on_startup()
+        self.apply_styles()
 
         self.show_notes_widget()
 
     def setup_ui(self):
         """Настройка дополнительных параметров UI"""
-        self.setWindowTitle("Умный Органайзер")
+        self.setWindowTitle("MINDSPACE")
         self.setMinimumSize(1100, 600)
         self.splitter.setSizes([100, 600])
 
@@ -65,6 +68,105 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             print("✅ Layout контейнера создан")
         else:
             print("✅ Layout контейнера уже существует")
+
+    def setup_icons(self, theme_name=None):
+        """Устанавливает иконки для кнопок в зависимости от темы"""
+        if theme_name is None:
+            theme_name = self.theme_manager.get_effective_theme_name()
+
+        icon_size = QSize(24, 24)
+        color = "white" if theme_name == "dark" else "black"
+        icon_path = "assets/icons/app_icon.png"
+
+        if os.path.exists(icon_path):
+            self.titleLabel.setText(f"""
+                    <html>
+                    <body>
+                        <div align="center">
+                            <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                <tr>
+                                    <td style="vertical-align: middle;">
+                                        <img src="{icon_path}" width="32" height="32"/>
+                                    </td>
+                                    <td style="vertical-align: middle; padding-left: 10px;">
+                                        <span style="color: {color}; font-size: 28px; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 900;">
+                                            MINDSPACE
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </body>
+                    </html>
+                """)
+        else:
+            self.titleLabel.setText(f"""
+                    <html>
+                    <body>
+                        <div align="center">
+                            <span style="color: {color}; font-size: 28px; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 900;">
+                                MINDSPACE
+                            </span>
+                        </div>
+                    </body>
+                    </html>
+                """)
+
+        # Выбираем иконки в зависимости от темы
+        if theme_name == "light":
+            buttons_icons = {
+                'btnTasks': 'assets/icons/checkbox-line.png',
+                'btnNotes': 'assets/icons/sticky-note-line.png',
+                'btnBookmarks': 'assets/icons/bookmark-line.png',
+                'btnWorkspaces': 'assets/icons/folder-line.png',
+                'btnSettings': 'assets/icons/settings-line.png'
+            }
+        else:  # dark
+            buttons_icons = {
+                'btnTasks': 'assets/icons/checkbox-line-light.png',
+                'btnNotes': 'assets/icons/sticky-note-line-light.png',
+                'btnBookmarks': 'assets/icons/bookmark-line-light.png',
+                'btnWorkspaces': 'assets/icons/folder-line-light.png',
+                'btnSettings': 'assets/icons/settings-line-light.png'
+            }
+
+        print(f"🎨 Установка иконок для темы: {theme_name}")
+
+        for button_name, icon_path in buttons_icons.items():
+            button = getattr(self, button_name)
+
+            # Проверяем существование файла
+            if os.path.exists(icon_path):
+                button.setIcon(QIcon(icon_path))
+                print(f"✅ Установлена иконка для {button_name}: {icon_path}")
+            else:
+                # Если файл не найден, пробуем альтернативный путь
+                alt_path = self.find_icon_file(icon_path)
+                if alt_path:
+                    button.setIcon(QIcon(alt_path))
+                    print(f"✅ Установлена иконка для {button_name} (альтернативный путь): {alt_path}")
+                else:
+                    print(f"⚠️ Файл иконки не найден: {icon_path}")
+                    # Можно использовать встроенные иконки Qt как запасной вариант
+                    button.setIcon(QIcon())
+
+            button.setIconSize(icon_size)
+
+    def find_icon_file(self, icon_path):
+        """Пытается найти файл иконки по разным путям"""
+        possible_paths = [
+            icon_path,
+            f"src/{icon_path}",
+            f"../{icon_path}",
+            f"../../{icon_path}",
+            os.path.join(os.path.dirname(__file__), icon_path),
+            os.path.join(os.path.dirname(__file__), "..", icon_path)
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        return None
 
     def setup_managers(self):
         db_path = "smart_organizer.db"
@@ -81,7 +183,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Применяет тему при запуске приложения"""
         # Получаем сохраненную тему из настроек
         saved_theme = self.theme_manager.get_current_theme()
-        effective_theme = self.theme_manager.get_effective_theme()
+        effective_theme = self.theme_manager.get_effective_theme_name()
 
         print(f"🎨 Загружена тема из настроек: {saved_theme}")
         print(f"🎨 Эффективная тема: {effective_theme}")
@@ -89,27 +191,50 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # Применяем тему
         self.theme_manager.apply_theme(saved_theme)
 
+        # ОБНОВЛЯЕМ ИКОНКИ при запуске с правильной темой
+        self.setup_icons(effective_theme)
+
     def apply_styles(self):
         """Принудительное применение стилей"""
         # Базовый стиль для неактивных кнопок
-        self.inactive_style = """
-            QPushButton {
-                margin: 0px;
-                padding: 12px 8px;
-                border: none;
-                border-top: 1px solid #e0e0e0;
-                border-bottom: 1px solid #e0e0e0;
-                border-radius: 0px;
-                text-align: left;
-                background-color: #8E8E8E;
-            }
-            QPushButton:hover {
-                background-color: #FFAA00;
-            }
-            QPushButton:pressed {
-                background-color: #e0e0e0;
-            }
-        """
+        if self.theme_manager.current_theme == "dark":
+            self.inactive_style = """
+                QPushButton {
+                    margin: 0px;
+                    padding: 12px 8px;
+                    border: none;
+                    border-top: 1px solid #e0e0e0;
+                    border-bottom: 1px solid #e0e0e0;
+                    border-radius: 0px;
+                    text-align: left;
+                    background-color: #0d1117;
+                }
+                QPushButton:hover {
+                    background-color: #ad420f;
+                }
+                QPushButton:pressed {
+                    background-color: #0d1117;
+                }
+            """
+        else:
+            self.inactive_style = """
+                QPushButton {
+                    margin: 0px;
+                    padding: 12px 8px;
+                    border: none;
+                    border-top: 1px solid #e0e0e0;
+                    border-bottom: 1px solid #e0e0e0;
+                    border-radius: 0px;
+                    text-align: left;
+                    background-color: #ffffff;
+                }
+                QPushButton:hover {
+                    background-color: #e1885e;
+                }
+                QPushButton:pressed {
+                    background-color: #e0e0e0;
+                }
+            """
 
         # Стиль для активной кнопки
         self.active_style = """
@@ -121,16 +246,26 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 border-bottom: 1px solid #e0e0e0;
                 border-radius: 0px;
                 text-align: left;
-                background-color: #FFAA00;
+                background-color: #E16428;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #FFBB33;
+                background-color: #E16428;
             }
-            QPushButton:pressed {
-                background-color: #e0e0e0;
-            }
+            
         """
+        if self.theme_manager.current_theme == "dark":
+            self.active_style += """
+                        QPushButton:pressed {
+                            background-color: #ffff;
+                        }
+                        """
+        else:
+            self.active_style += """
+                        QPushButton:pressed {
+                            background-color: #fffff;
+                        }
+                        """
 
         # Изначально все кнопки неактивны
         buttons = [
@@ -316,6 +451,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         print(f"🎨 Тема изменена на: {theme_name}")
         # Применяем новую тему через ThemeManager
         self.theme_manager.set_theme(theme_name)
+        # ПЕРЕЗАГРУЖАЕМ ИКОНКИ после смены темы
+        self.apply_styles()
+        self.setup_icons(theme_name)
 
     def apply_theme(self, theme_name):
         """Устаревший метод - используйте theme_manager вместо этого"""

@@ -54,8 +54,8 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
     def on_theme_changed_immediately(self):
         """Немедленно применяет тему при изменении в комбобоксе"""
         try:
-            # Получаем новую тему
-            theme_map = {0: "system", 1: "light", 2: "dark"}
+            # Получаем новую тему (только светлая и тёмная)
+            theme_map = {0: "light", 1: "dark"}
             new_theme = theme_map[self.theme_combo.currentIndex()]
 
             print(f"🎨 Немедленное применение темы: {new_theme}")
@@ -71,33 +71,20 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
             self.original_settings = self.get_current_settings()
             self.update_apply_button()
 
-            # ДОБАВЬТЕ ОТЛАДОЧНУЮ ИНФОРМАЦИЮ
-            if new_theme == "system":
-                from core.theme_manager import ThemeManager
-                temp_manager = ThemeManager()
-                system_theme = temp_manager.get_system_theme()
-                print(f"🎨 Системная тема определена как: {system_theme}")
-
         except Exception as e:
             print(f"❌ Ошибка при немедленном применении темы: {e}")
 
     def load_settings(self):
         """Загружает текущие настройки"""
         # Тема оформления
-        theme = self.settings.value("appearance/theme", "system", type=str)
-        theme_index = {"system": 0, "light": 1, "dark": 2}.get(theme, 0)
+        theme = self.settings.value("appearance/theme", "dark", type=str)
+        theme_index = {"light": 0, "dark": 1}.get(theme, 1)  # По умолчанию тёмная
         self.theme_combo.setCurrentIndex(theme_index)
-
-        # Автосохранение
-        auto_save = self.settings.value("behavior/auto_save", True, type=bool)
-
-        # Загрузка сессии
-        load_session = self.settings.value("behavior/load_session", True, type=bool)
 
         # Сохраняем оригинальные настройки для сравнения
         self.original_settings = self.get_current_settings()
 
-        print(f"⚙️ Загружены настройки: тема={theme}, автосохранение={auto_save}, загрузка сессии={load_session}")
+        print(f"⚙️ Загружены настройки: тема={theme}")
 
     def get_current_workspace_id(self) -> int:
         """Возвращает ID текущего рабочего пространства"""
@@ -107,7 +94,7 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
     def get_current_settings(self):
         """Возвращает текущие настройки из UI"""
-        theme_map = {0: "system", 1: "light", 2: "dark"}
+        theme_map = {0: "light", 1: "dark"}
         return {
             "theme": theme_map[self.theme_combo.currentIndex()]
         }
@@ -125,47 +112,44 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
         if has_changes:
             self.apply_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #4caf50;
-                    color: white;
-                    border: 1px solid #45a049;
-                    border-radius: 5px;
-                    padding: 8px 16px;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
-            """)
+                   QPushButton {
+                       background-color: #4caf50;
+                       color: white;
+                       border: 1px solid #45a049;
+                       border-radius: 5px;
+                       padding: 8px 16px;
+                       font-weight: bold;
+                   }
+                   QPushButton:hover {
+                       background-color: #45a049;
+                   }
+               """)
         else:
             self.apply_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #cccccc;
-                    color: #666666;
-                    border: 1px solid #bbbbbb;
-                    border-radius: 5px;
-                    padding: 8px 16px;
-                    font-weight: normal;
-                }
-            """)
+                   QPushButton {
+                       background-color: #cccccc;
+                       color: #666666;
+                       border: 1px solid #bbbbbb;
+                       border-radius: 5px;
+                       padding: 8px 16px;
+                       font-weight: normal;
+                   }
+               """)
 
     def apply_settings(self):
-        """Применяет настройки (кроме темы, которая уже применена)"""
+        """Применяет настройки"""
         try:
             current_settings = self.get_current_settings()
 
-            # Сохраняем настройки (тема уже сохранена, но на всякий случай)
+            # Сохраняем настройки
             self.settings.setValue("appearance/theme", current_settings["theme"])
-            self.settings.setValue("behavior/auto_save", current_settings["auto_save"])
-            self.settings.setValue("behavior/load_session", current_settings["load_session"])
-
             self.settings.sync()
 
             # Обновляем оригинальные настройки
             self.original_settings = current_settings
             self.update_apply_button()
 
-            # Отправляем сигналы (сигнал темы уже отправлен, но отправляем общий)
+            # Отправляем сигнал
             self.settings_changed.emit()
 
             QMessageBox.information(self, "Успех", "Настройки применены!")
@@ -771,8 +755,6 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
     def get_settings_summary(self):
         """Возвращает текстовое описание текущих настроек"""
         current = self.get_current_settings()
-        theme_names = {"system": "Системная", "light": "Светлая", "dark": "Тёмная"}
+        theme_names = {"light": "Светлая", "dark": "Тёмная"}
 
-        return (f"Тема: {theme_names[current['theme']]}\n"
-                f"Автосохранение: {'Вкл' if current['auto_save'] else 'Выкл'}\n"
-                f"Загрузка сессии: {'Вкл' if current['load_session'] else 'Выкл'}")
+        return f"Тема: {theme_names[current['theme']]}"

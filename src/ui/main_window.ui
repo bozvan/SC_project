@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Умный Органайзер</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <property name="leftMargin">
@@ -244,8 +247,11 @@
             <height>16777215</height>
            </size>
           </property>
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
           <property name="text">
-           <string>Smart Organizer</string>
+           <string>MINDSPACE</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>

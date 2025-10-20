@@ -9,7 +9,7 @@ import platform
 class ThemeManager:
     def __init__(self):
         self.settings = QSettings("SmartOrganizer", "SmartOrganizer")
-        self.current_theme = self.settings.value("appearance/theme", "system", type=str)
+        self.current_theme = self.settings.value("appearance/theme", "dark", type=str)  # По умолчанию тёмная
         self.stylesheets = {}
         self.load_themes()
 
@@ -18,252 +18,87 @@ class ThemeManager:
         # Светлая тема
         self.stylesheets["light"] = """
             /* Основные стили для светлой темы */
-            QMainWindow, QWidget {
-                background-color: #f5f5f5;
-                color: #333333;
-            }
-
-            QPushButton {
+            QMainWindow {
                 background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                padding: 8px 16px;
-                color: #333333;
             }
-
-            QPushButton:hover {
-                background-color: #e6e6e6;
-                border-color: #adadad;
-            }
-
-            QPushButton:pressed {
-                background-color: #d4d4d4;
-            }
-
-            QLineEdit, QTextEdit {
+            QWidget {
                 background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: #333333;
+            }
+            QLabel#titleLabel {
+                color: black;
+                font-size: 28px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-weight: 900; 
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
             }
 
-            QListWidget, QTreeWidget {
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-radius: 4px;
-                color: #333333;
-                outline: none;
-            }
+            /* Стили кнопок на главном виджете */
 
-            QListWidget::item:selected, QTreeWidget::item:selected {
-                background-color: #0078d4;
-                color: white;
-            }
-
-            QTabWidget::pane {
-                border: 1px solid #cccccc;
+            QPushButton#btnTasks, #btnNotes, #btnBookmarks, #btnWorkspaces, #btnSettings {
+                text-align: left;
+                margin: -1px;
+                color: black;
+                font-size: 18px;
+                font-family: "Sans Serif", sans-serif;
+                font-weight: bold;
+                border: 1px solid #000000;
+                border-radius: 5px;
                 background-color: #ffffff;
             }
 
-            QTabBar::tab {
-                background-color: #e6e6e6;
-                border: 1px solid #cccccc;
-                padding: 8px 16px;
-                margin-right: 2px;
+            QPushButton#btnTasks:hover, #btnNotes:hover, #btnBookmarks:hover, 
+            #btnWorkspaces:hover, #btnSettings:hover {
+                background-color: #E16428;
             }
-
-            QTabBar::tab:selected {
-                background-color: #ffffff;
-                border-bottom: 2px solid #0078d4;
-            }
-
-            QMenuBar {
-                background-color: #f0f0f0;
-                color: #333333;
-            }
-
-            QMenuBar::item:selected {
-                background-color: #e6e6e6;
-            }
-
-            QMenu {
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-            }
-
-            QMenu::item:selected {
-                background-color: #0078d4;
-                color: white;
-            }
-
-            QScrollBar:vertical {
-                background-color: #f0f0f0;
-                width: 15px;
-                margin: 0px;
-            }
-
-            QScrollBar::handle:vertical {
-                background-color: #c0c0c0;
-                border-radius: 7px;
-                min-height: 20px;
-            }
-
-            QScrollBar::handle:vertical:hover {
-                background-color: #a0a0a0;
+            QPushButton#btnTasks:pressed, #btnNotes:pressed, #btnBookmarks:pressed, 
+            #btnWorkspaces:pressed, #btnSettings:pressed {
+                background-color: #E16428;
             }
         """
 
         # Темная тема
         self.stylesheets["dark"] = """
             /* Основные стили для темной темы */
-            QMainWindow, QWidget {
-                background-color: #2b2b2b;
-                color: #ffffff;
+            QMainWindow {
+                background-color: #0d1117;
+            }
+            QWidget {
+                background-color: #0d1117;
             }
 
-            QPushButton {
-                background-color: #404040;
-                border: 1px solid #555555;
-                border-radius: 4px;
-                padding: 8px 16px;
-                color: #ffffff;
-            }
-
-            QPushButton:hover {
-                background-color: #505050;
-                border-color: #666666;
-            }
-
-            QPushButton:pressed {
-                background-color: #606060;
-            }
-
-            QLineEdit, QTextEdit {
-                background-color: #404040;
-                border: 1px solid #555555;
-                border-radius: 4px;
-                padding: 4px 8px;
-                color: #ffffff;
-            }
-
-            QListWidget, QTreeWidget {
-                background-color: #404040;
-                border: 1px solid #555555;
-                border-radius: 4px;
-                color: #ffffff;
-                outline: none;
-            }
-
-            QListWidget::item:selected, QTreeWidget::item:selected {
-                background-color: #0078d4;
+            QLabel#titleLabel {
                 color: white;
+                font-size: 28px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-weight: 900; 
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
             }
 
-            QTabWidget::pane {
-                border: 1px solid #555555;
-                background-color: #404040;
-            }
+            /* Стили кнопок на главном виджете */
 
-            QTabBar::tab {
-                background-color: #353535;
-                border: 1px solid #555555;
-                padding: 8px 16px;
-                margin-right: 2px;
-                color: #ffffff;
-            }
-
-            QTabBar::tab:selected {
-                background-color: #404040;
-                border-bottom: 2px solid #0078d4;
-            }
-
-            QMenuBar {
-                background-color: #353535;
-                color: #ffffff;
-            }
-
-            QMenuBar::item:selected {
-                background-color: #404040;
-            }
-
-            QMenu {
-                background-color: #404040;
-                border: 1px solid #555555;
-                color: #ffffff;
-            }
-
-            QMenu::item:selected {
-                background-color: #0078d4;
+            QPushButton#btnTasks, #btnNotes, #btnBookmarks, #btnWorkspaces, #btnSettings {
+                margin: -1px;
                 color: white;
+                font-size: 18px;
+                font-family: "Sans Serif", sans-serif;
+                font-weight: bold;
+                border: 1px solid #ffffff;
+                border-radius: 5px;
             }
 
-            QScrollBar:vertical {
-                background-color: #353535;
-                width: 15px;
-                margin: 0px;
+            QPushButton#btnTasks:hover, #btnNotes:hover, #btnBookmarks:hover, 
+            #btnWorkspaces:hover, #btnSettings:hover {
+                background-color: #E16428;
             }
-
-            QScrollBar::handle:vertical {
-                background-color: #555555;
-                border-radius: 7px;
-                min-height: 20px;
-            }
-
-            QScrollBar::handle:vertical:hover {
-                background-color: #666666;
+            QPushButton#btnTasks:pressed, #btnNotes:pressed, #btnBookmarks:pressed, 
+            #btnWorkspaces:pressed, #btnSettings:pressed {
+                background-color: #E16428;
             }
         """
-
-        # Системная тема (определяется автоматически)
-        self.stylesheets["system"] = ""
-
-    def get_system_theme(self):
-        """Определяет системную тему"""
-
-        # Способ 2: через системные настройки (для разных ОС)
-        try:
-            system = platform.system().lower()
-
-            if system == "windows":
-                # Для Windows можно попробовать через реестр
-                import winreg
-                try:
-                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                                         r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
-                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-                    winreg.CloseKey(key)
-                    if value == 0:
-                        print("🎨 Системная тема определена как: dark (по реестру Windows)")
-                        return "dark"
-                    else:
-                        print("🎨 Системная тема определена как: light (по реестру Windows)")
-                        return "light"
-                except:
-                    pass
-
-            elif system == "darwin":  # macOS
-                # Для macOS можно использовать терминальные команды
-                import subprocess
-                try:
-                    result = subprocess.run(['defaults', 'read', '-g', 'AppleInterfaceStyle'],
-                                            capture_output=True, text=True)
-                    if 'Dark' in result.stdout:
-                        print("🎨 Системная тема определена как: dark (по настройкам macOS)")
-                        return "dark"
-                except:
-                    pass
-
-            elif system == "linux":
-                # Для Linux можно попробовать через переменные окружения или gsettings
-                import os
-                gtk_theme = os.environ.get('GTK_THEME', '').lower()
-                if 'dark' in gtk_theme:
-                    print("🎨 Системная тема определена как: dark (по GTK_THEME)")
-                    return "dark"
-
-        except Exception as e:
-            print(f"⚠️ Не удалось определить тему через системные настройки: {e}")
 
     def apply_theme(self, theme_name=None):
         """Применяет указанную тему ко всему приложению"""
@@ -272,24 +107,18 @@ class ThemeManager:
 
         self.current_theme = theme_name
         self.settings.setValue("appearance/theme", theme_name)
-
         app = QApplication.instance()
 
-        # Для системной темы определяем актуальную тему
-        effective_theme = theme_name
-        if theme_name == "system":
-            effective_theme = self.get_system_theme()
+        print(f"🎨 Применение темы: {theme_name}")
 
-        print(f"🎨 Применение темы: {theme_name} -> {effective_theme}")
-
-        if effective_theme in self.stylesheets:
-            stylesheet = self.stylesheets[effective_theme]
+        if theme_name in self.stylesheets:
+            stylesheet = self.stylesheets[theme_name]
             app.setStyleSheet(stylesheet)
 
             # Также применяем палитру для лучшей совместимости
-            self.apply_palette(effective_theme)
+            self.apply_palette(theme_name)
 
-        print(f"✅ Применена тема: {theme_name} (эффективная: {effective_theme})")
+        print(f"✅ Применена тема: {theme_name}")
 
     def apply_palette(self, theme_name):
         """Применяет цветовую палитру для темы"""
@@ -338,8 +167,6 @@ class ThemeManager:
         self.current_theme = theme_name
         self.apply_theme(theme_name)
 
-    def get_effective_theme(self):
-        """Возвращает эффективную тему (для системной темы определяет актуальную)"""
-        if self.current_theme == "system":
-            return self.get_system_theme()
+    def get_effective_theme_name(self):
+        """Возвращает актуальное название темы"""
         return self.current_theme

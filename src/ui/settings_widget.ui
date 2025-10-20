@@ -112,11 +112,6 @@ QComboBox {
           </property>
           <item>
            <property name="text">
-            <string>🌓 Системная</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
             <string>☀️ Светлая</string>
            </property>
           </item>

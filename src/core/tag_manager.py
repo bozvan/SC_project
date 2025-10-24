@@ -295,7 +295,7 @@ class TagManager:
                         JOIN note_tag_relation ntr ON n.id = ntr.note_id
                         JOIN tags t ON ntr.tag_id = t.id
                         WHERE t.name = ? AND n.workspace_id = ?
-                    """, (tag_name, workspace_id))
+                    """, (tag_name.lower(), workspace_id))  # ← ДОБАВЛЕН lower()
                     print(f"🔍 Поиск заметок по тегу '{tag_name}' в workspace {workspace_id}")
                 else:
                     cursor.execute("""
@@ -304,12 +304,12 @@ class TagManager:
                         JOIN note_tag_relation ntr ON n.id = ntr.note_id
                         JOIN tags t ON ntr.tag_id = t.id
                         WHERE t.name = ?
-                    """, (tag_name,))
+                    """, (tag_name.lower(),))  # ← ДОБАВЛЕН lower()
                     print(f"🔍 Поиск заметок по тегу '{tag_name}' во всех workspace")
 
                 results = cursor.fetchall()
-                note_ids = [row[0] for row in results]  # ИЗВЛЕКАЕМ ТОЛЬКО ID
-                print(f"✅ Найдено {len(note_ids)} заметок с тегом '{tag_name}'")
+                note_ids = [row[0] for row in results]
+                print(f"✅ Найдено {len(note_ids)} заметок с тегом '{tag_name}' в workspace {workspace_id}")
                 return note_ids
 
         except Exception as e:
@@ -367,4 +367,36 @@ class TagManager:
 
         except Exception as e:
             print(f"❌ Ошибка при получении популярных тегов: {e}")
+            return []
+
+    def get_tags_by_workspace(self, workspace_id: int) -> List[Tag]:
+        """
+        Возвращает все теги для указанного workspace
+
+        Args:
+            workspace_id: ID рабочего пространства
+
+        Returns:
+            List[Tag]: Список тегов workspace
+        """
+        try:
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, name 
+                    FROM tags 
+                    WHERE workspace_id = ?
+                    ORDER BY name
+                """, (workspace_id,))
+
+                results = cursor.fetchall()
+                tags = []
+                for tag_id, name in results:
+                    tags.append(Tag(name=name, tag_id=tag_id))
+
+                print(f"✅ Загружено {len(tags)} тегов для workspace {workspace_id}")
+                return tags
+
+        except Exception as e:
+            print(f"❌ Ошибка при получении тегов для workspace {workspace_id}: {e}")
             return []

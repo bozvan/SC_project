@@ -114,10 +114,14 @@ class TagsWidget(QWidget):
 
     def load_tags(self):
         """Загрузка и отображение тегов для текущего workspace"""
+        print(f"🔄 Загрузка тегов для workspace {self.workspace_id}")
+
         self.tags_list.clear()
 
         # Получаем теги только для текущего workspace
         tags = self.tag_manager.get_all(self.workspace_id)
+
+        print(f"📋 Получено {len(tags)} тегов из базы данных для workspace {self.workspace_id}")
 
         # Сортируем теги по имени
         tags.sort(key=lambda x: x.name)
@@ -126,16 +130,26 @@ class TagsWidget(QWidget):
             item = QListWidgetItem(tag.name)
             item.setData(Qt.ItemDataRole.UserRole, tag.id)
 
-            # Получаем количество заметок с этим тегом в текущем workspace
-            note_count = self.get_note_count_for_tag(tag.name)
+            # Получаем количество заметок и закладок с этим тегом в текущем workspace
+            notes_count, bookmarks_count, total_count = self.get_note_count_for_tag(tag.name)
 
-            if note_count > 0:
-                item.setText(f"{tag.name} ({note_count})")
-                item.setToolTip(f"{note_count} записей в workspace {self.workspace_id}")
+            # Форматируем текст в зависимости от наличия заметок и закладок
+            # Используем иконки вместо текста
+            if notes_count > 0 and bookmarks_count > 0:
+                item.setText(f"{tag.name} (📝{notes_count} 🔖{bookmarks_count})")
+                item.setToolTip(f"{notes_count} заметок и {bookmarks_count} закладок")
+            elif notes_count > 0:
+                item.setText(f"{tag.name} (📝{notes_count})")
+                item.setToolTip(f"{notes_count} заметок")
+            elif bookmarks_count > 0:
+                item.setText(f"{tag.name} (🔖{bookmarks_count})")
+                item.setToolTip(f"{bookmarks_count} закладок")
             else:
-                item.setToolTip("Нет записей в текущем workspace")
+                item.setText(tag.name)
+                item.setToolTip("Нет записей")
 
             self.tags_list.addItem(item)
+            print(f"📝 Добавлен тег: {tag.name} ({notes_count} заметок, {bookmarks_count} закладок)")
 
         # Восстанавливаем выделение если есть активный тег
         if self.selected_tag:
@@ -155,34 +169,48 @@ class TagsWidget(QWidget):
             # Считаем закладки в текущем workspace
             bookmarks_with_tag = self.get_bookmarks_by_tag(tag_name)
 
-            return len(notes_with_tag) + len(bookmarks_with_tag)
+            notes_count = len(notes_with_tag)
+            bookmarks_count = len(bookmarks_with_tag)
+            total_count = notes_count + bookmarks_count
+
+            # ДЕБАГ: выведем информацию о найденных записях
+            print(
+                f"🔍 Тег '{tag_name}': {notes_count} заметок + {bookmarks_count} закладок = {total_count} всего в workspace {self.workspace_id}")
+
+            return notes_count, bookmarks_count, total_count
+
         except Exception as e:
             print(f"❌ Ошибка подсчета для тега {tag_name}: {e}")
-            return 0
+            return 0, 0, 0
 
     def get_bookmarks_by_tag(self, tag_name):
         """Вспомогательный метод для получения закладок по тегу в текущем workspace"""
-        # Временная реализация - можно вынести в tag_manager позже
         try:
             from core.database_manager import DatabaseManager
             from core.bookmark_manager import BookmarkManager
 
             db = DatabaseManager()
             bookmark_manager = BookmarkManager(db)
+
             # Получаем все закладки и фильтруем по workspace и тегу
             all_bookmarks = bookmark_manager.get_all()
 
             bookmarks_with_tag = []
             for bookmark in all_bookmarks:
-                # Проверяем workspace закладки (если есть поле workspace_id)
-                if hasattr(bookmark, 'workspace_id') and bookmark.workspace_id != self.workspace_id:
+                # Проверяем workspace закладки
+                bookmark_workspace_id = getattr(bookmark, 'workspace_id', 1)  # По умолчанию 1 если нет поля
+                if bookmark_workspace_id != self.workspace_id:
                     continue
 
-                bookmark_tags = [tag.name for tag in bookmark.tags]
-                if tag_name in bookmark_tags:
+                # Проверяем теги закладки - ИСПРАВЛЕНО: точное совпадение
+                bookmark_tags = [tag.name.lower() for tag in bookmark.tags] if hasattr(bookmark,
+                                                                                       'tags') and bookmark.tags else []
+                if tag_name.lower() in bookmark_tags:  # Это уже точное сравнение
                     bookmarks_with_tag.append(bookmark)
 
+            print(f"📚 Для тега '{tag_name}' найдено {len(bookmarks_with_tag)} закладок в workspace {self.workspace_id}")
             return bookmarks_with_tag
+
         except Exception as e:
             print(f"❌ Ошибка получения закладок по тегу: {e}")
             return []
@@ -202,8 +230,10 @@ class TagsWidget(QWidget):
             QMessageBox.warning(self, "Ошибка", "Имя тега не должно превышать 50 символов")
             return
 
+        print(f"🔧 Создание тега '{tag_name}' в workspace {self.workspace_id}")
+
         # Пытаемся создать тег ДЛЯ ТЕКУЩЕГО WORKSPACE
-        tag = self.tag_manager.create(tag_name, self.workspace_id)  # ← ДОБАВЬТЕ workspace_id
+        tag = self.tag_manager.create(tag_name, self.workspace_id)
         if tag:
             self.tag_input.clear()
             self.load_tags()

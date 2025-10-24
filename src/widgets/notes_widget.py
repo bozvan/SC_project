@@ -90,6 +90,25 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.auto_save_timer.setSingleShot(True)
         self.auto_save_timer.timeout.connect(self.auto_save_note)
 
+        # Таймер для обновления тегов (5 секунд)
+        self.tags_update_timer = QTimer()
+        self.tags_update_timer.setSingleShot(True)
+        self.tags_update_timer.timeout.connect(self.delayed_tags_update)
+
+        # Убираем кнопку Сохранить из UI
+        self.save_btn.setVisible(False)
+        self.save_btn.setEnabled(False)
+
+        # Добавляем таймер для отложенного обновления списка заметок
+        self.update_list_timer = QTimer()
+        self.update_list_timer.setSingleShot(True)
+        self.update_list_timer.timeout.connect(self.delayed_update_notes_list)
+
+        self.last_note_update_time = 0  # Время последнего обновления заметки
+        self.auto_save_delay = 1000  # 1 секунда вместо 3
+        self.update_list_delay = 300  # 300 мс для обновления списка
+        self.tags_update_delay = 5000  # 5 секунд для обновления тегов
+
         self.load_notes()
 
     def set_workspace(self, workspace_id):
@@ -124,6 +143,15 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         print(f"❌ Заметка с ID {note_id} не найдена в workspace {self.workspace_id}")
         QMessageBox.warning(self, "Ошибка", f"Заметка с ID {note_id} не найдена")
+
+    def delayed_tags_update(self):
+        """Обновляет виджет тегов с задержкой 5 секунд"""
+        try:
+            if hasattr(self, 'tags_widget'):
+                self.tags_widget.refresh()
+                print("✅ Виджет тегов обновлен (задержка 5 секунд)")
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении тегов: {e}")
 
     def closeEvent(self, event):
         """Обработчик закрытия окна"""
@@ -175,15 +203,17 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.setup_rich_editor()
         self.setup_tasks_area()
 
+        # ДОБАВЬТЕ СТАТУСНУЮ СТРОКУ
+        self.status_label = QLabel("Готов к созданию новой заметки")
+        self.status_label.setStyleSheet("color: gray; font-size: 11px; margin-top: 5px;")
+
         self.tags_widget = TagsWidget(self.tag_manager, self.workspace_id)
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 
-        self.save_btn.setVisible(True)
-        self.save_btn.setEnabled(False)  # Изначально выключена
-        self.save_btn.clicked.connect(self.on_save_clicked)
-
-        # self.save_btn.setVisible(False)
+        # УБИРАЕМ КНОПКУ СОХРАНЕНИЯ
+        self.save_btn.setVisible(False)
+        self.save_btn.setEnabled(False)
         self.cancel_btn.setVisible(False)
 
         # Добавляем кнопку открепления
@@ -274,114 +304,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.set_editor_enabled(True)
         print(f"📌 Окно редактора для заметки {note_id} закрыто")
 
-    def on_save_clicked(self):
-        """Обработчик нажатия кнопки Сохранить"""
-        try:
-            # Определяем что сохраняем - заметку или закладку
-            if hasattr(self, 'current_note_id') and self.current_note_id:
-                self.save_note()
-            elif hasattr(self, 'current_bookmark_id') and self.current_bookmark_id:
-                self.save_bookmark()
-            else:
-                self.save_new_note()  # Новая заметка
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при сохранении: {e}")
-
-    def save_note(self):
-        """Сохраняет существующую заметку"""
-        title = self.title_input.text().strip()
-        if not title:
-            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
-            return
-
-        content = self.rich_editor.to_html()
-        tags_text = self.tags_input.text().strip()
-        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
-        tags = [tag for tag in tags if tag]
-
-        success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
-        if success:
-            print(f"✅ Заметка {self.current_note_id} сохранена в workspace {self.workspace_id}")
-            self.save_btn.setEnabled(False)
-            # Обновляем список заметок
-            self.load_notes(self.search_input.text())
-            self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
-        else:
-            QMessageBox.critical(self, "Ошибка", "Не удалось сохранить заметку")
-
-    def save_bookmark(self):
-        """Сохраняет изменения в закладке"""
-        title = self.title_input.text().strip()
-        if not title:
-            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
-            return
-
-        # Получаем текущую закладку
-        bookmark = self.bookmark_manager.get(self.current_bookmark_id)
-        if not bookmark:
-            QMessageBox.critical(self, "Ошибка", "Закладка не найдена!")
-            return
-
-        # Получаем теги
-        tags_text = self.tags_input.text().strip()
-        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
-        tags = [tag for tag in tags if tag]
-
-        # Обновляем закладку
-        # Нужно добавить метод update в BookmarkManager
-        success = self.bookmark_manager.update(
-            self.current_bookmark_id,
-            title=title,
-            description=bookmark.description,  # Пока не редактируем описание
-            tags=tags
-        )
-
-        if success:
-            print(f"✅ Закладка {self.current_bookmark_id} сохранена")
-            self.save_btn.setEnabled(False)
-            # Обновляем список закладок
-            # self.bookmarks_widget.refresh() # РАССКОМЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ЗАКЛАДОК
-            self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
-        else:
-            QMessageBox.critical(self, "Ошибка", "Не удалось сохранить закладку")
-
-    def save_new_note(self):
-        """Создает новую заметку"""
-        title = self.title_input.text().strip()
-        if not title:
-            QMessageBox.warning(self, "Предупреждение", "Заголовок не может быть пустым!")
-            return
-
-        content = self.rich_editor.to_html()
-        tags_text = self.tags_input.text().strip()
-        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
-        tags = [tag for tag in tags if tag]
-
-        # ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
-        print(f"🔧 SAVE_NEW_NOTE: current workspace_id = {self.workspace_id}")
-        print(f"🔧 Calling note_manager.create with workspace_id = {self.workspace_id}")
-
-        # ПЕРЕДАЕМ workspace_id ПРИ СОЗДАНИИ ЗАМЕТКИ
-        note = self.note_manager.create(
-            title=title,
-            content=content,
-            tags=tags,
-            content_type="html",
-            note_type="note",
-            workspace_id=self.workspace_id  # УБЕДИТЕСЬ, что передается правильно
-        )
-
-        if note:
-            print(f"✅ Новая заметка создана в workspace {self.workspace_id}: {note.id}")
-            self.save_btn.setEnabled(False)
-            self.current_note_id = note.id
-            # Обновляем список заметок
-            self.load_notes(self.search_input.text())
-            if hasattr(self, 'tags_widget'):
-                self.tags_widget.refresh()
-        else:
-            QMessageBox.critical(self, "Ошибка", "Не удалось создать заметку")
-
     def on_bookmark_selected(self, bookmark_id: int):
         """Обработчик выбора закладки"""
         bookmark = self.bookmark_manager.get(bookmark_id)
@@ -442,8 +364,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         print("✅ Новая закладка добавлена")
         # Обновляем список заметок, чтобы показать новую закладку
         self.load_notes(self.search_input.text())
-        # Обновляем теги
-        self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+        # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ С ЗАДЕРЖКОЙ 5 СЕКУНД
+        self.schedule_tags_update()
 
     def navigate_to_note_by_id(self, note_id):
         """Переходит к заметке по ID"""
@@ -600,8 +522,18 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
     def on_task_form_submit(self):
         """Обработчик отправки формы задачи"""
         if not self.current_note_id:
-            QMessageBox.warning(self, "Ошибка", "Сначала создайте или откройте заметку!")
-            return
+            # Если нет текущей заметки, создаем ее автоматически
+            title = self.title_input.text().strip()
+            if not title:
+                QMessageBox.warning(self, "Ошибка", "Введите заголовок заметки перед добавлением задачи!")
+                return
+
+            # Создаем заметку автоматически
+            self.save_new_note_automatically()
+
+            # Если все еще нет заметки, выходим
+            if not self.current_note_id:
+                return
 
         description = self.new_task_input.text().strip()
         if not description:
@@ -631,7 +563,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         )
 
         if task:
-            self.add_task_widget(task)  # Уже включает сортировку
+            self.add_task_widget(task)
             self.clear_task_form()
 
             # Автоматически обновляем список предстоящих задач
@@ -991,50 +923,251 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 
-        # Подключаем автосохранение И включение кнопки. Сохранить при изменениях
+        # Подключаем автосохранение БЕЗ кнопки Сохранить
         self.title_input.textChanged.connect(self.on_content_changed)
         self.rich_editor.text_edit.textChanged.connect(self.on_content_changed)
         self.tags_input.textChanged.connect(self.on_content_changed)
 
-    def on_content_changed(self):
-        """Обработчик изменения содержимого"""
-        # Включаем кнопку. Сохранить при любых изменениях
-        self.save_btn.setEnabled(True)
+        # ДОБАВЬТЕ: Обработка Enter для быстрого создания
+        self.title_input.returnPressed.connect(self.on_title_enter_pressed)
 
-        # Для заметок также планируем автосохранение
+    def on_title_enter_pressed(self):
+        """Обработка нажатия Enter в поле заголовка"""
+        if not hasattr(self, 'current_note_id') or not self.current_note_id:
+            self.save_new_note_automatically()
+        # Переводим фокус в редактор контента
+        self.rich_editor.setFocus()
+
+    def on_content_changed(self):
+        """Обработчик изменения содержимого - ТОЛЬКО автосохранение"""
+        print(f"🔄 Изменение содержимого, current_note_id: {getattr(self, 'current_note_id', None)}")
+
+        # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ НОВОЙ ЗАМЕТКИ ПРИ ВВОДЕ ЗАГОЛОВКА
+        if not hasattr(self, 'current_note_id') or not self.current_note_id:
+            title = self.title_input.text().strip()
+            if title:  # Если есть заголовок, создаем новую заметку
+                print("📝 Автоматическое создание новой заметки...")
+                self.save_new_note_automatically()
+                return
+
+        # Для существующих заметок планируем автосохранение
         if hasattr(self, 'current_note_id') and self.current_note_id:
+            print("⏰ Планируем автосохранение...")
             self.schedule_auto_save()
 
+            # ОБНОВЛЯЕМ СПИСОК ЗАМЕТОК ПРИ ИЗМЕНЕНИИ ЗАГОЛОВКА
+            current_time = datetime.now().timestamp() * 1000  # Текущее время в мс
+            if current_time - self.last_note_update_time > self.update_list_delay:
+                self.last_note_update_time = current_time
+                self.schedule_list_update()
+
+    def schedule_tags_update(self):
+        """Планирует обновление тегов - теперь обновляем сразу"""
+        if hasattr(self, 'tags_widget'):
+            self.tags_widget.refresh()
+            print("✅ Виджет тегов обновлен")
+
+    def schedule_list_update(self):
+        """Планирует обновление списка заметок с задержкой"""
+        self.update_list_timer.start(self.update_list_delay)
+
+    def delayed_update_notes_list(self):
+        """Обновляет список заметок с учетом текущего поиска"""
+        try:
+            # Получаем текущий поисковый запрос
+            search_query = self.search_input.text()
+
+            # Обновляем только если есть открытая заметка и она в текущем списке
+            if hasattr(self, 'current_note_id') and self.current_note_id:
+                self.refresh_notes_list_without_reload(search_query)
+
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении списка заметок: {e}")
+
+    def refresh_notes_list_without_reload(self, search_query=""):
+        """Обновляет список заметок без полной перезагрузки из БД"""
+        try:
+            # Получаем текущий заголовок из редактора
+            current_title = self.title_input.text().strip()
+            if not current_title:
+                return
+
+            # Ищем текущую заметку в списке
+            current_item = None
+            for i in range(self.notes_list.count()):
+                item = self.notes_list.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == self.current_note_id:
+                    current_item = item
+                    break
+
+            # Если нашли - обновляем заголовок
+            if current_item:
+                old_title = current_item.text()
+                if old_title != current_title:
+                    current_item.setText(current_title)
+                    print(f"🔄 Заголовок заметки обновлен в списке: '{old_title}' -> '{current_title}'")
+
+        except Exception as e:
+            print(f"❌ Ошибка при обновлении списка: {e}")
+
     def schedule_auto_save(self):
-        """Планирует автосохранение через 3 секунды после последнего изменения"""
+        """Планирует автосохранение через 1 секунду после последнего изменения"""
         if hasattr(self, 'current_note_id') and self.current_note_id:
-            self.auto_save_timer.start(3000)  # 3 секунды
-            print("⏰ Автосохранение запланировано через 3 секунды...")
+            self.auto_save_timer.start(self.auto_save_delay)  # 1 секунда
 
     def auto_save_note(self):
         """Автоматически сохраняет заметку"""
-        # Добавьте проверку на существование атрибута
         if not hasattr(self, 'current_note_id') or not self.current_note_id:
+            print("❌ Автосохранение: нет current_note_id")
             return
 
         try:
             title = self.title_input.text().strip()
             if not title:
-                return  # Не сохраняем заметки без заголовка
+                print("⚠️ Автосохранение пропущено: пустой заголовок")
+                return
 
             content = self.rich_editor.to_html()
             tags_text = self.tags_input.text().strip()
-            tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
-            tags = [tag for tag in tags if tag]
+            new_tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+            new_tags = [tag for tag in new_tags if tag]
 
-            success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
+            print(f"🔧 Автосохранение: title='{title}', tags={new_tags}")
+
+            # Получаем старые теги перед обновлением
+            old_note = self.note_manager.get(self.current_note_id)
+            old_tags = [tag.name for tag in old_note.tags] if old_note and old_note.tags else []
+
+            success = self.note_manager.update(self.current_note_id, title, content, new_tags, "html")
             if success:
                 print(f"✅ Автосохранение заметки {self.current_note_id} в workspace {self.workspace_id}")
+
+                # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ
+                if hasattr(self, 'tags_widget'):
+                    self.tags_widget.refresh()
+                    print("✅ Виджет тегов обновлен")
+
+                # ВАЖНО: ОБНОВЛЯЕМ ТОЛЬКО ЗАГОЛОВОК В СПИСКЕ, НЕ ПЕРЕЗАГРУЖАЯ ВЕСЬ СПИСОК
+                self.refresh_current_note_title_only()
+
+                # ОЧИСТКА ТОЛЬКО УДАЛЕННЫХ ТЕГОВ
+                removed_tags = set(old_tags) - set(new_tags)
+                if removed_tags:
+                    print(f"🔄 Удалены теги из заметки: {removed_tags}")
+                    self.cleanup_unused_tags(removed_tags)
+
+                # ВОССТАНАВЛИВАЕМ ФОКУС
+                self.restore_editor_focus()
+
             else:
                 print(f"❌ Ошибка автосохранения заметки {self.current_note_id}")
 
         except Exception as e:
             print(f"❌ Ошибка при автосохранении: {e}")
+
+    def refresh_current_note_title_only(self):
+        """Обновляет только заголовок текущей заметки в списке, не перезагружая весь список"""
+        try:
+            current_title = self.title_input.text().strip()
+            if not current_title:
+                return
+
+            # Ищем текущую заметку в списке и обновляем только ее заголовок
+            for i in range(self.notes_list.count()):
+                item = self.notes_list.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == self.current_note_id:
+                    old_title = item.text()
+                    if old_title != current_title:
+                        item.setText(current_title)
+                        print(f"🔄 Заголовок обновлен в списке: '{old_title}' -> '{current_title}'")
+                    break
+
+        except Exception as e:
+            print(f"❌ Ошибка обновления заголовка: {e}")
+
+    def check_editor_state(self):
+        """Проверяет состояние редактора после операций"""
+        print(f"🔍 Состояние редактора:")
+        print(f"   - title_input enabled: {self.title_input.isEnabled()}")
+        print(f"   - tags_input enabled: {self.tags_input.isEnabled()}")
+        print(f"   - rich_editor enabled: {self.rich_editor.isEnabled()}")
+        print(f"   - current_note_id: {getattr(self, 'current_note_id', None)}")
+        print(f"   - has focus: title={self.title_input.hasFocus()}, tags={self.tags_input.hasFocus()}")
+
+    def cleanup_unused_tags(self, removed_tags):
+        """Удаляет только те теги, которые были удалены из текущей заметки и больше нигде не используются"""
+        if not removed_tags:
+            return
+
+        try:
+            deleted_count = 0
+
+            for tag_name in removed_tags:
+                # Проверяем, используется ли этот тег в других заметках
+                notes_with_tag = self.note_manager.search_by_tags([tag_name], workspace_id=self.workspace_id)
+                if len(notes_with_tag) == 0:
+                    # Находим ID тега для удаления
+                    tag = self.tag_manager.get_by_name(tag_name, self.workspace_id)
+                    if tag and self.tag_manager.delete(tag.id):
+                        print(f"🗑️ Удален неиспользуемый тег: {tag_name}")
+                        deleted_count += 1
+
+            if deleted_count > 0:
+                print(f"✅ Удалено неиспользуемых тегов: {deleted_count}")
+
+                # ВАЖНОЕ ИЗМЕНЕНИЕ: НЕМЕДЛЕННО обновляем виджет тегов
+                if hasattr(self, 'tags_widget'):
+                    self.tags_widget.refresh()
+                    print("✅ Виджет тегов обновлен после очистки")
+
+        except Exception as e:
+            print(f"❌ Ошибка при очистке тегов: {e}")
+
+    def save_new_note_automatically(self):
+        """Автоматически создает новую заметку при вводе текста"""
+        title = self.title_input.text().strip()
+        if not title:
+            return  # Не создаем заметки без заголовка
+
+        content = self.rich_editor.to_html()
+        tags_text = self.tags_input.text().strip()
+        tags = [tag.strip().lower() for tag in tags_text.split(",")] if tags_text else []
+        tags = [tag for tag in tags if tag]
+
+        print(f"🔧 Создание новой заметки в workspace {self.workspace_id}")
+
+        # Создаем заметку
+        note = self.note_manager.create(
+            title=title,
+            content=content,
+            tags=tags,
+            content_type="html",
+            note_type="note",
+            workspace_id=self.workspace_id
+        )
+
+        if note:
+            print(f"✅ Новая заметка создана автоматически: {note.id}")
+            self.current_note_id = note.id
+            if hasattr(self, 'status_label'):
+                self.status_label.setText(f"Заметка создана (ID: {note.id})")
+                self.status_label.setStyleSheet("color: green; font-size: 11px;")
+
+            # НЕМЕДЛЕННО ОБНОВЛЯЕМ СПИСОК ЗАМЕТОК
+            self.load_notes(self.search_input.text())
+
+            # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ
+            if hasattr(self, 'tags_widget'):
+                self.tags_widget.refresh()
+
+            # Загружаем задачи для новой заметки
+            self.load_tasks_for_note(note.id)
+
+            # Устанавливаем фокус обратно в редактор
+            self.title_input.setFocus()
+
+        else:
+            print("❌ Не удалось создать заметку автоматически")
 
     def force_auto_save(self):
         """Принудительное автосохранение текущей заметки"""
@@ -1059,6 +1192,9 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             success = self.note_manager.update(self.current_note_id, title, content, tags, "html")
             if success:
                 print(f"✅ Автосохранение заметки {self.current_note_id} в workspace {self.workspace_id}")
+
+                # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ С ЗАДЕРЖКОЙ 5 СЕКУНД
+                self.schedule_tags_update()
 
                 # Обновляем список предстоящих задач после сохранения заметки
                 self.refresh_upcoming_tasks()
@@ -1120,19 +1256,30 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     def on_note_selected(self, current, previous):
         """Обработчик выбора заметки"""
+        print(f"🔍 on_note_selected: current={current}, previous={previous}")
+        print(f"   - current_note_id до: {getattr(self, 'current_note_id', None)}")
+
         # Автосохранение предыдущей заметки перед переключением
         if (previous is not None and
                 hasattr(self, 'current_note_id') and
                 self.current_note_id and
                 not hasattr(self, 'current_bookmark_id')):  # Только для заметок
 
+            print("💾 Автосохранение предыдущей заметки...")
             self.force_auto_save()
 
         # Останавливаем таймер автосохранения
         if hasattr(self, 'auto_save_timer'):
             self.auto_save_timer.stop()
 
+        # Останавливаем таймер обновления списка
+        if hasattr(self, 'update_list_timer'):
+            self.update_list_timer.stop()
+
         if current is None:
+            # Если выбрана пустая область, создаем новую заметку при вводе
+            print("📝 Создание новой заметки...")
+            self.current_note_id = None
             return
 
         try:
@@ -1143,11 +1290,35 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 if hasattr(self, 'current_bookmark_id'):
                     del self.current_bookmark_id
 
+                print(f"📖 Загрузка заметки {note_id}: {note.title}")
                 self.display_note(note)
                 self.current_note_id = note_id
                 self.set_editor_enabled(True)
+
+                print(f"   - current_note_id после: {self.current_note_id}")
+
+                # Сбрасываем время последнего обновления
+                self.last_note_update_time = 0
         except Exception as e:
+            print(f"❌ Ошибка при выборе заметки: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
+
+    def restore_editor_focus(self):
+        """Восстанавливает фокус в редакторе после операций"""
+        try:
+            # Проверяем, какой элемент имеет фокус сейчас
+            focused_widget = self.focusWidget()
+            print(f"🎯 Текущий фокус: {focused_widget}")
+
+            # Если фокус потерян, восстанавливаем его в поле тегов
+            if (focused_widget != self.title_input and
+                    focused_widget != self.tags_input and
+                    focused_widget != self.rich_editor):
+                print("🎯 Восстанавливаем фокус в поле тегов")
+                self.tags_input.setFocus()
+
+        except Exception as e:
+            print(f"❌ Ошибка восстановления фокуса: {e}")
 
     def display_note(self, note):
         """Отображает заметку в редакторе"""
@@ -1164,13 +1335,16 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         else:
             self.tags_input.setText("")
 
-        # Выключаем кнопку Сохранить (нет изменений)
-        self.save_btn.setEnabled(False)
-
     def set_editor_enabled(self, enabled):
+        print(f"🔧 set_editor_enabled({enabled})")
         self.title_input.setEnabled(enabled)
         self.tags_input.setEnabled(enabled)
         self.rich_editor.setEnabled(enabled)
+
+        # Если включаем редактор, устанавливаем фокус
+        if enabled:
+            print("🎯 Устанавливаем фокус в поле тегов")
+            self.tags_input.setFocus()
 
     def update_window_title(self):
         """Обновляет заголовок окна"""
@@ -1180,9 +1354,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     # В методах, где меняется состояние сохранения:
     def on_note_modified(self):
-        """Обработчик изменения заметки (теперь только для автосохранения)"""
-
-        # Для автосохранения существующих заметок
+        """Обработчик изменения заметки - запускает автосохранение"""
         if hasattr(self, 'current_note_id') and self.current_note_id:
             self.schedule_auto_save()
 
@@ -1190,25 +1362,18 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         """Создание новой заметки"""
         print(f"🔧 ON_NEW_NOTE: current workspace_id = {self.workspace_id}")
 
-        # Автосохранение текущей заметки если есть изменения
+        # Автосохранение текущей заметки если она есть
         if (hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                self.save_btn.isEnabled()):
-
-            reply = QMessageBox.question(
-                self,
-                "Несохраненные изменения",
-                "Сохранить изменения в текущей заметке перед созданием новой?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes
-            )
-
-            if reply == QMessageBox.StandardButton.Yes:
-                self.on_save_clicked()
+                self.current_note_id):
+            self.force_auto_save()
 
         # Останавливаем автосохранение
         if hasattr(self, 'auto_save_timer'):
             self.auto_save_timer.stop()
+
+        # Останавливаем таймер обновления списка
+        if hasattr(self, 'update_list_timer'):
+            self.update_list_timer.stop()
 
         # Очищаем все атрибуты
         if hasattr(self, 'current_bookmark_id'):
@@ -1230,9 +1395,16 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                     self.tasks_layout.removeWidget(widget)
                     widget.deleteLater()
 
-        # Включаем кнопку Сохранить (новая заметка)
-        self.save_btn.setEnabled(True)
         self.title_input.setFocus()
+
+        # Сбрасываем время последнего обновления
+        self.last_note_update_time = 0
+
+        if hasattr(self, 'status_label'):
+            self.status_label.setText("Готов к созданию новой заметки")
+            self.status_label.setStyleSheet("color: gray; font-size: 11px;")
+
+        print("📝 Готово к созданию новой заметки")
 
     def on_delete_note(self):
         """Удаление заметки с расширенным подтверждением"""
@@ -1273,20 +1445,27 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             print("❌ Удаление заметки отменено пользователем")
             return
 
-        # Автосохранение если есть изменения (перед удалением)
-        if (hasattr(self, 'current_note_id') and
-                self.current_note_id and
-                self.save_btn.isEnabled()):
-            self.force_auto_save()
-
         # Удаляем заметку
         try:
+            # Получаем теги удаляемой заметки перед удалением
+            note_to_delete = self.note_manager.get(self.current_note_id)
+            tags_to_check = [tag.name for tag in
+                             note_to_delete.tags] if note_to_delete and note_to_delete.tags else []
+
             success = self.note_manager.delete(self.current_note_id)
             if success:
                 print(f"✅ Заметка {self.current_note_id} удалена из workspace {self.workspace_id}")
 
+                # ОЧИСТКА ТЕГОВ, КОТОРЫЕ БЫЛИ ТОЛЬКО В ЭТОЙ ЗАМЕТКЕ
+                if tags_to_check:
+                    self.cleanup_unused_tags(tags_to_check)
+
+                # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ
+                if hasattr(self, 'tags_widget'):
+                    self.tags_widget.refresh()
+                    print("✅ Виджет тегов обновлен после удаления заметки")
+
                 # Обновляем интерфейс
-                self.tags_widget.refresh()
                 self.load_notes(self.search_input.text())
 
                 # Очищаем редактор
@@ -1307,7 +1486,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 # Обновляем предстоящие задачи
                 self.refresh_upcoming_tasks()
 
-                #QMessageBox.information(self, "Успех", "Заметка успешно удалена")
             else:
                 QMessageBox.critical(self, "Ошибка", "Не удалось удалить заметку")
         except Exception as e:

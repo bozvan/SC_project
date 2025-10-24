@@ -371,7 +371,7 @@ class NoteManager:
 
     def delete(self, note_id: int) -> bool:
         """
-        Удаляет заметку и все ее связи с тегами
+        Удаляет заметку и все ее связи с тегами и задачи
         """
         existing_note = self.get(note_id)
         if not existing_note:
@@ -382,23 +382,63 @@ class NoteManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Удаляем связи с тегами
+                # 1. Удаляем связи с тегами
                 cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
+                print(f"✅ Удалены связи с тегами для заметки {note_id}")
 
-                # Удаляем саму заметку
+                # 2. Удаляем задачи, связанные с этой заметкой
+                tasks_deleted = self._delete_tasks_for_note(cursor, note_id)
+
+                # 3. Удаляем саму заметку
                 cursor.execute("DELETE FROM notes WHERE id = ?", (note_id,))
                 conn.commit()
 
                 if cursor.rowcount > 0:
-                    print(f"Заметка '{existing_note.title}' (ID: {note_id}) успешно удалена")
+                    print(f"✅ Заметка '{existing_note.title}' (ID: {note_id}) успешно удалена")
+                    if tasks_deleted > 0:
+                        print(f"✅ Удалено {tasks_deleted} задач, связанных с заметкой")
                     return True
                 else:
-                    print(f"Не удалось удалить заметку с ID {note_id}")
+                    print(f"❌ Не удалось удалить заметку с ID {note_id}")
                     return False
 
         except Exception as e:
-            print(f"Ошибка при удалении заметки с ID {note_id}: {e}")
+            print(f"❌ Ошибка при удалении заметки с ID {note_id}: {e}")
             return False
+
+    def _delete_tasks_for_note(self, cursor, note_id: int) -> int:
+        """
+        Удаляет все задачи, связанные с заметкой
+        Возвращает количество удаленных задач
+        """
+        try:
+            # Сначала получаем ID задач для этой заметки
+            cursor.execute("SELECT id FROM tasks WHERE note_id = ?", (note_id,))
+            task_ids = [row[0] for row in cursor.fetchall()]
+
+            if not task_ids:
+                print(f"ℹ️ Нет задач для удаления для заметки {note_id}")
+                return 0
+
+            # Удаляем связи задач с тегами (если есть такая таблица)
+            try:
+                cursor.execute("DELETE FROM task_tag_relation WHERE task_id IN ({})".format(
+                    ','.join('?' * len(task_ids))
+                ), task_ids)
+                print(f"✅ Удалены связи тегов для {len(task_ids)} задач")
+            except Exception as e:
+                print(f"ℹ️ Нет таблицы связей задач с тегами или другая ошибка: {e}")
+
+            # Удаляем сами задачи
+            cursor.execute("DELETE FROM tasks WHERE note_id = ?", (note_id,))
+            tasks_deleted = cursor.rowcount
+
+            print(f"✅ Удалено {tasks_deleted} задач для заметки {note_id}")
+            return tasks_deleted
+
+        except Exception as e:
+            print(f"❌ Ошибка при удалении задач для заметки {note_id}: {e}")
+            return 0
 
     def get_notes_by_workspace(self, workspace_id: int) -> List[Note]:
         """

@@ -78,6 +78,8 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self._updating_from_search = False
         self._updating_from_tags = False
 
+        self._loading_existing_note = False  # Флаг загрузки существующей заметки
+
         self.setup_managers()
         self.setup_ui_simple()
         self.setup_connections()
@@ -940,6 +942,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     def on_content_changed(self):
         """Обработчик изменения содержимого - ТОЛЬКО автосохранение"""
+        # ЕСЛИ ИДЕТ ЗАГРУЗКА СУЩЕСТВУЮЩЕЙ ЗАМЕТКИ - ИГНОРИРУЕМ ИЗМЕНЕНИЯ
+        if self._loading_existing_note:
+            return
+
         print(f"🔄 Изменение содержимого, current_note_id: {getattr(self, 'current_note_id', None)}")
 
         # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ НОВОЙ ЗАМЕТКИ ПРИ ВВОДЕ ЗАГОЛОВКА
@@ -1149,9 +1155,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         if note:
             print(f"✅ Новая заметка создана автоматически: {note.id}")
             self.current_note_id = note.id
-            if hasattr(self, 'status_label'):
-                self.status_label.setText(f"Заметка создана (ID: {note.id})")
-                self.status_label.setStyleSheet("color: green; font-size: 11px;")
 
             # НЕМЕДЛЕННО ОБНОВЛЯЕМ СПИСОК ЗАМЕТОК
             self.load_notes(self.search_input.text())
@@ -1291,6 +1294,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                     del self.current_bookmark_id
 
                 print(f"📖 Загрузка заметки {note_id}: {note.title}")
+
+                # УСТАНАВЛИВАЕМ ФЛАГ ЗАГРУЗКИ СУЩЕСТВУЮЩЕЙ ЗАМЕТКИ
+                self._loading_existing_note = True
+
                 self.display_note(note)
                 self.current_note_id = note_id
                 self.set_editor_enabled(True)
@@ -1302,6 +1309,9 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         except Exception as e:
             print(f"❌ Ошибка при выборе заметки: {e}")
             QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить заметку: {e}")
+        finally:
+            # ВСЕГДА СНИМАЕМ ФЛАГ, ДАЖЕ ПРИ ОШИБКЕ
+            self._loading_existing_note = False
 
     def restore_editor_focus(self):
         """Восстанавливает фокус в редакторе после операций"""
@@ -1322,6 +1332,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
     def display_note(self, note):
         """Отображает заметку в редакторе"""
+        # Флаг уже установлен в on_note_selected, так что просто заполняем поля
         self.title_input.setText(note.title)
         self.rich_editor.set_html(note.content)
 
@@ -1381,7 +1392,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.current_note_id = None
 
-        # Очищаем поля
+        # Очищаем поля (флаг не нужен, так как current_note_id = None)
         self.set_editor_enabled(True)
         self.title_input.clear()
         self.rich_editor.clear()
@@ -1399,10 +1410,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         # Сбрасываем время последнего обновления
         self.last_note_update_time = 0
-
-        if hasattr(self, 'status_label'):
-            self.status_label.setText("Готов к созданию новой заметки")
-            self.status_label.setStyleSheet("color: gray; font-size: 11px;")
 
         print("📝 Готово к созданию новой заметки")
 

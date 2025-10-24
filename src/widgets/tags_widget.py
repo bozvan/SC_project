@@ -126,39 +126,42 @@ class TagsWidget(QWidget):
         # Сортируем теги по имени
         tags.sort(key=lambda x: x.name)
 
+        # Фильтруем теги: оставляем только те, у которых 0 закладок
+        filtered_tags = []
         for tag in tags:
+            notes_count, bookmarks_count, total_count = self.get_note_count_for_tag(tag.name)
+
+            # Показываем только теги, которые НЕ используются в закладках
+            if bookmarks_count == 0:
+                filtered_tags.append((tag, notes_count, bookmarks_count))
+            else:
+                print(f"🚫 Пропущен тег '{tag.name}' - используется в {bookmarks_count} закладках")
+
+        print(f"✅ После фильтрации осталось {len(filtered_tags)} тегов (без закладок)")
+
+        for tag, notes_count, bookmarks_count in filtered_tags:
             item = QListWidgetItem(tag.name)
             item.setData(Qt.ItemDataRole.UserRole, tag.id)
 
-            # Получаем количество заметок и закладок с этим тегом в текущем workspace
-            notes_count, bookmarks_count, total_count = self.get_note_count_for_tag(tag.name)
-
-            # Форматируем текст в зависимости от наличия заметок и закладок
-            # Используем иконки вместо текста
-            if notes_count > 0 and bookmarks_count > 0:
-                item.setText(f"{tag.name} (📝{notes_count} 🔖{bookmarks_count})")
-                item.setToolTip(f"{notes_count} заметок и {bookmarks_count} закладок")
-            elif notes_count > 0:
-                item.setText(f"{tag.name} (📝{notes_count})")
+            # Форматируем текст в зависимости от наличия заметок
+            if notes_count > 0:
+                item.setText(f"{tag.name} (📝- {notes_count})")
                 item.setToolTip(f"{notes_count} заметок")
-            elif bookmarks_count > 0:
-                item.setText(f"{tag.name} (🔖{bookmarks_count})")
-                item.setToolTip(f"{bookmarks_count} закладок")
             else:
                 item.setText(tag.name)
-                item.setToolTip("Нет записей")
+                item.setToolTip("Нет заметок")
 
             self.tags_list.addItem(item)
-            print(f"📝 Добавлен тег: {tag.name} ({notes_count} заметок, {bookmarks_count} закладок)")
+            print(f"📝 Добавлен тег: {tag.name} ({notes_count} заметок)")
 
         # Восстанавливаем выделение если есть активный тег
         if self.selected_tag:
             self.select_tag_by_name(self.selected_tag)
 
         # Обновляем статистику
-        self.stats_label.setText(f"Тегов в workspace {self.workspace_id}: {len(tags)}")
+        self.stats_label.setText(f"Тегов в workspace {self.workspace_id}: {len(filtered_tags)}")
 
-        print(f"✅ Загружено {len(tags)} тегов для workspace {self.workspace_id}")
+        print(f"✅ Загружено {len(filtered_tags)} тегов для workspace {self.workspace_id}")
 
     def get_note_count_for_tag(self, tag_name):
         """Получает количество заметок И закладок для тега в текущем workspace"""

@@ -1,55 +1,108 @@
-## 📚 **Документация: Умный Органайзер**
+# 📖 Справочник API MINDSPACE (кратко)
 
-# 1. 🚀 **Руководство по использованию**
+## 🗄️ DatabaseManager
+Управляет подключением к SQLite и схемой данных.
+```python
+__init__(db_path="smart_organizer.db")
+_get_connection() -> sqlite3.Connection
+execute(sql, params=()) -> Cursor
+execute_transaction(queries: List[Tuple[str, tuple]])
+_init_db()
+```
+**Назначение:** централизованная работа с БД, транзакции, создание таблиц.
 
-## 1.1 Основные возможности
+---
 
-### 📝 Управление заметками
-- **Создание заметок**: Нажмите "Новая заметка" или используйте меню Файл → Новая заметка
-- **Редактирование**: Просто начните печатать - автосохранение сработает через 3 секунды
-- **Форматирование текста**: Используйте панель инструментов редактора:
-  - 🅱️ **Жирный**, *К*, Ч - базовое форматирование
-  - ◀Ⓧ▶ - выравнивание текста
-  - • 1. - маркированные и нумерованные списки
-  - ↶↷ - отмена/повтор действий
-- **Удаление**: Кнопка "Удалить" в списке заметок
+## 📝 NoteManager
+Операции с заметками и закладками.
+```python
+create(title, content, tags, content_type, note_type, url, workspace_id) -> Note
+get(note_id) -> Note
+update(note_id, **kwargs) -> bool
+delete(note_id) -> bool
+search(search_text, tag_names, note_type, workspace_id) -> List[Note]
+```
+**Назначение:** управление заметками, HTML/plain контентом и тегами.
 
-### 🏷️ Работа с тегами
-- **Добавление тегов**: Введите теги через запятую в поле "Теги"
-- **Фильтрация по тегам**: 
-  - Кликните на тег в боковой панели
-  - Используйте `#тег` в поиске
-- **Управление тегами**: 
-  - ПКМ на теге для удаления
-  - Добавление новых тегов через поле ввода
+---
 
-### ✅ Система задач
-- **Добавление задач**: Введите задачу в поле под редактором и нажмите "Добавить"
-- **Отметка выполнения**: Кликните на чекбокс задачи
-- **Удаление задач**: Кнопка × рядом с задачей
-- **Предстоящие задачи**: Виджет в боковой панели показывает все невыполненные задачи
+## ✅ TaskManager
+Управляет задачами, связанными с заметками.
+```python
+create_task(note_id, description, due_date, priority, is_completed, workspace_id) -> Task
+create_standalone_task(title, description, due_date, priority, tags, workspace_id) -> Task
+get_tasks_for_note(note_id) -> List[Task]
+update_task(task_id, **kwargs) -> bool
+toggle_task_completion(task_id) -> bool
+get_urgent_tasks(workspace_id) -> List[Task]
+```
+**Назначение:** приоритеты, сроки, статусы выполнения задач.
 
-### 🔍 Поиск и фильтрация
-- **Текстовый поиск**: Ищет по заголовку и содержимому заметок
-- **Поиск по тегам**: Используйте `#название_тега` в поисковой строке
-- **Комбинированный поиск**: `текст #тег1 #тег2`
+---
 
-## 1.2 Автосохранение
+## 🔖 BookmarkManager
+Работа с веб-закладками и метаданными.
+```python
+create(url, title, description, tags, favicon_url, workspace_id) -> WebBookmark
+add_bookmark_with_metadata(url, tags, workspace_id) -> WebBookmark
+parse_url_metadata(url) -> Dict
+get_all(workspace_id) -> List[WebBookmark]
+search(search_text, workspace_id) -> List[WebBookmark]
+```
+**Назначение:** сохранение ссылок с автоматическим извлечением данных.
 
-Приложение автоматически сохраняет изменения:
-- ⏰ Через 3 секунды после остановки печати
-- 🔄 При переключении между заметками  
-- ➕ При создании новой заметки
-- 🗑️ При удалении заметки
-- ❌ При закрытии приложения
+---
 
-**Не нужно нажимать "Сохранить"!**
+## 📁 WorkspaceManager
+Создание и управление рабочими пространствами.
+```python
+create_workspace(name, description) -> Workspace
+get_all_workspaces() -> List[Workspace]
+get_workspace(workspace_id) -> Workspace
+delete_workspace(workspace_id) -> bool
+get_workspace_stats(workspace_id) -> Dict
+```
+**Назначение:** изоляция данных по проектам и контекстам.
 
-## 1.3 Горячие клавиши
+---
 
-- `Ctrl+N` - Новая заметка
-- `Ctrl+F` - Фокус на поиск
-- `Ctrl+Z` - Отменить (в редакторе)
-- `Ctrl+Y` - Повторить (в редакторе)
-- `Enter` - Добавить задачу (в поле ввода задач)
+## 🏷️ TagManager
+Работа с тегами.
+```python
+create(name, workspace_id) -> Tag
+get_all(workspace_id) -> List[Tag]
+get_tags_for_note(note_id) -> List[Tag]
+get_popular_tags(workspace_id, limit) -> List[Tag]
+```
+**Назначение:** гибкое тегирование и быстрый поиск по ним.
 
+---
+
+## 🎨 ThemeManager
+Настройки интерфейса и тем оформления.
+```python
+apply_theme(theme_name)
+set_theme(theme_name)
+get_current_theme() -> str
+```
+**Назначение:** переключение между светлой/тёмной темами.
+
+---
+
+## ⚙️ SettingsManager
+Работа с пользовательскими настройками.
+```python
+get_last_workspace() -> int
+set_last_workspace(workspace_id)
+get_window_geometry()
+set_window_geometry(geometry)
+```
+**Назначение:** сохранение интерфейсных параметров и последнего состояния.
+
+---
+
+## 🔄 Сигналы (PyQt)
+```python
+workspaceDeleted = pyqtSignal(int)
+```
+**Назначение:** уведомление об удалении рабочего пространства.

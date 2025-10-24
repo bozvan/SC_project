@@ -45,16 +45,6 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
         else:
             print("⚠️ Кнопка add_btn не найдена для подключения сигнала")
 
-        # Обработка нажатия Enter в полях ввода
-        if hasattr(self, 'url_edit') and self.url_edit is not None:
-            self.url_edit.returnPressed.connect(self.on_enter_pressed)
-
-        if hasattr(self, 'title_edit') and self.title_edit is not None:
-            self.title_edit.returnPressed.connect(self.on_enter_pressed)
-
-        if hasattr(self, 'tags_edit') and self.tags_edit is not None:
-            self.tags_edit.returnPressed.connect(self.on_enter_pressed)
-
         # Валидация в реальном времени
         if hasattr(self, 'url_edit') and self.url_edit is not None:
             self.url_edit.textChanged.connect(self.validate_form)
@@ -70,10 +60,16 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
             # Проверяем, что cancel_btn существует и имеет фокус
             if (hasattr(self, 'cancel_btn') and self.cancel_btn is not None and
                     self.cancel_btn.hasFocus()):
+                self.reject()
                 return
+
+            # Проверяем, что форма валидна
             if self.validate_form():
+                # Предотвращаем дальнейшую обработку события
+                event.accept()
                 self.add_bookmark()
             else:
+                # Если форма не валидна, переходим к следующему полю
                 self.focusNextChild()
         else:
             super().keyPressEvent(event)
@@ -169,35 +165,41 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
         return is_valid
 
     def add_bookmark(self):
-        """Добавляет новую закладку"""
-        # Проверяем существование необходимых виджетов
-        if not hasattr(self, 'url_edit') or self.url_edit is None:
-            QMessageBox.warning(self, "Ошибка", "Поле URL не найдено")
+        """Добавляет новую закладку с защитой от повторного вызова"""
+        # ЗАЩИТА ОТ ПОВТОРНОГО ВЫЗОВА
+        if hasattr(self, '_adding_in_progress') and self._adding_in_progress:
             return
 
-        url = self.url_edit.text().strip()
-
-        # Получаем опциональные поля если они существуют
-        title = ""
-        if hasattr(self, 'title_edit') and self.title_edit is not None:
-            title = self.title_edit.text().strip()
-
-        description = ""
-        if hasattr(self, 'description_edit') and self.description_edit is not None:
-            description = self.description_edit.toPlainText().strip()
-
-        tags_text = ""
-        if hasattr(self, 'tags_edit') and self.tags_edit is not None:
-            tags_text = self.tags_edit.text().strip()
-
-        # Валидация
-        if not url:
-            QMessageBox.warning(self, "Ошибка", "URL закладки не может быть пустым")
-            if hasattr(self, 'url_edit') and self.url_edit is not None:
-                self.url_edit.setFocus()
-            return
+        self._adding_in_progress = True
 
         try:
+            # Проверяем существование необходимых виджетов
+            if not hasattr(self, 'url_edit') or self.url_edit is None:
+                QMessageBox.warning(self, "Ошибка", "Поле URL не найдено")
+                return
+
+            url = self.url_edit.text().strip()
+
+            # Получаем опциональные поля если они существуют
+            title = ""
+            if hasattr(self, 'title_edit') and self.title_edit is not None:
+                title = self.title_edit.text().strip()
+
+            description = ""
+            if hasattr(self, 'description_edit') and self.description_edit is not None:
+                description = self.description_edit.toPlainText().strip()
+
+            tags_text = ""
+            if hasattr(self, 'tags_edit') and self.tags_edit is not None:
+                tags_text = self.tags_edit.text().strip()
+
+            # Валидация
+            if not url:
+                QMessageBox.warning(self, "Ошибка", "URL закладки не может быть пустым")
+                if hasattr(self, 'url_edit') and self.url_edit is not None:
+                    self.url_edit.setFocus()
+                return
+
             # Парсим теги
             tags = []
             if tags_text:
@@ -209,9 +211,9 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
             print(f"   - Title: {title}")
             print(f"   - Description: {description}")
             print(f"   - Tags: {tags}")
-            print(f"   - Workspace ID: {self.workspace_id} (тип: {type(self.workspace_id)})")
+            print(f"   - Workspace ID: {self.workspace_id}")
 
-            # Пробуем создать закладку с пользовательскими данными
+            # Создаем закладку
             bookmark = None
 
             # Способ 1: Используем новый метод create_bookmark_with_custom_data
@@ -228,37 +230,22 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
                 except Exception as e:
                     print(f"❌ Ошибка в create_bookmark_with_custom_data: {e}")
 
-            # Способ 2: Если нового метода нет, используем существующий и обновляем
+            # Способ 2: Если нового метода нет, используем существующий
             if not bookmark and hasattr(self.bookmark_manager, 'add_bookmark_with_metadata'):
                 try:
-                    # Создаем базовую закладку
                     bookmark = self.bookmark_manager.add_bookmark_with_metadata(
                         url=url,
                         tags=tags,
                         workspace_id=self.workspace_id
                     )
-
-                    # Обновляем title и description если они указаны
-                    if bookmark and (title or description):
-                        success = self._update_bookmark_metadata(bookmark.id, title, description)
-                        if success:
-                            print("✅ Закладка создана и обновлена с пользовательскими данными")
-                        else:
-                            print("⚠️ Закладка создана, но не удалось обновить метаданные")
-                    else:
-                        print("✅ Закладка создана (без пользовательских данных)")
-
+                    print("✅ Использован метод add_bookmark_with_metadata")
                 except Exception as e:
                     print(f"❌ Ошибка в add_bookmark_with_metadata: {e}")
 
             if bookmark:
                 print(f"✅ Закладка добавлена в workspace {self.workspace_id}: {bookmark.title}")
-                print(f"   🔗 URL: {bookmark.url}")
-                print(f"   📝 Описание: {getattr(bookmark, 'description', 'N/A')}")
-                print(f"   🏷️ Теги: {[tag.name for tag in getattr(bookmark, 'tags', [])]}")
-
                 self.bookmark_added.emit()
-                self.accept()
+                self.accept()  # Закрываем диалог только при успешном добавлении
             else:
                 QMessageBox.critical(self, "Ошибка", "Не удалось добавить закладку")
 
@@ -267,6 +254,9 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
             import traceback
             traceback.print_exc()
             QMessageBox.critical(self, "Ошибка", f"Ошибка при добавлении закладки: {str(e)}")
+        finally:
+            # СНИМАЕМ ФЛАГ БЛОКИРОВКИ
+            self._adding_in_progress = False
 
     def _update_bookmark_metadata(self, bookmark_id, title, description):
         """Обновляет метаданные закладки после создания"""

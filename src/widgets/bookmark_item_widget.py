@@ -88,13 +88,18 @@ class BookmarkItemWidget(QFrame, Ui_BookmarkItemWidget):
 
     def on_delete_clicked(self):
         """Обработчик кнопки удаления закладки"""
-        reply = QMessageBox.question(
-            self,
+        msg_box = QMessageBox(
+            QMessageBox.Icon.Question,
             "Подтверждение удаления",
             f"Вы уверены, что хотите удалить закладку:\n\"{self.bookmark.title}\"?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            self
         )
+
+        # Устанавливаем кнопку "Нет" по умолчанию
+        msg_box.setDefaultButton(QMessageBox.StandardButton.No)
+
+        reply = msg_box.exec()
 
         if reply == QMessageBox.StandardButton.Yes:
             # Отправляем сигнал родительскому виджету для удаления

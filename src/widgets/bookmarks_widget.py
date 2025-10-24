@@ -190,22 +190,13 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
 
     def delete_bookmark(self, bookmark_id: int):
         """Удаляет закладку"""
-        reply = QMessageBox.question(
-            self,
-            "Подтверждение удаления",
-            "Вы уверены, что хотите удалить эту закладку?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            success = self.bookmark_manager.delete(bookmark_id)
-            if success:
-                self.bookmark_deleted.emit(bookmark_id)
-                self.load_bookmarks(self.search_input.text())
-                print(f"✅ Закладка {bookmark_id} удалена")
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось удалить закладку")
+        success = self.bookmark_manager.delete(bookmark_id)
+        if success:
+            self.bookmark_deleted.emit(bookmark_id)
+            self.load_bookmarks(self.search_input.text())
+            print(f"✅ Закладка {bookmark_id} удалена")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось удалить закладку")
 
     def on_add_bookmark(self):
         """Обработчик добавления новой закладки"""

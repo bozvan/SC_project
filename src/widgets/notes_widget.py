@@ -1235,32 +1235,84 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.title_input.setFocus()
 
     def on_delete_note(self):
-        """Удаление заметки"""
-        # Автосохранение если есть изменения
-        if (hasattr(self, 'current_note_id') and
-                self.current_note_id):
-            self.force_auto_save()  # Просто сохраняем без вопросов
-
+        """Удаление заметки с расширенным подтверждением"""
         if not self.current_note_id:
             QMessageBox.warning(self, "Предупреждение", "Выберите заметку для удаления!")
             return
 
-        # Удаляем без лишних подтверждений
+        # Получаем полную информацию о заметке
+        note = self.note_manager.get(self.current_note_id)
+        if not note:
+            QMessageBox.warning(self, "Ошибка", "Заметка не найдена!")
+            return
+
+        # Собираем информацию для диалога
+        note_info = f"\"{note.title}\""
+
+        # Добавляем информацию о задачах
+        tasks_count = len(self.task_manager.get_tasks_for_note(self.current_note_id))
+        if tasks_count > 0:
+            note_info += f"\n\n📝 Содержит {tasks_count} задач"
+
+        # Добавляем информацию о тегах
+        if note.tags:
+            tags_count = len(note.tags)
+            note_info += f"\n🏷️ Имеет {tags_count} тегов"
+
+        # Диалог подтверждения удаления
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение удаления",
+            f"Вы действительно хотите удалить заметку {note_info}?\n\n"
+            "⚠️ Это действие нельзя отменить.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            print("❌ Удаление заметки отменено пользователем")
+            return
+
+        # Автосохранение если есть изменения (перед удалением)
+        if (hasattr(self, 'current_note_id') and
+                self.current_note_id and
+                self.save_btn.isEnabled()):
+            self.force_auto_save()
+
+        # Удаляем заметку
         try:
             success = self.note_manager.delete(self.current_note_id)
             if success:
                 print(f"✅ Заметка {self.current_note_id} удалена из workspace {self.workspace_id}")
-                self.tags_widget.refresh()  # РАССКОММЕНТИРОВАТЬ, КОГДА ПОЯВИТСЯ ВИДЖЕТ ТЕГОВ
+
+                # Обновляем интерфейс
+                self.tags_widget.refresh()
                 self.load_notes(self.search_input.text())
+
+                # Очищаем редактор
                 self.set_editor_enabled(True)
                 self.title_input.clear()
                 self.rich_editor.clear()
                 self.tags_input.clear()
                 self.current_note_id = None
+
+                # Очищаем задачи
+                if hasattr(self, 'tasks_layout'):
+                    for i in reversed(range(self.tasks_layout.count())):
+                        widget = self.tasks_layout.itemAt(i).widget()
+                        if widget:
+                            self.tasks_layout.removeWidget(widget)
+                            widget.deleteLater()
+
+                # Обновляем предстоящие задачи
+                self.refresh_upcoming_tasks()
+
+                #QMessageBox.information(self, "Успех", "Заметка успешно удалена")
             else:
                 QMessageBox.critical(self, "Ошибка", "Не удалось удалить заметку")
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при удалении: {e}")
+            print(f"❌ Ошибка удаления заметки {self.current_note_id}: {e}")
 
     def on_search_clicked(self):
         query = self.search_input.text()

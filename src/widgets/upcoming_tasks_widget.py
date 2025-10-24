@@ -46,7 +46,7 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
 
     def connect_signals(self):
         """Подключение сигналов"""
-        self.pushButton.clicked.connect(self.refresh)
+        #self.pushButton.clicked.connect(self.refresh)
 
     def set_workspace(self, workspace_id):
         """Обновляет workspace и перезагружает задачи"""
@@ -317,10 +317,27 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
             self.task_toggled.emit(task_id, is_completed)
             print(f"✅ Задача {task_id} отмечена как {'выполнена' if is_completed else 'не выполнена'}")
 
-            # ОБНОВЛЯЕМ ТОЛЬКО КОНКРЕТНУЮ ЗАДАЧУ - ПЕРЕСОЗДАЕМ ВИДЖЕТ
-            self.update_single_task_display(task_id, is_completed)
+            # ОБНОВЛЯЕМ ВЕСЬ СПИСОК ЗАДАЧ АВТОМАТИЧЕСКИ
+            self.refresh_tasks_after_toggle()
         else:
             print(f"❌ Ошибка обновления задачи {task_id}")
+
+    def refresh_tasks_after_toggle(self):
+        """Обновляет список задач после изменения состояния чекбокса"""
+        print("🔄 Автоматическое обновление списка задач после изменения статуса...")
+
+        # Сохраняем текущие настройки фильтра и сортировки
+        current_filter = self.filter_combo.currentText()
+        current_sort = self.sort_combo.currentText()
+
+        # Перезагружаем задачи
+        self.load_tasks()
+
+        # Восстанавливаем настройки фильтра и сортировки
+        self.filter_combo.setCurrentText(current_filter)
+        self.sort_combo.setCurrentText(current_sort)
+
+        print("✅ Список задач обновлен после изменения статуса")
 
     def update_single_task_display(self, task_id, is_completed):
         """Обновляет отображение только одной задачи - ГАРАНТИРУЕМ что дедлайн всегда виден"""

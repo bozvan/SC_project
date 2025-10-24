@@ -37,6 +37,7 @@ class TaskWidget(QWidget):
         self.update_style()
         self.task_changed.emit()
 
+
     def on_text_changed(self):
         """Обработчик изменения текста"""
         self.description = self.text_input.text()

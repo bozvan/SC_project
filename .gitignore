@@ -21,6 +21,7 @@ __pycache__/
 secrets.py
 
 # Другое
+src/smart_organizer.db
 test.spec
 setup.py
 smart_organizer.spec

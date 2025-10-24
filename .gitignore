@@ -1,34 +1,121 @@
-# Виртуальное окружение
+# Виртуальные окружения Python
 venv/
 env/
 .venv/
+venv*/
+ENV/
 
 # Кеш Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# PyCharm
+# PyCharm/IDE
 .idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
-# Логи и базы данных
+# Логи
 *.log
+logs/
+
+# Базы данных
 *.sqlite3
+*.db
+*.sqlite
 
-# Файлы с чувствительными данными (пароли, ключи API)
+# Файлы с чувствительными данными
 .env
+.env.local
+.env.production
+.env.development
 secrets.py
+config_secret.py
+*.key
+*.pem
 
-# Другое
-src/smart_organizer.db
+# JSON файлы (не храним в репозитории)
+*.json
+
+# Файлы сборки и дистрибутивы
+build/
+dist/
+*.spec
+*.msi
+*.dmg
+*.deb
+*.rpm
+
+# Документация
+docs/_build/
+
+# Тестовые покрытия
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.tox/
+.nox/
+.cache
+
+# Файлы операционных систем
+Thumbs.db
+ehthumbs.db
+
+# Файлы приложений
+[Dd]esktop.ini
+
+# Резервные копии
+*.bak
+*.backup
+
+# Ваши специфичные файлы
 test.spec
-setup.py
-smart_organizer.spec
 build_all.py
 build_linux.sh
 build_windows.bat
-build
-dist
 build_crossplatform.py
-*.spec
+src/smart_organizer.db

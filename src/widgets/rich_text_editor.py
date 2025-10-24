@@ -1,5 +1,3 @@
-# [file name]: rich_text_editor.py
-# [file content begin]
 from PyQt6.QtWidgets import (QTextEdit, QToolBar, QVBoxLayout, QWidget,
                              QFontComboBox, QSpinBox, QColorDialog)
 from PyQt6.QtGui import (QTextCharFormat, QFont, QTextListFormat,
@@ -14,6 +12,8 @@ class RichTextEditor(QWidget):
         super().__init__(parent)
         self.format_actions = {}
         self._updating_format = False
+        self.default_font_size = 12
+        self.default_font_family = "Arial"
         self.setup_ui()
 
     def setup_ui(self):
@@ -25,6 +25,12 @@ class RichTextEditor(QWidget):
         self.text_edit = QTextEdit()
         self.text_edit.setAcceptRichText(True)
 
+        # Устанавливаем начальный формат по умолчанию
+        default_fmt = QTextCharFormat()
+        default_fmt.setFontPointSize(self.default_font_size)
+        default_fmt.setFontFamily(self.default_font_family)
+        self.text_edit.setCurrentCharFormat(default_fmt)
+
         # Создаем панель инструментов
         self.toolbar = self.create_toolbar()
 
@@ -33,6 +39,13 @@ class RichTextEditor(QWidget):
 
         # Подключаем сигналы
         self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+        self.text_edit.currentCharFormatChanged.connect(self.on_char_format_changed)
+
+    def on_char_format_changed(self, fmt):
+        """Обработчик изменения текущего формата символов"""
+        if self._updating_format:
+            return
+        self.update_format_actions()
 
     def create_toolbar(self):
         """Создание панели инструментов"""
@@ -41,13 +54,14 @@ class RichTextEditor(QWidget):
 
         # Шрифт
         self.font_combo = QFontComboBox()
+        self.font_combo.setCurrentFont(QFont(self.default_font_family))
         self.font_combo.currentFontChanged.connect(self.set_font_family)
         toolbar.addWidget(self.font_combo)
 
         # Размер шрифта
         self.font_size = QSpinBox()
         self.font_size.setRange(8, 72)
-        self.font_size.setValue(12)
+        self.font_size.setValue(self.default_font_size)
         self.font_size.valueChanged.connect(self.set_font_size)
         toolbar.addWidget(self.font_size)
 
@@ -68,7 +82,7 @@ class RichTextEditor(QWidget):
         self.format_actions['italic'] = italic_action
 
         # Подчеркивание
-        underline_action = QAction("U̲̲", self)
+        underline_action = QAction("U", self)
         underline_action.setCheckable(True)
         underline_action.triggered.connect(self.toggle_underline)
         toolbar.addAction(underline_action)
@@ -117,85 +131,102 @@ class RichTextEditor(QWidget):
 
         return toolbar
 
-    def toggle_bold(self):
+    def get_current_format(self):
+        """Получает текущий формат символов"""
+        cursor = self.text_edit.textCursor()
+        return cursor.charFormat()
+
+    def apply_format_change(self, format_change_func):
+        """Применяет изменение формата, сохраняя остальные стили"""
         if self._updating_format:
             return
+
         cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
 
-        fmt = QTextCharFormat()
-        # Проверяем, есть ли уже жирный стиль в выделенном тексте
-        current_format = cursor.charFormat()
-        is_currently_bold = current_format.fontWeight() == QFont.Weight.Bold
+        # Получаем текущий формат
+        current_format = self.get_current_format()
 
-        # Переключаем: если жирный - делаем обычным, если обычный - делаем жирным
-        weight = QFont.Weight.Normal if is_currently_bold else QFont.Weight.Bold
-        fmt.setFontWeight(weight)
+        # Создаем новый формат на основе текущего
+        new_format = QTextCharFormat(current_format)
 
-        cursor.mergeCharFormat(fmt)
+        # Применяем изменение
+        format_change_func(new_format)
+
+        # Применяем обновленный формат
+        if cursor.hasSelection():
+            cursor.mergeCharFormat(new_format)
+        else:
+            self.text_edit.setCurrentCharFormat(new_format)
+
         self.text_edit.setFocus()
+
+    def toggle_bold(self):
+        """Переключение жирного стиля"""
+
+        def change_bold(fmt):
+            is_bold = fmt.fontWeight() == QFont.Weight.Bold
+            new_weight = QFont.Weight.Normal if is_bold else QFont.Weight.Bold
+            fmt.setFontWeight(new_weight)
+
+        self.apply_format_change(change_bold)
 
     def toggle_italic(self):
-        if self._updating_format:
-            return
-        cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
-        fmt = QTextCharFormat()
-        fmt.setFontItalic(not cursor.charFormat().fontItalic())
-        cursor.mergeCharFormat(fmt)
-        self.text_edit.setFocus()
+        """Переключение курсивного стиля"""
+
+        def change_italic(fmt):
+            fmt.setFontItalic(not fmt.fontItalic())
+
+        self.apply_format_change(change_italic)
 
     def toggle_underline(self):
-        if self._updating_format:
-            return
-        cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
-        fmt = QTextCharFormat()
-        fmt.setFontUnderline(not cursor.charFormat().fontUnderline())
-        cursor.mergeCharFormat(fmt)
-        self.text_edit.setFocus()
+        """Переключение подчеркивания"""
+
+        def change_underline(fmt):
+            fmt.setFontUnderline(not fmt.fontUnderline())
+
+        self.apply_format_change(change_underline)
 
     def set_text_color(self):
+        """Установка цвета текста"""
         color = QColorDialog.getColor()
         if color.isValid():
-            cursor = self.text_edit.textCursor()
-            if cursor.hasSelection():
-                fmt = QTextCharFormat()
+            def change_color(fmt):
                 fmt.setForeground(color)
-                cursor.mergeCharFormat(fmt)
-                self.text_edit.setFocus()
+
+            self.apply_format_change(change_color)
 
     def set_font_family(self, font):
+        """Установка семейства шрифтов"""
         if self._updating_format:
             return
-        cursor = self.text_edit.textCursor()
-        if cursor.hasSelection():
-            fmt = QTextCharFormat()
+
+        def change_font_family(fmt):
             fmt.setFontFamily(font.family())
-            cursor.mergeCharFormat(fmt)
-            self.text_edit.setFocus()
+
+        self.apply_format_change(change_font_family)
 
     def set_font_size(self, size):
+        """Установка размера шрифта"""
         if self._updating_format:
             return
-        cursor = self.text_edit.textCursor()
-        if cursor.hasSelection():
-            fmt = QTextCharFormat()
+
+        def change_font_size(fmt):
             fmt.setFontPointSize(size)
-            cursor.mergeCharFormat(fmt)
-            self.text_edit.setFocus()
+
+        self.apply_format_change(change_font_size)
 
     def set_alignment(self, alignment):
+        """Установка выравнивания"""
         if self._updating_format:
             return
+
         cursor = self.text_edit.textCursor()
         block_fmt = QTextBlockFormat()
         block_fmt.setAlignment(alignment)
         cursor.mergeBlockFormat(block_fmt)
         self.text_edit.setFocus()
+
+        # Обновляем кнопки выравнивания
         self._updating_format = True
         try:
             for key in ['align_left', 'align_center', 'align_right']:
@@ -210,52 +241,122 @@ class RichTextEditor(QWidget):
             self._updating_format = False
 
     def update_format_actions(self):
+        """Обновление состояния кнопок форматирования"""
         if self._updating_format:
             return
+
         self._updating_format = True
         try:
             cursor = self.text_edit.textCursor()
             char_fmt = cursor.charFormat()
             block_fmt = cursor.blockFormat()
+
+            # Обновляем кнопки форматирования текста
             self.format_actions['bold'].setChecked(char_fmt.fontWeight() == QFont.Weight.Bold)
             self.format_actions['italic'].setChecked(char_fmt.fontItalic())
             self.format_actions['underline'].setChecked(char_fmt.fontUnderline())
+
+            # Обновляем выравнивание
             alignment = block_fmt.alignment()
             self.format_actions['align_left'].setChecked(alignment == Qt.AlignmentFlag.AlignLeft)
             self.format_actions['align_center'].setChecked(alignment == Qt.AlignmentFlag.AlignCenter)
             self.format_actions['align_right'].setChecked(alignment == Qt.AlignmentFlag.AlignRight)
+
+            # Обновляем шрифт и размер
             current_font = char_fmt.font()
-            if current_font.family():
+            font_family = current_font.family()
+
+            # Если шрифт не установлен (по умолчанию), используем дефолтный
+            if not font_family or font_family == "":
+                font_family = self.default_font_family
+                self.font_combo.setCurrentFont(QFont(font_family))
+            else:
                 self.font_combo.setCurrentFont(current_font)
+
             font_size = char_fmt.fontPointSize()
-            if font_size > 0:
-                self.font_size.setValue(int(font_size))
+            # Если размер шрифта не установлен (по умолчанию), используем дефолтный
+            if font_size <= 0:
+                font_size = self.default_font_size
+            self.font_size.setValue(int(font_size))
+
+        except Exception as e:
+            print(f"Ошибка при обновлении формата: {e}")
         finally:
             self._updating_format = False
 
     def set_html(self, html_content):
-        self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
+        """Установка HTML контента"""
+        # Временно отключаем сигналы для предотвращения рекурсии
+        try:
+            self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
+            self.text_edit.currentCharFormatChanged.disconnect(self.on_char_format_changed)
+        except:
+            pass
+
         try:
             self.text_edit.setHtml(html_content)
+        except Exception as e:
+            print(f"Ошибка при установке HTML: {e}")
         finally:
-            self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+            # Восстанавливаем сигналы
+            try:
+                self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+                self.text_edit.currentCharFormatChanged.connect(self.on_char_format_changed)
+            except:
+                pass
 
     def to_html(self):
-        return self.text_edit.toHtml()
+        """Получение HTML контента"""
+        try:
+            return self.text_edit.toHtml()
+        except Exception as e:
+            print(f"Ошибка при получении HTML: {e}")
+            return ""
 
     def set_plain_text(self, text):
-        self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
+        """Установка простого текста"""
+        try:
+            self.text_edit.cursorPositionChanged.disconnect(self.update_format_actions)
+            self.text_edit.currentCharFormatChanged.disconnect(self.on_char_format_changed)
+        except:
+            pass
+
         try:
             self.text_edit.setPlainText(text)
+            # Сбрасываем к формату по умолчанию
+            default_fmt = QTextCharFormat()
+            default_fmt.setFontPointSize(self.default_font_size)
+            default_fmt.setFontFamily(self.default_font_family)
+            self.text_edit.setCurrentCharFormat(default_fmt)
+        except Exception as e:
+            print(f"Ошибка при установке текста: {e}")
         finally:
-            self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+            try:
+                self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
+                self.text_edit.currentCharFormatChanged.connect(self.on_char_format_changed)
+            except:
+                pass
 
     def to_plain_text(self):
-        return self.text_edit.toPlainText()
+        """Получение простого текста"""
+        try:
+            return self.text_edit.toPlainText()
+        except Exception as e:
+            print(f"Ошибка при получении текста: {e}")
+            return ""
 
     def clear(self):
-        self.text_edit.clear()
+        """Очистка редактора"""
+        try:
+            self.text_edit.clear()
+            # Сбрасываем к формату по умолчанию
+            default_fmt = QTextCharFormat()
+            default_fmt.setFontPointSize(self.default_font_size)
+            default_fmt.setFontFamily(self.default_font_family)
+            self.text_edit.setCurrentCharFormat(default_fmt)
+        except Exception as e:
+            print(f"Ошибка при очистке: {e}")
 
     def get_text_edit(self):
+        """Получение текстового редактора"""
         return self.text_edit
-# [file content end]

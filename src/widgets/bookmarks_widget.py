@@ -6,6 +6,7 @@ import webbrowser
 
 from gui.ui_bookmarks_widget import Ui_BookmarksWidget
 from widgets.bookmark_item_widget import BookmarkItemWidget  # Импортируем из отдельного файла
+from widgets.edit_bookmark_dialog import EditBookmarkDialog  # Импортируем диалог редактирования
 
 
 class BookmarksWidget(QWidget, Ui_BookmarksWidget):
@@ -14,6 +15,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
     bookmark_selected = pyqtSignal(int)  # bookmark_id
     bookmark_deleted = pyqtSignal(int)  # bookmark_id
     bookmark_description_changed = pyqtSignal(int, str)  # bookmark_id, new_description
+    bookmark_updated = pyqtSignal(int)  # bookmark_id - новый сигнал для обновления закладки
 
     def __init__(self, bookmark_manager, workspace_id=1, parent=None):
         super().__init__(parent)
@@ -33,7 +35,6 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         self.search_input.textChanged.connect(self.on_search_changed)
         self.clear_search_btn.clicked.connect(self.clear_search)
         self.add_btn.clicked.connect(self.on_add_bookmark)
-        self.refresh_btn.clicked.connect(self.refresh)
 
         self.bookmarks_list.itemClicked.connect(self.on_bookmark_clicked)
         self.bookmarks_list.customContextMenuRequested.connect(self.show_context_menu)
@@ -60,6 +61,9 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
                     any(search_text_lower in tag.name.lower() for tag in b.tags))
             ]
 
+        # Обновляем статистику ДО создания виджетов
+        self.update_statistics(bookmarks)
+
         for bookmark in bookmarks:
             # Создаем кастомный виджет для каждой закладки
             bookmark_widget = self.create_bookmark_widget(bookmark)
@@ -72,9 +76,22 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
             self.bookmarks_list.addItem(item)
             self.bookmarks_list.setItemWidget(item, bookmark_widget)
 
-        # Обновляем статистику
-        self.stats_label.setText(f"Закладок: {len(bookmarks)}")
         print(f"✅ Загружено закладок в workspace {self.workspace_id}: {len(bookmarks)}")
+
+    def update_statistics(self, bookmarks):
+        """Обновляет статистику закладок"""
+        total_count = len(bookmarks)
+
+        # Считаем закладки с описанием
+        with_description_count = sum(1 for b in bookmarks if b.description and b.description.strip())
+
+        # Считаем закладки с тегами
+        with_tags_count = sum(1 for b in bookmarks if b.tags and len(b.tags) > 0)
+
+        # Обновляем метки статистики
+        self.labelTotal.setText(f"Всего закладок: {total_count}")
+        self.labelWithDescription.setText(f"С описанием: {with_description_count}")
+        self.labelWithTags.setText(f"С тегами: {with_tags_count}")
 
     def create_bookmark_widget(self, bookmark):
         """Создает виджет для отображения закладки"""
@@ -85,14 +102,44 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         widget.copy_requested.connect(self.copy_to_clipboard)
         widget.open_requested.connect(self.open_in_browser)
         widget.description_changed.connect(self.on_description_changed)
-        widget.edit_requested.connect(self.edit_bookmark)
+        widget.edit_requested.connect(self.edit_bookmark)  # Теперь открывает диалог
         widget.delete_requested.connect(self.delete_bookmark)
 
         return widget
 
+    def force_save_all_descriptions(self):
+        """Принудительно сохраняет все незавершенные редактирования"""
+        print("💾 Принудительное сохранение всех описаний закладок...")
+        saved_count = 0
+
+        for i in range(self.bookmarks_list.count()):
+            item = self.bookmarks_list.item(i)
+            if item:
+                widget = self.bookmarks_list.itemWidget(item)
+                if (widget and hasattr(widget, 'force_save_description') and
+                        hasattr(widget, '_is_destroyed') and not widget._is_destroyed):
+                    if widget.force_save_description():
+                        saved_count += 1
+
+        print(f"✅ Сохранено описаний: {saved_count}")
+        return saved_count
+
+    def closeEvent(self, event):
+        """Обработчик закрытия виджета"""
+        self.force_save_all_descriptions()
+        super().closeEvent(event)
+
+    def hideEvent(self, event):
+        """Обработчик скрытия виджета (при переключении вкладок)"""
+        self.force_save_all_descriptions()
+        super().hideEvent(event)
+
     def on_description_changed(self, bookmark_id: int, new_description: str):
         """Обработчик изменения описания закладки"""
         self.bookmark_description_changed.emit(bookmark_id, new_description)
+
+        # Обновляем статистику после изменения описания
+        self.load_bookmarks(self.search_input.text())
 
     def on_search_changed(self, text):
         """Обработчик изменения поискового запроса"""
@@ -130,7 +177,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         copy_url_action.triggered.connect(lambda: self.copy_to_clipboard(bookmark.url))
         menu.addAction(copy_url_action)
 
-        # Редактировать описание
+        # Редактировать закладку (открывает диалог)
         edit_action = QAction("✏️ Редактировать закладку", self)
         edit_action.triggered.connect(lambda: self.edit_bookmark(bookmark_id))
         menu.addAction(edit_action)
@@ -145,27 +192,34 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         menu.exec(self.bookmarks_list.mapToGlobal(position))
 
     def edit_bookmark(self, bookmark_id: int):
-        """Открывает диалог редактирования закладки"""
-        from widgets.edit_bookmark_dialog import EditBookmarkDialog
-
+        """Открывает диалоговое окно для редактирования закладки"""
         bookmark = self.bookmark_manager.get(bookmark_id)
         if not bookmark:
             QMessageBox.warning(self, "Ошибка", "Закладка не найдена")
             return
 
-        dialog = EditBookmarkDialog(self.bookmark_manager, bookmark, self)
-        dialog.bookmark_updated.connect(self.on_bookmark_updated)
+        try:
+            # Создаем и показываем диалог редактирования
+            dialog = EditBookmarkDialog(self.bookmark_manager, bookmark, self)
+            dialog.bookmark_updated.connect(self.on_bookmark_updated)
 
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            print(f"✅ Закладка {bookmark_id} отредактирована")
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                print(f"✅ Закладка {bookmark_id} отредактирована через диалог")
+                # Список автоматически обновится через сигнал on_bookmark_updated
+
+        except Exception as e:
+            print(f"❌ Ошибка при открытии диалога редактирования: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Не удалось открыть диалог редактирования: {str(e)}")
 
     def on_bookmark_updated(self, bookmark_id: int):
-        """Обработчик обновления закладки"""
+        """Обработчик обновления закладки через диалог"""
+        # Перезагружаем список закладок
         self.load_bookmarks(self.search_input.text())
+        self.bookmark_updated.emit(bookmark_id)  # Испускаем сигнал для внешних слушателей
         print(f"🔄 Закладка {bookmark_id} обновлена, список перезагружен")
 
     def edit_bookmark_description(self, bookmark_id: int):
-        """Редактирует описание закладки"""
+        """Редактирует только описание закладки (inline)"""
         # Находим виджет закладки
         for i in range(self.bookmarks_list.count()):
             item = self.bookmarks_list.item(i)
@@ -190,6 +244,7 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
 
     def delete_bookmark(self, bookmark_id: int):
         """Удаляет закладку"""
+
         success = self.bookmark_manager.delete(bookmark_id)
         if success:
             self.bookmark_deleted.emit(bookmark_id)
@@ -203,11 +258,9 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
         from widgets.add_bookmark_dialog import AddBookmarkDialog
 
         try:
-            # ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
             print(f"🔍 Отладка BookmarksWidget.on_add_bookmark():")
             print(f"   - Текущий workspace_id: {self.workspace_id} (тип: {type(self.workspace_id)})")
             print(f"   - Bookmark Manager: {type(self.bookmark_manager)}")
-            print(f"   - Parent: {type(self)}")
 
             dialog = AddBookmarkDialog(self.bookmark_manager, self.workspace_id, self)
             dialog.bookmark_added.connect(self.on_bookmark_added)
@@ -224,3 +277,38 @@ class BookmarksWidget(QWidget, Ui_BookmarksWidget):
     def refresh(self):
         """Обновляет список закладок"""
         self.load_bookmarks(self.search_input.text())
+
+    def get_current_bookmarks_count(self):
+        """Возвращает количество закладок в текущем представлении"""
+        return self.bookmarks_list.count()
+
+    def clear_all_bookmarks(self):
+        """Удаляет все закладки в текущем workspace"""
+        if self.bookmarks_list.count() == 0:
+            QMessageBox.information(self, "Информация", "Нет закладок для удаления")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Подтверждение удаления",
+            f"Вы уверены, что хотите удалить ВСЕ закладки ({self.bookmarks_list.count()} шт.) в этом рабочем пространстве?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Получаем все ID закладок в текущем workspace
+        bookmarks = self.bookmark_manager.get_bookmarks_by_workspace(self.workspace_id)
+        deleted_count = 0
+
+        for bookmark in bookmarks:
+            if self.bookmark_manager.delete(bookmark.id):
+                deleted_count += 1
+
+        if deleted_count > 0:
+            self.load_bookmarks(self.search_input.text())
+            QMessageBox.information(self, "Успех", f"Удалено закладок: {deleted_count}")
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось удалить закладки")

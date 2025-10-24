@@ -18,6 +18,8 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
 
         self.bookmark_manager = bookmark_manager
         self.workspace_id = workspace_id  # Сохраняем workspace_id
+        self.user_entered_description = ""  # Храним описание, введенное пользователем
+        self.is_description_manual = False  # Флаг, что описание введено вручную
 
         # Проверяем, что кнопки существуют перед настройкой
         if hasattr(self, 'add_btn') and self.add_btn is not None:
@@ -45,9 +47,21 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
         else:
             print("⚠️ Кнопка add_btn не найдена для подключения сигнала")
 
+        # Отслеживаем изменения описания для определения ручного ввода
+        if hasattr(self, 'description_edit') and self.description_edit is not None:
+            self.description_edit.textChanged.connect(self.on_description_changed)
+
         # Валидация в реальном времени
         if hasattr(self, 'url_edit') and self.url_edit is not None:
             self.url_edit.textChanged.connect(self.validate_form)
+
+    def on_description_changed(self):
+        """Обработчик изменения описания - отмечаем как ручной ввод"""
+        current_description = self.description_edit.toPlainText().strip()
+        # Если описание не пустое, считаем что пользователь ввел его вручную
+        if current_description:
+            self.is_description_manual = True
+            self.user_entered_description = current_description
 
     def on_enter_pressed(self):
         """Обработчик нажатия Enter в полях ввода"""
@@ -186,7 +200,11 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
                 title = self.title_edit.text().strip()
 
             description = ""
-            if hasattr(self, 'description_edit') and self.description_edit is not None:
+            # Если описание было введено вручную, используем сохраненное значение
+            if self.is_description_manual and self.user_entered_description:
+                description = self.user_entered_description
+                print("📝 Используется ручное описание пользователя")
+            elif hasattr(self, 'description_edit') and self.description_edit is not None:
                 description = self.description_edit.toPlainText().strip()
 
             tags_text = ""
@@ -209,7 +227,7 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
             print(f"🔍 Отладка AddBookmarkDialog.add_bookmark():")
             print(f"   - URL: {url}")
             print(f"   - Title: {title}")
-            print(f"   - Description: {description}")
+            print(f"   - Description: {description} ({'ручное' if self.is_description_manual else 'авто'})")
             print(f"   - Tags: {tags}")
             print(f"   - Workspace ID: {self.workspace_id}")
 
@@ -239,8 +257,30 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
                         workspace_id=self.workspace_id
                     )
                     print("✅ Использован метод add_bookmark_with_metadata")
+
+                    # Если закладка создана, но у нас есть ручное описание - обновляем его
+                    if bookmark and self.is_description_manual and description:
+                        self._update_bookmark_metadata(bookmark.id, title, description)
+
                 except Exception as e:
                     print(f"❌ Ошибка в add_bookmark_with_metadata: {e}")
+
+            # Способ 3: Прямое создание через add_bookmark
+            if not bookmark and hasattr(self.bookmark_manager, 'add_bookmark'):
+                try:
+                    bookmark_id = self.bookmark_manager.add_bookmark(
+                        title=title or url,  # Используем title или URL как заголовок
+                        url=url,
+                        description=description,
+                        tags=tags,
+                        workspace_id=self.workspace_id
+                    )
+                    if bookmark_id:
+                        # Получаем созданную закладку
+                        bookmark = self.bookmark_manager.get(bookmark_id)
+                        print("✅ Использован метод add_bookmark")
+                except Exception as e:
+                    print(f"❌ Ошибка в add_bookmark: {e}")
 
             if bookmark:
                 print(f"✅ Закладка добавлена в workspace {self.workspace_id}: {bookmark.title}")
@@ -293,3 +333,9 @@ class AddBookmarkDialog(QDialog, Ui_AddBookmarkDialog):
         except Exception as e:
             print(f"❌ Ошибка обновления метаданных: {e}")
             return False
+
+    def normalize_url(self, url: str) -> str:
+        """Нормализует URL, добавляя протокол если необходимо"""
+        if not url.startswith(('http://', 'https://')):
+            return 'https://' + url
+        return url

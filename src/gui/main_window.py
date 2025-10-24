@@ -586,3 +586,39 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         if state:
             self.restoreState(state)
             print("✅ Состояние окна восстановлено")
+
+    def closeEvent(self, event):
+        """Обработчик закрытия приложения"""
+        print("🔴 Закрытие приложения...")
+
+        # Принудительно сохраняем все данные в текущем виджете
+        if hasattr(self, 'current_widget') and self.current_widget:
+            # Для виджета закладок
+            if hasattr(self.current_widget, 'force_save_all_descriptions'):
+                self.current_widget.force_save_all_descriptions()
+                print("💾 Сохранены описания закладок")
+
+            # Для виджета заметок (автосохранение)
+            if hasattr(self.current_widget, 'force_auto_save'):
+                self.current_widget.force_auto_save()
+                print("💾 Сохранены заметки")
+
+            # Для виджета задач
+            if hasattr(self.current_widget, 'refresh'):
+                self.current_widget.refresh()
+                print("💾 Обновлены задачи")
+
+        # Сохраняем настройки
+        self.settings_manager.set_last_workspace(self.current_workspace_id)
+        self.settings_manager.set_window_geometry(self.saveGeometry())
+        self.settings_manager.set_window_state(self.saveState())
+
+        print(f"💾 Сохранен workspace: {self.current_workspace_id}")
+
+        # Закрываем соединения с БД
+        if hasattr(self, 'db_manager'):
+            self.db_manager.close()
+            print("✅ Соединение с БД закрыто")
+
+        event.accept()
+        print("✅ Приложение завершено корректно")

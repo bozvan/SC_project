@@ -36,3 +36,4 @@ class QtSettingsManager:
     def set_window_state(self, state):
         """Сохраняет состояние окна"""
         self.settings.setValue("window_state", state)
+

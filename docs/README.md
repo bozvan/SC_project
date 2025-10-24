@@ -28,17 +28,13 @@ python main.py
 ## 📁 Структура проекта
 
 ```
-mindspace/
+src/
+├── assets/                  # Иконки / Картинки
 ├── core/                    # Ядро приложения
-│   ├── database_manager.py  # Управление БД SQLite
-│   ├── note_manager.py      # Менеджер заметок
-│   ├── task_manager.py      # Менеджер задач
-│   ├── bookmark_manager.py  # Менеджер закладок
-│   ├── workspace_manager.py # Управление рабочими пространствами
-│   ├── tag_manager.py       # Управление тегами
-│   ├── theme_manager.py     # Управление темами
-│   └── models.py            # Модели данных
+├── gui/                     # Пользовательский интерфейс
+├── tests/                   # Файлы тестирования
 ├── ui/                      # Пользовательский интерфейс
+├── widgets/                 # Виджеты
 └── main.py                  # Точка входа
 ```
 

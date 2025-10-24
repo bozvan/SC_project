@@ -60,7 +60,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Настройка дополнительных параметров UI"""
         self.setWindowTitle("MINDSPACE")
         self.setMinimumSize(1100, 600)
-        self.splitter.setSizes([100, 600])
+        self.main_splitter.setSizes([100, 600])
+
+        self.left_widget.setMaximumWidth(500)
+        self.left_widget.setMinimumWidth(350)
+
+        self.main_splitter.setCollapsible(0, False)
+        self.main_splitter.setCollapsible(1, False)
 
         if self.widgetConteiner.layout() is None:
             layout = QtWidgets.QVBoxLayout(self.widgetConteiner)
@@ -229,10 +235,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                     background-color: #ffffff;
                 }
                 QPushButton:hover {
-                    background-color: #e1885e;
+                    background-color: #FF8851;
                 }
                 QPushButton:pressed {
-                    background-color: #e0e0e0;
+                    background-color: #ffffff;
                 }
             """
 
@@ -439,7 +445,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_settings_changed(self):
         """Обработчик изменения настроек"""
         print("✅ Настройки изменены")
-        # Можно обновить что-то в интерфейсе
 
     def on_data_imported(self):
         """Обработчик импорта данных"""
@@ -451,7 +456,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         print(f"🎨 Тема изменена на: {theme_name}")
         # Применяем новую тему через ThemeManager
         self.theme_manager.set_theme(theme_name)
-        # ПЕРЕЗАГРУЖАЕМ ИКОНКИ после смены темы
         self.apply_styles()
         self.setup_icons(theme_name)
 
@@ -544,7 +548,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             print("🔄 Перезагружаем виджет рабочих пространств...")
             self.current_widget.load_workspaces()
 
-        # Обновляем все виджеты которые могут показывать workspace-зависимые данные
         self.refresh_all_widgets()
 
     def refresh_all_widgets(self):

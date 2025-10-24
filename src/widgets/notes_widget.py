@@ -199,6 +199,12 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         self.verticalLayout.insertLayout(0, header_layout)
 
+        self.left_widget.setMaximumWidth(250)
+        self.left_widget.setMinimumWidth(250)
+
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(1, False)
+
         print("✅ UI настроен с отдельными разделами для задач и закладок")
 
     def detach_note(self):

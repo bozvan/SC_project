@@ -31,7 +31,7 @@
      <number>0</number>
     </property>
     <item row="0" column="0">
-     <widget class="QSplitter" name="splitter">
+     <widget class="QSplitter" name="main_splitter">
       <property name="cursor">
        <cursorShape>ArrowCursor</cursorShape>
       </property>

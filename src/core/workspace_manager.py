@@ -22,14 +22,30 @@ class WorkspaceManager(QObject):
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id FROM workspaces WHERE is_default = TRUE")
-                if not cursor.fetchone():
+
+                # Сначала проверяем, есть ли уже workspace с id=1
+                cursor.execute("SELECT id, name FROM workspaces WHERE id = 1")
+                existing_workspace = cursor.fetchone()
+
+                if existing_workspace:
+                    print(f"✅ Workspace с id=1 уже существует: {existing_workspace}")
+                    # Обновляем существующий workspace на DEFAULT если нужно
+                    if existing_workspace[1] != "DEFAULT":
+                        cursor.execute(
+                            "UPDATE workspaces SET name = ?, description = ?, is_default = ? WHERE id = 1",
+                            ("DEFAULT", "Рабочее пространство по умолчанию", True)
+                        )
+                        conn.commit()
+                        print("✅ Обновлен workspace с id=1 на 'DEFAULT'")
+                else:
+                    # Если workspace с id=1 не существует, создаем его
                     cursor.execute(
-                        "INSERT INTO workspaces (name, description, is_default) VALUES (?, ?, ?)",
-                        ("all", "Все заметки и задачи", True)
+                        "INSERT INTO workspaces (id, name, description, is_default) VALUES (?, ?, ?, ?)",
+                        (1, "DEFAULT", "Рабочее пространство по умолчанию", True)
                     )
                     conn.commit()
-                    print("✅ Создано рабочее пространство по умолчанию 'all'")
+                    print("✅ Создано рабочее пространство по умолчанию 'DEFAULT' с id=1")
+
         except Exception as e:
             print(f"❌ Ошибка при создании workspace по умолчанию: {e}")
 

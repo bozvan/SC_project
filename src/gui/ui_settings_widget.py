@@ -42,11 +42,11 @@ class Ui_SettingsWidget(object):
         self.verticalLayout.setContentsMargins(20, 20, 20, 20)
         self.verticalLayout.setSpacing(20)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.title_label = QtWidgets.QLabel(parent=SettingsWidget)
-        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: palette(text);")
-        self.title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.title_label.setObjectName("title_label")
-        self.verticalLayout.addWidget(self.title_label)
+        self.setting_title_label = QtWidgets.QLabel(parent=SettingsWidget)
+        self.setting_title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        self.setting_title_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setting_title_label.setObjectName("setting_title_label")
+        self.verticalLayout.addWidget(self.setting_title_label)
         self.appearance_group = QtWidgets.QGroupBox(parent=SettingsWidget)
         self.appearance_group.setObjectName("appearance_group")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.appearance_group)
@@ -70,7 +70,7 @@ class Ui_SettingsWidget(object):
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.theme_info_label = QtWidgets.QLabel(parent=self.appearance_group)
-        self.theme_info_label.setStyleSheet("font-size: 11px; color: palette(mid); font-style: italic;")
+        self.theme_info_label.setStyleSheet("font-weight: bold;")
         self.theme_info_label.setObjectName("theme_info_label")
         self.verticalLayout_2.addWidget(self.theme_info_label)
         self.verticalLayout.addWidget(self.appearance_group)
@@ -84,45 +84,19 @@ class Ui_SettingsWidget(object):
         self.horizontalLayout_2.setSpacing(15)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.import_btn = QtWidgets.QPushButton(parent=self.data_group)
-        self.import_btn.setMinimumSize(QtCore.QSize(180, 35))
-        self.import_btn.setStyleSheet("QPushButton {\n"
-"    background-color: #e3f2fd;\n"
-"    color: #1565c0;\n"
-"    border: 1px solid #90caf9;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px 12px;\n"
-"    font-weight: normal;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #bbdefb;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #90caf9;\n"
-"}")
+        self.import_btn.setMinimumSize(QtCore.QSize(180, 45))
+        self.import_btn.setStyleSheet("")
         self.import_btn.setObjectName("import_btn")
         self.horizontalLayout_2.addWidget(self.import_btn)
         self.export_btn = QtWidgets.QPushButton(parent=self.data_group)
-        self.export_btn.setMinimumSize(QtCore.QSize(180, 35))
-        self.export_btn.setStyleSheet("QPushButton {\n"
-"    background-color: #e8f5e8;\n"
-"    color: #2e7d32;\n"
-"    border: 1px solid #a5d6a7;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px 12px;\n"
-"    font-weight: normal;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #c8e6c9;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #a5d6a7;\n"
-"}")
+        self.export_btn.setMinimumSize(QtCore.QSize(180, 45))
+        self.export_btn.setStyleSheet("")
         self.export_btn.setObjectName("export_btn")
         self.horizontalLayout_2.addWidget(self.export_btn)
         self.verticalLayout_4.addLayout(self.horizontalLayout_2)
         self.data_info_label = QtWidgets.QLabel(parent=self.data_group)
-        self.data_info_label.setStyleSheet("font-size: 11px; color: palette(mid); font-style: italic;")
-        self.data_info_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.data_info_label.setStyleSheet("font-weight: bold;")
+        self.data_info_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.data_info_label.setWordWrap(True)
         self.data_info_label.setObjectName("data_info_label")
         self.verticalLayout_4.addWidget(self.data_info_label)
@@ -134,46 +108,6 @@ class Ui_SettingsWidget(object):
         self.button_layout.setObjectName("button_layout")
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.button_layout.addItem(spacerItem2)
-        self.apply_btn = QtWidgets.QPushButton(parent=SettingsWidget)
-        self.apply_btn.setMinimumSize(QtCore.QSize(100, 35))
-        self.apply_btn.setStyleSheet("QPushButton {\n"
-"    background-color: #4caf50;\n"
-"    color: white;\n"
-"    border: 1px solid #45a049;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: bold;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #45a049;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #3d8b40;\n"
-"}\n"
-"QPushButton:disabled {\n"
-"    background-color: #a5d6a7;\n"
-"    color: #e8f5e9;\n"
-"}")
-        self.apply_btn.setObjectName("apply_btn")
-        self.button_layout.addWidget(self.apply_btn)
-        self.reset_btn = QtWidgets.QPushButton(parent=SettingsWidget)
-        self.reset_btn.setMinimumSize(QtCore.QSize(100, 35))
-        self.reset_btn.setStyleSheet("QPushButton {\n"
-"    background-color: #ff9800;\n"
-"    color: white;\n"
-"    border: 1px solid #f57c00;\n"
-"    border-radius: 5px;\n"
-"    padding: 8px 16px;\n"
-"    font-weight: normal;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #f57c00;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #ef6c00;\n"
-"}")
-        self.reset_btn.setObjectName("reset_btn")
-        self.button_layout.addWidget(self.reset_btn)
         self.verticalLayout.addLayout(self.button_layout)
 
         self.retranslateUi(SettingsWidget)
@@ -182,17 +116,15 @@ class Ui_SettingsWidget(object):
     def retranslateUi(self, SettingsWidget):
         _translate = QtCore.QCoreApplication.translate
         SettingsWidget.setWindowTitle(_translate("SettingsWidget", "Настройки"))
-        self.title_label.setText(_translate("SettingsWidget", "⚙️ Настройки приложения"))
+        self.setting_title_label.setText(_translate("SettingsWidget", "⚙️ Настройки приложения"))
         self.appearance_group.setTitle(_translate("SettingsWidget", "Внешний вид"))
         self.theme_label.setText(_translate("SettingsWidget", "Тема оформления:"))
         self.theme_combo.setItemText(0, _translate("SettingsWidget", "☀️ Светлая"))
         self.theme_combo.setItemText(1, _translate("SettingsWidget", "🌙 Темная"))
-        self.theme_info_label.setText(_translate("SettingsWidget", "💡 Изменение темы вступит в силу после перезапуска приложения"))
+        self.theme_info_label.setText(_translate("SettingsWidget", "💡 Тема приложения сохранится автоматически"))
         self.data_group.setTitle(_translate("SettingsWidget", "Управление данными"))
         self.import_btn.setToolTip(_translate("SettingsWidget", "Импортировать заметки из JSON файла"))
         self.import_btn.setText(_translate("SettingsWidget", "📥 Импорт заметок из JSON"))
         self.export_btn.setToolTip(_translate("SettingsWidget", "Экспортировать заметки в JSON файл"))
         self.export_btn.setText(_translate("SettingsWidget", "📤 Экспорт заметок в JSON"))
-        self.data_info_label.setText(_translate("SettingsWidget", "💡 Импорт/экспорт включает заметки, теги и связанные данные. Рекомендуется делать бэкап перед импортом."))
-        self.apply_btn.setText(_translate("SettingsWidget", "Применить"))
-        self.reset_btn.setText(_translate("SettingsWidget", "Сбросить"))
+        self.data_info_label.setText(_translate("SettingsWidget", "💡 Импорт/экспорт включает заметки, теги и связанные данные"))

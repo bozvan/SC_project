@@ -88,7 +88,7 @@ class Note:
 class Tag:
     """Класс, представляющий тег"""
 
-    def __init__(self, name: str, tag_id: Optional[int] = None):
+    def __init__(self, name: str, tag_id: Optional[int] = None, workspace_id: int = 1):
         """
         Инициализация тега
 
@@ -98,6 +98,7 @@ class Tag:
         """
         self.id = tag_id
         self.name = name.strip().lower()  # Нормализуем имя тега
+        self.workspace_id = workspace_id
 
     def __str__(self) -> str:
         """Строковое представление тега"""

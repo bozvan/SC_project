@@ -202,13 +202,13 @@ class TagsWidget(QWidget):
             QMessageBox.warning(self, "Ошибка", "Имя тега не должно превышать 50 символов")
             return
 
-        # Пытаемся создать тег
-        tag = self.tag_manager.create(tag_name)
+        # Пытаемся создать тег ДЛЯ ТЕКУЩЕГО WORKSPACE
+        tag = self.tag_manager.create(tag_name, self.workspace_id)  # ← ДОБАВЬТЕ workspace_id
         if tag:
             self.tag_input.clear()
             self.load_tags()
             self.tag_created.emit(tag_name)
-            print(f"✅ Тег '{tag_name}' создан")
+            print(f"✅ Тег '{tag_name}' создан в workspace {self.workspace_id}")
         else:
             QMessageBox.warning(self, "Ошибка", f"Не удалось создать тег '{tag_name}'")
 

@@ -54,21 +54,21 @@ class RichTextEditor(QWidget):
         toolbar.addSeparator()
 
         # Жирный
-        bold_action = QAction("Ж", self)
+        bold_action = QAction("B", self)
         bold_action.setCheckable(True)
         bold_action.triggered.connect(self.toggle_bold)
         toolbar.addAction(bold_action)
         self.format_actions['bold'] = bold_action
 
         # Курсив
-        italic_action = QAction("К", self)
+        italic_action = QAction("I", self)
         italic_action.setCheckable(True)
         italic_action.triggered.connect(self.toggle_italic)
         toolbar.addAction(italic_action)
         self.format_actions['italic'] = italic_action
 
         # Подчеркивание
-        underline_action = QAction("Ч", self)
+        underline_action = QAction("U̲̲", self)
         underline_action.setCheckable(True)
         underline_action.triggered.connect(self.toggle_underline)
         toolbar.addAction(underline_action)
@@ -104,28 +104,6 @@ class RichTextEditor(QWidget):
 
         toolbar.addSeparator()
 
-        # Списки
-        bullet_list_action = QAction("•", self)
-        bullet_list_action.setCheckable(True)
-        bullet_list_action.triggered.connect(self.toggle_bullet_list)
-        toolbar.addAction(bullet_list_action)
-        self.format_actions['bullet_list'] = bullet_list_action
-
-        number_list_action = QAction("1.", self)
-        number_list_action.setCheckable(True)
-        number_list_action.triggered.connect(self.toggle_number_list)
-        toolbar.addAction(number_list_action)
-        self.format_actions['number_list'] = number_list_action
-
-        toolbar.addSeparator()
-
-        # Кнопка для добавления задачи (символ чекбокса)
-        task_action = QAction("☑", self)
-        task_action.setToolTip("Добавить задачу (в области ниже)")
-        toolbar.addAction(task_action)
-
-        toolbar.addSeparator()
-
         # Отменить/Повторить
         undo_action = QAction("↶", self)
         undo_action.setToolTip("Отменить (Ctrl+Z)")
@@ -145,9 +123,16 @@ class RichTextEditor(QWidget):
         cursor = self.text_edit.textCursor()
         if not cursor.hasSelection():
             return
+
         fmt = QTextCharFormat()
-        weight = QFont.Weight.Bold if not cursor.charFormat().fontWeight() == QFont.Weight.Bold else QFont.Weight.Normal
+        # Проверяем, есть ли уже жирный стиль в выделенном тексте
+        current_format = cursor.charFormat()
+        is_currently_bold = current_format.fontWeight() == QFont.Weight.Bold
+
+        # Переключаем: если жирный - делаем обычным, если обычный - делаем жирным
+        weight = QFont.Weight.Normal if is_currently_bold else QFont.Weight.Bold
         fmt.setFontWeight(weight)
+
         cursor.mergeCharFormat(fmt)
         self.text_edit.setFocus()
 
@@ -223,32 +208,6 @@ class RichTextEditor(QWidget):
                 self.format_actions['align_right'].setChecked(True)
         finally:
             self._updating_format = False
-
-    def toggle_bullet_list(self):
-        if self._updating_format:
-            return
-        cursor = self.text_edit.textCursor()
-        if self.format_actions['bullet_list'].isChecked():
-            list_fmt = QTextListFormat()
-            list_fmt.setStyle(QTextListFormat.Style.ListDisc)
-            cursor.createList(list_fmt)
-        else:
-            block_fmt = QTextBlockFormat()
-            cursor.setBlockFormat(block_fmt)
-        self.text_edit.setFocus()
-
-    def toggle_number_list(self):
-        if self._updating_format:
-            return
-        cursor = self.text_edit.textCursor()
-        if self.format_actions['number_list'].isChecked():
-            list_fmt = QTextListFormat()
-            list_fmt.setStyle(QTextListFormat.Style.ListDecimal)
-            cursor.createList(list_fmt)
-        else:
-            block_fmt = QTextBlockFormat()
-            cursor.setBlockFormat(block_fmt)
-        self.text_edit.setFocus()
 
     def update_format_actions(self):
         if self._updating_format:

@@ -43,8 +43,8 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
 
     def setup_connections(self):
         """Настраивает соединения сигналов"""
-        self.apply_btn.clicked.connect(self.apply_settings)
-        self.reset_btn.clicked.connect(self.reset_settings)
+        # self.apply_btn.clicked.connect(self.apply_settings)
+        # self.reset_btn.clicked.connect(self.reset_settings)
         self.import_btn.clicked.connect(self.import_notes)
         self.export_btn.clicked.connect(self.export_notes)
 
@@ -108,33 +108,33 @@ class SettingsWidget(QWidget, Ui_SettingsWidget):
         current_settings = self.get_current_settings()
         has_changes = current_settings != self.original_settings
 
-        self.apply_btn.setEnabled(has_changes)
-
-        if has_changes:
-            self.apply_btn.setStyleSheet("""
-                   QPushButton {
-                       background-color: #4caf50;
-                       color: white;
-                       border: 1px solid #45a049;
-                       border-radius: 5px;
-                       padding: 8px 16px;
-                       font-weight: bold;
-                   }
-                   QPushButton:hover {
-                       background-color: #45a049;
-                   }
-               """)
-        else:
-            self.apply_btn.setStyleSheet("""
-                   QPushButton {
-                       background-color: #cccccc;
-                       color: #666666;
-                       border: 1px solid #bbbbbb;
-                       border-radius: 5px;
-                       padding: 8px 16px;
-                       font-weight: normal;
-                   }
-               """)
+        # self.apply_btn.setEnabled(has_changes)
+        #
+        # if has_changes:
+        #     self.apply_btn.setStyleSheet("""
+        #            QPushButton {
+        #                background-color: #4caf50;
+        #                color: white;
+        #                border: 1px solid #45a049;
+        #                border-radius: 5px;
+        #                padding: 8px 16px;
+        #                font-weight: bold;
+        #            }
+        #            QPushButton:hover {
+        #                background-color: #45a049;
+        #            }
+        #        """)
+        # else:
+        #     self.apply_btn.setStyleSheet("""
+        #            QPushButton {
+        #                background-color: #cccccc;
+        #                color: #666666;
+        #                border: 1px solid #bbbbbb;
+        #                border-radius: 5px;
+        #                padding: 8px 16px;
+        #                font-weight: normal;
+        #            }
+        #        """)
 
     def apply_settings(self):
         """Применяет настройки"""

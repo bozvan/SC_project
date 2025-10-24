@@ -33,10 +33,22 @@ class ThemeManager:
                 border-radius: 8px;
                 text-align: center;
             }
+            QToolTip {
+                background-color: #ffffff;
+                color: #333333;
+                border: 1px solid #cccccc;
+                border-radius: 6px;
+                padding: 4px 6px;
+                font-family: "Segoe UI", Arial, sans-serif;
+                font-size: 13px;
+                font-weight: normal;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
 
             /* Стили кнопок на главном виджете */
 
-            QPushButton#btnTasks, #btnNotes, #btnBookmarks, #btnWorkspaces, #btnSettings {
+            QPushButton#btnTasks, QPushButton#btnNotes, QPushButton#btnBookmarks, 
+            QPushButton#btnWorkspaces, QPushButton#btnSettings {
                 text-align: left;
                 margin: -1px;
                 color: black;
@@ -48,13 +60,134 @@ class ThemeManager:
                 background-color: #ffffff;
             }
 
-            QPushButton#btnTasks:hover, #btnNotes:hover, #btnBookmarks:hover, 
-            #btnWorkspaces:hover, #btnSettings:hover {
+            QPushButton#btnTasks:hover, QPushButton#btnNotes:hover, QPushButton#btnBookmarks:hover, 
+            QPushButton#btnWorkspaces:hover, QPushButton#btnSettings:hover {
                 background-color: #E16428;
             }
-            QPushButton#btnTasks:pressed, #btnNotes:pressed, #btnBookmarks:pressed, 
-            #btnWorkspaces:pressed, #btnSettings:pressed {
+            QPushButton#btnTasks:pressed, QPushButton#btnNotes:pressed, QPushButton#btnBookmarks:pressed, 
+            QPushButton#btnWorkspaces:pressed, QPushButton#btnSettings:pressed {
                 background-color: #E16428;
+            }
+            
+            /* SETTING WIDGET */
+            QLabel#theme_label,
+            QLabel#theme_info_label, 
+            QLabel#data_info_label, 
+            QLabel#setting_title_label {
+                color: black;
+                font-size: 14px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-weight: bold;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            QPushButton#import_btn, QPushButton#export_btn {
+                color: #E16428;
+                border: 1px solid #E16428;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-weight: bold;
+            }  
+
+            QPushButton#import_btn:hover, QPushButton#export_btn:hover{
+                background-color: #FFE1D2;
+            }
+            QPushButton#import_btn:pressed, QPushButton#export_btn:pressed {
+                background-color: #ffffff;
+            }
+            
+            
+/*======================================= QComboBox =======================================*/
+
+
+            QComboBox {
+                background-color: #ffffff;
+                color: #333333;
+                border: 1px solid #E16428;
+                border-radius: 4px;
+                padding: 6px 10px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-size: 12px;
+                font-weight: normal;
+                min-width: 120px;
+            }
+            
+            QComboBox:hover {
+                border: 1px solid #999999;
+            }
+            
+            QComboBox:focus {
+                border: 1px solid #E16428;
+            }
+            
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #E16428;
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+            
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #666666;
+                width: 0px;
+                height: 0px;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: #ffffff;
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                padding: 4px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-size: 12px;
+                outline: none;
+            }
+            
+            QComboBox QAbstractItemView::item {
+                padding: 6px 8px;
+                border-radius: 2px;
+                color: black;
+            }
+            
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #FFE1D2;
+                color: black;
+            }
+            
+            QComboBox QAbstractItemView::item:hover {
+                color: black;
+                background-color: #FF8851;
+            }
+            
+            
+/*======================================= QSplitter =======================================*/
+            
+            
+            QSplitter#main_splitter {
+                background-color: transparent;
+            }
+            
+            QSplitter#main_splitter::handle {
+                background-color: #e0e0e0;
+                width: 1px;
+                margin: 0px;
+            }
+            
+            QSplitter#main_splitter::handle:hover {
+                background-color: #E16428;
+                width: 3px;
+            }
+            
+            QSplitter#main_splitter::handle:pressed {
+                background-color: #c8531f;
+                width: 3px;
             }
         """
 
@@ -67,7 +200,6 @@ class ThemeManager:
             QWidget {
                 background-color: #0d1117;
             }
-
             QLabel#titleLabel {
                 color: white;
                 font-size: 28px;
@@ -77,10 +209,22 @@ class ThemeManager:
                 border-radius: 8px;
                 text-align: center;
             }
+            QToolTip {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+                border: 1px solid #404040;
+                border-radius: 6px;
+                padding: 4px 6px;
+                font-family: "Segoe UI", Arial, sans-serif;
+                font-size: 13px;
+                font-weight: normal;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
 
             /* Стили кнопок на главном виджете */
 
-            QPushButton#btnTasks, #btnNotes, #btnBookmarks, #btnWorkspaces, #btnSettings {
+            QPushButton#btnTasks, QPushButton#btnNotes, QPushButton#btnBookmarks, 
+            QPushButton#btnWorkspaces, QPushButton#btnSettings {
                 margin: -1px;
                 color: white;
                 font-size: 18px;
@@ -90,13 +234,130 @@ class ThemeManager:
                 border-radius: 5px;
             }
 
-            QPushButton#btnTasks:hover, #btnNotes:hover, #btnBookmarks:hover, 
-            #btnWorkspaces:hover, #btnSettings:hover {
+            QPushButton#btnTasks:hover, QPushButton#btnNotes:hover, QPushButton#btnBookmarks:hover {
                 background-color: #E16428;
             }
-            QPushButton#btnTasks:pressed, #btnNotes:pressed, #btnBookmarks:pressed, 
-            #btnWorkspaces:pressed, #btnSettings:pressed {
+            QPushButton#btnTasks:pressed, QPushButton#btnNotes:pressed {
                 background-color: #E16428;
+            }
+            
+            /* SETTING WIDGET */
+            QLabel#theme_label,
+            QLabel#theme_info_label, 
+            QLabel#data_info_label, 
+            QLabel#setting_title_label {
+                color: white;
+                font-size: 14px;
+                font-family: "Segoe UI", "Arial", sans-serif; 
+                font-weight: bold;
+                padding: 10px;
+                border-radius: 8px;
+                text-align: center;
+            }
+            
+            QPushButton#import_btn, QPushButton#export_btn {
+                color: #E16428;
+                border: 1px solid #E16428;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-weight: bold;
+            }
+            QPushButton#import_btn:hover, QPushButton#export_btn:hover {
+                background-color: #201611;
+            }
+            QPushButton#import_btn:pressed, QPushButton#export_btn:pressed {
+                background-color: #0d1117;
+            }
+            
+            
+/*======================================= QComboBox =======================================*/
+
+
+            QComboBox {
+                background-color: #0d1117;
+                color: #e0e0e0;
+                border: 1px solid #404040;
+                border-radius: 4px;
+                padding: 6px 10px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-size: 12px;
+                font-weight: normal;
+                min-width: 120px;
+            }
+            
+            QComboBox:hover {
+                border: 1px solid #666666;
+            }
+            
+            QComboBox:focus {
+                border: 1px solid #E16428;
+            }
+            
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border-left: 1px solid #404040;
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+            
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #999999;
+                width: 0px;
+                height: 0px;
+            }
+            
+            QComboBox QAbstractItemView {
+                background-color: #0d1117;
+                border: 1px solid #404040;
+                border-radius: 4px;
+                padding: 4px;
+                font-family: "Segoe UI", "Arial", sans-serif;
+                font-size: 12px;
+                outline: none;
+                color: #e0e0e0;
+            }
+            
+            QComboBox QAbstractItemView::item {
+                padding: 6px 8px;
+                border-radius: 2px;
+            }
+            
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #3a3a3a;
+                color: white;
+            }
+            
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #E16428;
+                color: white;
+            }
+            
+            
+/*======================================= QSplitter =======================================*/
+
+
+            QSplitter#main_splitter {
+                background-color: transparent;
+            }
+            
+            QSplitter#main_splitter::handle {
+                background-color: #404040;
+                width: 1px;
+                margin: 0px;
+            }
+            
+            QSplitter#main_splitter::handle:hover {
+                background-color: #E16428;
+                width: 3px;
+            }
+            
+            QSplitter#main_splitter::handle:pressed {
+                background-color: #c8531f;
             }
         """
 

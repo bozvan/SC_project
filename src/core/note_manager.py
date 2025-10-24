@@ -97,14 +97,15 @@ class NoteManager:
                 if tags:
                     print(f"🔧 Обработка тегов: {tags}")
                     for tag_name in tags:
-                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
+                        # ПЕРЕДАЕМ workspace_id ПРИ СОЗДАНИИ ТЕГА
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name, workspace_id)
                         if tag:
                             cursor.execute(
                                 "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
                                 (note_id, tag.id)
                             )
                             tag_objects.append(tag)
-                            print(f"✅ Тег '{tag_name}' привязан к заметке {note_id}")
+                            print(f"✅ Тег '{tag_name}' привязан к заметке {note_id} в workspace {workspace_id}")
                 else:
                     print("🔧 Теги не указаны")
 
@@ -310,7 +311,9 @@ class NoteManager:
                 if tags is not None:
                     cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
                     for tag_name in tags:
-                        tag = self._get_or_create_tag_with_connection(cursor, tag_name)
+                        # ИСПОЛЬЗУЕМ workspace_id существующей заметки при создании тегов
+                        current_workspace_id = workspace_id if workspace_id is not None else existing_note.workspace_id
+                        tag = self._get_or_create_tag_with_connection(cursor, tag_name, current_workspace_id)
                         if tag and tag.id:
                             cursor.execute(
                                 "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
@@ -332,7 +335,7 @@ class NoteManager:
             print(f"❌ Ошибка при обновлении записи с ID {note_id}: {e}")
             return False
 
-    def _get_or_create_tag_with_connection(self, cursor, tag_name: str) -> Optional[Tag]:
+    def _get_or_create_tag_with_connection(self, cursor, tag_name: str, workspace_id: int = 1) -> Optional[Tag]:
         """
         Вспомогательный метод для получения или создания тега с использованием существующего курсора
         """
@@ -342,19 +345,21 @@ class NoteManager:
         normalized_name = tag_name.strip().lower()
 
         try:
-            # Сначала ищем существующий тег
-            cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+            # Сначала ищем существующий тег В КОНКРЕТНОМ WORKSPACE
+            cursor.execute("SELECT id, name FROM tags WHERE name = ? AND workspace_id = ?",
+                           (normalized_name, workspace_id))
             result = cursor.fetchone()
 
             if result:
                 tag_id, name = result
                 return Tag(name=name, tag_id=tag_id)
             else:
-                # Создаем новый тег
-                cursor.execute("INSERT INTO tags (name) VALUES (?)", (normalized_name,))
+                # Создаем новый тег ПРИВЯЗАННЫЙ К WORKSPACE
+                cursor.execute("INSERT INTO tags (name, workspace_id) VALUES (?, ?)",
+                               (normalized_name, workspace_id))
                 tag_id = cursor.lastrowid
                 if tag_id:
-                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id}")
+                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id} в workspace {workspace_id}")
                     return Tag(name=normalized_name, tag_id=tag_id)
                 else:
                     print(f"❌ Ошибка при создании тега '{normalized_name}'")
@@ -527,7 +532,8 @@ class NoteManager:
         if not note:
             return False
 
-        tag = self.tag_manager.get_or_create(tag_name)
+        # Используем workspace_id заметки при создании тега
+        tag = self.tag_manager.get_or_create(tag_name, note.workspace_id)
         if not tag or not tag.id:
             return False
 
@@ -548,7 +554,7 @@ class NoteManager:
                         (note_id, tag.id)
                     )
                     conn.commit()
-                    print(f"Тег '{tag_name}' добавлен к заметке {note_id}")
+                    print(f"Тег '{tag_name}' добавлен к заметке {note_id} в workspace {note.workspace_id}")
                     return True
                 else:
                     print(f"Тег '{tag_name}' уже привязан к заметке {note_id}")

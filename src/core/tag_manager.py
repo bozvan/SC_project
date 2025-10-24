@@ -15,10 +15,9 @@ class TagManager:
         """
         self.db = db_manager
 
-    def create(self, name: str) -> Optional[Tag]:
+    def create(self, name: str, workspace_id: int = 1) -> Optional[Tag]:
         """
-        Создает новый тег в БД (с проверкой на дубликаты)
-        Использует отдельное соединение для случаев, когда вызывается отдельно
+        Создает новый тег в БД для указанного workspace
         """
         if not name or not name.strip():
             print("❌ Ошибка: имя тега не может быть пустым")
@@ -30,29 +29,35 @@ class TagManager:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Проверяем, существует ли тег с таким именем
-                cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+                # Проверяем, существует ли тег с таким именем В ДАННОМ WORKSPACE
+                cursor.execute(
+                    "SELECT id, name FROM tags WHERE name = ? AND workspace_id = ?",
+                    (normalized_name, workspace_id)
+                )
                 existing_tag = cursor.fetchone()
 
                 if existing_tag:
                     tag_id, tag_name = existing_tag
-                    print(f"✅ Тег '{tag_name}' уже существует (ID: {tag_id})")
+                    print(f"✅ Тег '{tag_name}' уже существует в workspace {workspace_id} (ID: {tag_id})")
                     return Tag(name=tag_name, tag_id=tag_id)
 
-                # Создаем новый тег
-                cursor.execute("INSERT INTO tags (name) VALUES (?)", (normalized_name,))
+                # Создаем новый тег ПРИВЯЗАННЫЙ К WORKSPACE
+                cursor.execute(
+                    "INSERT INTO tags (name, workspace_id) VALUES (?, ?)",
+                    (normalized_name, workspace_id)
+                )
                 conn.commit()
                 tag_id = cursor.lastrowid
 
                 if tag_id:
-                    print(f"✅ Тег '{normalized_name}' создан с ID: {tag_id}")
+                    print(f"✅ Тег '{normalized_name}' создан в workspace {workspace_id} с ID: {tag_id}")
                     return Tag(name=normalized_name, tag_id=tag_id)
                 else:
                     print("❌ Ошибка: не удалось получить ID созданного тега")
                     return None
 
         except Exception as e:
-            print(f"❌ Ошибка при создании тега '{name}': {e}")
+            print(f"❌ Ошибка при создании тега '{name}' в workspace {workspace_id}: {e}")
             return None
 
     def get(self, tag_id: int) -> Optional[Tag]:
@@ -84,29 +89,21 @@ class TagManager:
 
     def get_all(self, workspace_id: Optional[int] = None) -> List[Tag]:
         """
-        Возвращает список всех тегов или тегов для определенного workspace
-
-        Args:
-            workspace_id: ID рабочего пространства (опционально)
-
-        Returns:
-            List[Tag]: Список тегов
+        Возвращает список всех тегов для определенного workspace
         """
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
 
                 if workspace_id is not None:
-                    # Получаем только теги, которые используются в заметках данного workspace
+                    # Получаем ВСЕ теги для данного workspace (включая неиспользуемые)
                     cursor.execute("""
-                        SELECT DISTINCT t.id, t.name 
-                        FROM tags t
-                        JOIN note_tag_relation ntr ON t.id = ntr.tag_id
-                        JOIN notes n ON ntr.note_id = n.id
-                        WHERE n.workspace_id = ?
-                        ORDER BY t.name
+                        SELECT id, name 
+                        FROM tags 
+                        WHERE workspace_id = ?
+                        ORDER BY name
                     """, (workspace_id,))
-                    print(f"🔍 Загружаем теги для workspace {workspace_id}")
+                    print(f"🔍 Загружаем ВСЕ теги для workspace {workspace_id}")
                 else:
                     # Получаем все теги (для обратной совместимости)
                     cursor.execute("SELECT id, name FROM tags ORDER BY name")
@@ -125,15 +122,9 @@ class TagManager:
             print(f"❌ Ошибка при получении списка тегов: {e}")
             return []
 
-    def get_by_name(self, name: str) -> Optional[Tag]:
+    def get_by_name(self, name: str, workspace_id: Optional[int] = None) -> Optional[Tag]:
         """
-        Поиск тега по имени (регистронезависимый)
-
-        Args:
-            name: Название тега для поиска
-
-        Returns:
-            Tag: Найденный тег или None если не найден
+        Поиск тега по имени в рамках workspace
         """
         if not name:
             return None
@@ -143,7 +134,15 @@ class TagManager:
         try:
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+
+                if workspace_id is not None:
+                    cursor.execute(
+                        "SELECT id, name FROM tags WHERE name = ? AND workspace_id = ?",
+                        (normalized_name, workspace_id)
+                    )
+                else:
+                    cursor.execute("SELECT id, name FROM tags WHERE name = ?", (normalized_name,))
+
                 result = cursor.fetchone()
 
                 if result:
@@ -189,21 +188,15 @@ class TagManager:
             print(f"Ошибка при удалении тега с ID {tag_id}: {e}")
             return False
 
-    def get_or_create(self, name: str) -> Tag:
+    def get_or_create(self, name: str, workspace_id: int = 1) -> Tag:
         """
-        Получает существующий тег или создает новый
-
-        Args:
-            name: Название тега
-
-        Returns:
-            Tag: Существующий или созданный тег
+        Получает существующий тег или создает новый для указанного workspace
         """
-        existing_tag = self.get_by_name(name)
+        existing_tag = self.get_by_name(name, workspace_id)
         if existing_tag:
             return existing_tag
         else:
-            new_tag = self.create(name)
+            new_tag = self.create(name, workspace_id)
             return new_tag if new_tag else Tag(name=name)
 
     def get_tags_for_note(self, note_id: int) -> List[Tag]:

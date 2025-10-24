@@ -58,11 +58,15 @@ class DatabaseManager:
                     FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE SET DEFAULT
                 )
                 """,
-                # Таблица тегов
+                # Таблица тегов (с workspace_id)
                 """
                 CREATE TABLE IF NOT EXISTS tags (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL
+                    name TEXT NOT NULL,
+                    workspace_id INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE CASCADE,
+                    UNIQUE(name, workspace_id)
                 )
                 """,
                 # Таблица связи многие-ко-многим между заметками и тегами
@@ -117,6 +121,10 @@ class DatabaseManager:
                 """
             ]
 
+            print("🔍 Проверяем структуру таблиц...")
+            self.check_table_structure("tags")
+            self.check_table_structure("notes")
+
             with self._get_connection() as conn:
                 cursor = conn.cursor()
 
@@ -124,10 +132,10 @@ class DatabaseManager:
                 for query in create_tables_queries:
                     cursor.execute(query)
 
-                # Создаем рабочее пространство по умолчанию "all"
+                # Создаем рабочее пространство по умолчанию "DEFAULT" с id=1
                 cursor.execute(
-                    "INSERT OR IGNORE INTO workspaces (name, description, is_default) VALUES (?, ?, ?)",
-                    ("all", "Все заметки и задачи", True)
+                    "INSERT OR IGNORE INTO workspaces (id, name, description, is_default) VALUES (?, ?, ?, ?)",
+                    (1, "DEFAULT", "Рабочее пространство по умолчанию", True)
                 )
 
                 # Проверяем, что workspace создан
@@ -186,6 +194,21 @@ class DatabaseManager:
             print(f"❌ Критическая ошибка инициализации БД: {e}")
             traceback.print_exc()
             raise
+
+    def check_table_structure(self, table_name):
+        """Проверяет структуру таблицы"""
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = cursor.fetchall()
+                print(f"🔍 Структура таблицы {table_name}:")
+                for column in columns:
+                    print(f"   - {column}")
+                return columns
+        except Exception as e:
+            print(f"❌ Ошибка проверки структуры таблицы {table_name}: {e}")
+            return []
 
     def migrate_database(self):
         """Миграция базы данных для добавления новых полей"""

@@ -50,7 +50,6 @@ class WorkspacesWidget(QtWidgets.QWidget):
 
     def connect_signals(self):
         """Подключает сигналы к слотам"""
-        self.ui.btnRefresh.clicked.connect(self.load_workspaces)
         self.ui.btnCreate.clicked.connect(self.create_workspace)
         self.ui.editSearch.textChanged.connect(self.filter_workspaces)
 

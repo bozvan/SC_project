@@ -57,9 +57,9 @@ QComboBox {
     <number>20</number>
    </property>
    <item>
-    <widget class="QLabel" name="title_label">
+    <widget class="QLabel" name="setting_title_label">
      <property name="styleSheet">
-      <string notr="true">font-size: 18px; font-weight: bold; color: palette(text);</string>
+      <string notr="true">font-size: 18px; font-weight: bold;</string>
      </property>
      <property name="text">
       <string>⚙️ Настройки приложения</string>
@@ -140,10 +140,10 @@ QComboBox {
       <item>
        <widget class="QLabel" name="theme_info_label">
         <property name="styleSheet">
-         <string notr="true">font-size: 11px; color: palette(mid); font-style: italic;</string>
+         <string notr="true">font-weight: bold;</string>
         </property>
         <property name="text">
-         <string>💡 Изменение темы вступит в силу после перезапуска приложения</string>
+         <string>💡 Тема приложения сохранится автоматически</string>
         </property>
        </widget>
       </item>
@@ -181,27 +181,14 @@ QComboBox {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>35</height>
+            <height>45</height>
            </size>
           </property>
           <property name="toolTip">
            <string>Импортировать заметки из JSON файла</string>
           </property>
           <property name="styleSheet">
-           <string notr="true">QPushButton {
-    background-color: #e3f2fd;
-    color: #1565c0;
-    border: 1px solid #90caf9;
-    border-radius: 5px;
-    padding: 8px 12px;
-    font-weight: normal;
-}
-QPushButton:hover {
-    background-color: #bbdefb;
-}
-QPushButton:pressed {
-    background-color: #90caf9;
-}</string>
+           <string notr="true"/>
           </property>
           <property name="text">
            <string>📥 Импорт заметок из JSON</string>
@@ -213,27 +200,14 @@ QPushButton:pressed {
           <property name="minimumSize">
            <size>
             <width>180</width>
-            <height>35</height>
+            <height>45</height>
            </size>
           </property>
           <property name="toolTip">
            <string>Экспортировать заметки в JSON файл</string>
           </property>
           <property name="styleSheet">
-           <string notr="true">QPushButton {
-    background-color: #e8f5e8;
-    color: #2e7d32;
-    border: 1px solid #a5d6a7;
-    border-radius: 5px;
-    padding: 8px 12px;
-    font-weight: normal;
-}
-QPushButton:hover {
-    background-color: #c8e6c9;
-}
-QPushButton:pressed {
-    background-color: #a5d6a7;
-}</string>
+           <string notr="true"/>
           </property>
           <property name="text">
            <string>📤 Экспорт заметок в JSON</string>
@@ -245,13 +219,13 @@ QPushButton:pressed {
       <item>
        <widget class="QLabel" name="data_info_label">
         <property name="styleSheet">
-         <string notr="true">font-size: 11px; color: palette(mid); font-style: italic;</string>
+         <string notr="true">font-weight: bold;</string>
         </property>
         <property name="text">
-         <string>💡 Импорт/экспорт включает заметки, теги и связанные данные. Рекомендуется делать бэкап перед импортом.</string>
+         <string>💡 Импорт/экспорт включает заметки, теги и связанные данные</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -291,68 +265,6 @@ QPushButton:pressed {
         </size>
        </property>
       </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="apply_btn">
-       <property name="minimumSize">
-        <size>
-         <width>100</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-    background-color: #4caf50;
-    color: white;
-    border: 1px solid #45a049;
-    border-radius: 5px;
-    padding: 8px 16px;
-    font-weight: bold;
-}
-QPushButton:hover {
-    background-color: #45a049;
-}
-QPushButton:pressed {
-    background-color: #3d8b40;
-}
-QPushButton:disabled {
-    background-color: #a5d6a7;
-    color: #e8f5e9;
-}</string>
-       </property>
-       <property name="text">
-        <string>Применить</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="reset_btn">
-       <property name="minimumSize">
-        <size>
-         <width>100</width>
-         <height>35</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton {
-    background-color: #ff9800;
-    color: white;
-    border: 1px solid #f57c00;
-    border-radius: 5px;
-    padding: 8px 16px;
-    font-weight: normal;
-}
-QPushButton:hover {
-    background-color: #f57c00;
-}
-QPushButton:pressed {
-    background-color: #ef6c00;
-}</string>
-       </property>
-       <property name="text">
-        <string>Сбросить</string>
-       </property>
-      </widget>
      </item>
     </layout>
    </item>

@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxCurrent">
      <property name="title">
-      <string>Текущее рабочее пространство</string>
+      <string/>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
@@ -43,24 +43,13 @@
         </property>
        </spacer>
       </item>
-      <item>
-       <widget class="QPushButton" name="btnRefresh">
-        <property name="text">
-         <string>Обновить</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBoxManage">
      <property name="title">
-      <string>Управление рабочими пространствами</string>
+      <string/>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -96,7 +85,7 @@
            <x>0</x>
            <y>0</y>
            <width>572</width>
-           <height>324</height>
+           <height>344</height>
           </rect>
          </property>
          <layout class="QGridLayout" name="gridLayoutWorkspaces">

@@ -101,6 +101,9 @@ pip-delete-this-directory.txt
 .nox/
 .cache
 
+# ui
+src/ui
+
 # Файлы операционных систем
 Thumbs.db
 ehthumbs.db
@@ -119,3 +122,9 @@ build_linux.sh
 build_windows.bat
 build_crossplatform.py
 src/smart_organizer.db
+src/cleanup.py
+src/debug_console.py
+setup.py
+fix_imports.py
+debug_main.py
+test_main.py

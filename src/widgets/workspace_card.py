@@ -25,9 +25,6 @@ class WorkspaceCard(QFrame):
         self.setMinimumHeight(160)
         self.setMaximumHeight(160)
 
-        self.setMinimumWidth(self.frameGeometry().width() // 2)
-        self.setMaximumWidth(
-            self.frameGeometry().width() // 2)  # ширина карточки workspace определяется динамически по ширине виджета
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Fixed
@@ -95,7 +92,7 @@ class WorkspaceCard(QFrame):
         if self.workspace.id == self.settings_manager.get_last_workspace():
             self.btn_select.setStyleSheet("""
                 QPushButton {
-                    background-color: #3498db;
+                    background-color: #E16428;
                     color: white;
                     border: none;
                     padding: 8px;
@@ -103,20 +100,20 @@ class WorkspaceCard(QFrame):
                     font-weight: bold;
                 }
                 QPushButton:hover {
-                    background-color: #2980b9;
+                    background-color: #ad420f;
                 }
             """)
         else:
             self.btn_select.setStyleSheet("""
                 QPushButton {
-                    background-color: #2ecc71;
+                    background-color: #211914;
                     color: white;
                     border: none;
                     padding: 8px;
                     border-radius: 4px;
                 }
                 QPushButton:hover {
-                    background-color: #27ae60;
+                    background-color: #362922;
                 }
             """)
 

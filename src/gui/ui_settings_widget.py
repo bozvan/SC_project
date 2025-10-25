@@ -13,31 +13,7 @@ class Ui_SettingsWidget(object):
     def setupUi(self, SettingsWidget):
         SettingsWidget.setObjectName("SettingsWidget")
         SettingsWidget.resize(600, 531)
-        SettingsWidget.setStyleSheet("SettingsWidget {\n"
-"    background-color: palette(window);\n"
-"}\n"
-"QGroupBox {\n"
-"    font-weight: bold;\n"
-"    margin-top: 10px;\n"
-"    padding-top: 10px;\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 5px;\n"
-"}\n"
-"QGroupBox::title {\n"
-"    subcontrol-origin: margin;\n"
-"    left: 10px;\n"
-"    padding: 0 5px 0 5px;\n"
-"    color: palette(text);\n"
-"}\n"
-"QLabel {\n"
-"    font-weight: normal;\n"
-"}\n"
-"QCheckBox {\n"
-"    font-weight: normal;\n"
-"}\n"
-"QComboBox {\n"
-"    font-weight: normal;\n"
-"}")
+        SettingsWidget.setStyleSheet("")
         self.verticalLayout = QtWidgets.QVBoxLayout(SettingsWidget)
         self.verticalLayout.setContentsMargins(20, 20, 20, 20)
         self.verticalLayout.setSpacing(20)

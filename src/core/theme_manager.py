@@ -46,7 +46,6 @@ class ThemeManager:
             }
 
             /* Стили кнопок на главном виджете */
-
             QPushButton#btnTasks, QPushButton#btnNotes, QPushButton#btnBookmarks, 
             QPushButton#btnWorkspaces, QPushButton#btnSettings {
                 text-align: left;
@@ -59,7 +58,6 @@ class ThemeManager:
                 border-radius: 5px;
                 background-color: #ffffff;
             }
-
             QPushButton#btnTasks:hover, QPushButton#btnNotes:hover, QPushButton#btnBookmarks:hover, 
             QPushButton#btnWorkspaces:hover, QPushButton#btnSettings:hover {
                 background-color: #E16428;
@@ -69,7 +67,10 @@ class ThemeManager:
                 background-color: #E16428;
             }
             
-            /* SETTING WIDGET */
+            
+/*======================================= SETTING WIDGET =======================================*/
+
+
             QLabel#theme_label,
             QLabel#theme_info_label, 
             QLabel#data_info_label, 
@@ -82,7 +83,6 @@ class ThemeManager:
                 border-radius: 8px;
                 text-align: center;
             }
-            
             QPushButton#import_btn, QPushButton#export_btn {
                 color: #E16428;
                 border: 1px solid #E16428;
@@ -90,12 +90,42 @@ class ThemeManager:
                 padding: 8px 12px;
                 font-weight: bold;
             }  
-
             QPushButton#import_btn:hover, QPushButton#export_btn:hover{
                 background-color: #FFE1D2;
             }
             QPushButton#import_btn:pressed, QPushButton#export_btn:pressed {
                 background-color: #ffffff;
+            }
+            QGroupBox#appearance_group, QGroupBox#data_group {
+                border-radius: 3px;
+                border-color: black;
+                border-style: solid;
+                border-width: 1px;
+                font-weight: bold;    
+            }
+            SettingsWidget {
+                background-color: palette(window);
+            }
+            QGroupBox {
+                font-weight: bold;
+                margin-top: 10px;
+                border: 1px solid palette(mid);
+                border-radius: 5px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                color: palette(text);
+            }
+            QLabel {
+                font-weight: normal;
+            }
+            QCheckBox {
+                font-weight: normal;
+            }
+            QComboBox {
+                font-weight: normal;
             }
             
             
@@ -113,15 +143,12 @@ class ThemeManager:
                 font-weight: normal;
                 min-width: 120px;
             }
-            
             QComboBox:hover {
                 border: 1px solid #999999;
             }
-            
             QComboBox:focus {
                 border: 1px solid #E16428;
             }
-            
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
@@ -130,7 +157,6 @@ class ThemeManager:
                 border-top-right-radius: 4px;
                 border-bottom-right-radius: 4px;
             }
-            
             QComboBox::down-arrow {
                 image: none;
                 border-left: 4px solid transparent;
@@ -139,7 +165,6 @@ class ThemeManager:
                 width: 0px;
                 height: 0px;
             }
-            
             QComboBox QAbstractItemView {
                 background-color: #ffffff;
                 border: 1px solid #cccccc;
@@ -149,18 +174,15 @@ class ThemeManager:
                 font-size: 12px;
                 outline: none;
             }
-            
             QComboBox QAbstractItemView::item {
                 padding: 6px 8px;
                 border-radius: 2px;
                 color: black;
             }
-            
             QComboBox QAbstractItemView::item:selected {
                 background-color: #FFE1D2;
                 color: black;
             }
-            
             QComboBox QAbstractItemView::item:hover {
                 color: black;
                 background-color: #FF8851;
@@ -173,21 +195,30 @@ class ThemeManager:
             QSplitter#main_splitter {
                 background-color: transparent;
             }
-            
             QSplitter#main_splitter::handle {
                 background-color: #e0e0e0;
                 width: 1px;
                 margin: 0px;
             }
-            
             QSplitter#main_splitter::handle:hover {
                 background-color: #E16428;
                 width: 3px;
             }
-            
             QSplitter#main_splitter::handle:pressed {
                 background-color: #c8531f;
                 width: 3px;
+            }
+            
+            
+/*======================================= WORKSPACE WIDGET =======================================*/
+            
+            
+            QGroupBox#groupBoxStats, QGroupBox#groupBoxManage, QGroupBox#groupBoxCurrent {
+                border-radius: 3px;
+                border-color: black;
+                border-style: solid;
+                border-width: 1px;
+                font-weight: bold;    
             }
         """
 
@@ -222,7 +253,6 @@ class ThemeManager:
             }
 
             /* Стили кнопок на главном виджете */
-
             QPushButton#btnTasks, QPushButton#btnNotes, QPushButton#btnBookmarks, 
             QPushButton#btnWorkspaces, QPushButton#btnSettings {
                 margin: -1px;
@@ -233,7 +263,6 @@ class ThemeManager:
                 border: 1px solid #ffffff;
                 border-radius: 5px;
             }
-
             QPushButton#btnTasks:hover, QPushButton#btnNotes:hover, QPushButton#btnBookmarks:hover {
                 background-color: #E16428;
             }
@@ -241,7 +270,10 @@ class ThemeManager:
                 background-color: #E16428;
             }
             
-            /* SETTING WIDGET */
+            
+/*======================================= SETTING WIDGET =======================================*/
+
+
             QLabel#theme_label,
             QLabel#theme_info_label, 
             QLabel#data_info_label, 
@@ -254,7 +286,6 @@ class ThemeManager:
                 border-radius: 8px;
                 text-align: center;
             }
-            
             QPushButton#import_btn, QPushButton#export_btn {
                 color: #E16428;
                 border: 1px solid #E16428;
@@ -268,6 +299,39 @@ class ThemeManager:
             QPushButton#import_btn:pressed, QPushButton#export_btn:pressed {
                 background-color: #0d1117;
             }
+            QGroupBox#appearance_group, QGroupBox#data_group {
+                border-radius: 3px;
+                border-color: white;
+                border-style: solid;
+                border-width: 1px;
+                font-weight: bold;    
+            }
+            SettingsWidget {
+                background-color: palette(window);
+            }
+            QGroupBox {
+                font-weight: bold;
+                margin-top: 10px;
+                
+                border: 1px solid palette(mid);
+                border-radius: 5px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+                color: palette(text);
+            }
+            QLabel {
+                font-weight: normal;
+            }
+            QCheckBox {
+                font-weight: normal;
+            }
+            QComboBox {
+                font-weight: normal;
+            }
+             
             
             
 /*======================================= QComboBox =======================================*/
@@ -284,15 +348,12 @@ class ThemeManager:
                 font-weight: normal;
                 min-width: 120px;
             }
-            
             QComboBox:hover {
                 border: 1px solid #666666;
             }
-            
             QComboBox:focus {
                 border: 1px solid #E16428;
             }
-            
             QComboBox::drop-down {
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
@@ -301,7 +362,6 @@ class ThemeManager:
                 border-top-right-radius: 4px;
                 border-bottom-right-radius: 4px;
             }
-            
             QComboBox::down-arrow {
                 image: none;
                 border-left: 4px solid transparent;
@@ -310,7 +370,6 @@ class ThemeManager:
                 width: 0px;
                 height: 0px;
             }
-            
             QComboBox QAbstractItemView {
                 background-color: #0d1117;
                 border: 1px solid #404040;
@@ -321,17 +380,14 @@ class ThemeManager:
                 outline: none;
                 color: #e0e0e0;
             }
-            
             QComboBox QAbstractItemView::item {
                 padding: 6px 8px;
                 border-radius: 2px;
             }
-            
             QComboBox QAbstractItemView::item:selected {
                 background-color: #3a3a3a;
                 color: white;
             }
-            
             QComboBox QAbstractItemView::item:hover {
                 background-color: #E16428;
                 color: white;
@@ -344,20 +400,55 @@ class ThemeManager:
             QSplitter#main_splitter {
                 background-color: transparent;
             }
-            
             QSplitter#main_splitter::handle {
                 background-color: #404040;
                 width: 1px;
                 margin: 0px;
             }
-            
             QSplitter#main_splitter::handle:hover {
                 background-color: #E16428;
                 width: 3px;
             }
-            
             QSplitter#main_splitter::handle:pressed {
                 background-color: #c8531f;
+            }
+       
+            
+/*======================================= WORKSPACE WIDGET =======================================*/
+        
+            
+            QGroupBox#groupBoxStats, QGroupBox#groupBoxManage, QGroupBox#groupBoxCurrent {
+                border-radius: 3px;
+                border-color: white;
+                border-style: solid;
+                border-width: 1px;
+                font-weight: bold;    
+            }
+            QLineEdit#editSearch {
+                border: none;
+                border-bottom: 2px solid #E16428;
+                min-height: 10px;
+                max-height: 30px;
+                padding: 5px;
+                background-color: transparent;
+                selection-background-color: #E16428;
+            }
+            QLineEdit#editSearch:hover {
+                border-bottom: 2px solid #E16428;
+                background-color: rgba(225, 100, 40, 0.1);
+            }
+            QPushButton#btnCreate {
+                color: #E16428;
+                border: 1px solid #E16428;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-weight: bold;
+            }
+            QPushButton#btnCreate:hover {
+                background-color: #201611;
+            }
+            QPushButton#btnCreate:pressed {
+                background-color: #0d1117;
             }
         """
 

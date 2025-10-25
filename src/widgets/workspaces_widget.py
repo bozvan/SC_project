@@ -32,19 +32,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
     def setup_additional_ui(self):
         """Дополнительная настройка UI элементов"""
         # Настройка кнопки создания
-        self.ui.btnCreate.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """)
+
 
         # Настройка области прокрутки
         self.ui.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -69,7 +57,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
             # Загружаем workspace
             workspaces = self.workspace_manager.get_all_workspaces()
 
-            # Обновляем текущий workspace (используем сохраненный, а не всегда default)
+            # Обновляем текущий workspace
             current_workspace = self.workspace_manager.get_workspace(self.current_workspace_id)
             if current_workspace:
                 display_text = f"{current_workspace.name}"
@@ -79,7 +67,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
 
             # Создаем карточки
             row, col = 0, 0
-            max_cols = 2  # Максимум 2 карточки в строке
+            max_cols = 2
 
             for workspace in workspaces:
                 card = WorkspaceCard(workspace)
@@ -87,8 +75,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
                 card.workspaceEditRequested.connect(self.on_workspace_edit_requested)
                 card.workspaceDeleteRequested.connect(self.on_workspace_delete_requested)
 
-                self.ui.gridLayoutWorkspaces.addWidget(card, row, col,
-                                                       alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+                self.ui.gridLayoutWorkspaces.addWidget(card, row, col)
                 self.workspace_cards[workspace.id] = card
 
                 col += 1
@@ -96,7 +83,11 @@ class WorkspacesWidget(QtWidgets.QWidget):
                     col = 0
                     row += 1
 
-            # ДОБАВЛЕНО: Добавляем растягивающий элемент, чтобы карточки были прижаты к верху
+            # ДОБАВЛЕНО: Настройка растяжения колонок
+            for i in range(max_cols):
+                self.ui.gridLayoutWorkspaces.setColumnStretch(i, 1)  # Каждая колонка растягивается одинаково
+
+            # Добавляем растягивающий элемент, чтобы карточки были прижаты к верху
             self.ui.gridLayoutWorkspaces.setRowStretch(row + 1, 1)
 
             # Обновляем статистику текущего workspace

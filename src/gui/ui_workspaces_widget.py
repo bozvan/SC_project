@@ -21,6 +21,7 @@ class Ui_WorkspaceWidget(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.groupBoxCurrent)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.labelCurrentWorkspace = QtWidgets.QLabel(parent=self.groupBoxCurrent)
+        self.labelCurrentWorkspace.setMaximumSize(QtCore.QSize(16777215, 40))
         self.labelCurrentWorkspace.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50; padding: 8px; background-color: #ecf0f1; border-radius: 4px;")
         self.labelCurrentWorkspace.setObjectName("labelCurrentWorkspace")
         self.horizontalLayout.addWidget(self.labelCurrentWorkspace)
@@ -38,6 +39,8 @@ class Ui_WorkspaceWidget(object):
         self.editSearch.setObjectName("editSearch")
         self.horizontalLayout_2.addWidget(self.editSearch)
         self.btnCreate = QtWidgets.QPushButton(parent=self.groupBoxManage)
+        self.btnCreate.setMinimumSize(QtCore.QSize(120, 0))
+        self.btnCreate.setMaximumSize(QtCore.QSize(150, 40))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/add.png"), QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
         self.btnCreate.setIcon(icon)
@@ -84,9 +87,9 @@ class Ui_WorkspaceWidget(object):
     def retranslateUi(self, WorkspaceWidget):
         _translate = QtCore.QCoreApplication.translate
         WorkspaceWidget.setWindowTitle(_translate("WorkspaceWidget", "Управление рабочими пространствами"))
-        self.labelCurrentWorkspace.setText(_translate("WorkspaceWidget", "all (Все заметки и задачи)"))
+        self.labelCurrentWorkspace.setText(_translate("WorkspaceWidget", "DEFAULT - Рабочее пространство по умолчанию"))
         self.editSearch.setPlaceholderText(_translate("WorkspaceWidget", "Поиск рабочего пространства..."))
-        self.btnCreate.setText(_translate("WorkspaceWidget", "Создать новое"))
+        self.btnCreate.setText(_translate("WorkspaceWidget", "➕ Добавить"))
         self.groupBoxStats.setTitle(_translate("WorkspaceWidget", "Статистика"))
         self.labelNotes.setText(_translate("WorkspaceWidget", "Заметок: 0"))
         self.labelTasks.setText(_translate("WorkspaceWidget", "Задач: 0"))

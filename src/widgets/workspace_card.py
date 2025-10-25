@@ -2,6 +2,8 @@ from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame
 
+from core.settings_manager import QtSettingsManager
+
 
 class WorkspaceCard(QFrame):
     """Виджет карточки рабочего пространства"""
@@ -13,6 +15,7 @@ class WorkspaceCard(QFrame):
     def __init__(self, workspace, parent=None):
         super().__init__(parent)
         self.workspace = workspace
+        self.settings_manager = QtSettingsManager()
         self.id = workspace.id
         self.setup_ui()
 
@@ -89,7 +92,7 @@ class WorkspaceCard(QFrame):
         self.btn_select = QtWidgets.QPushButton("Выбрать")
         self.btn_select.clicked.connect(self.on_select_clicked)
 
-        if self.workspace.is_default:
+        if self.workspace.id == self.settings_manager.get_last_workspace():
             self.btn_select.setStyleSheet("""
                 QPushButton {
                     background-color: #3498db;

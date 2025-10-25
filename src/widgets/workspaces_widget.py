@@ -2,6 +2,7 @@ from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox, QInputDialog
 
+from core.settings_manager import QtSettingsManager
 from gui.ui_workspaces_widget import Ui_WorkspaceWidget
 from widgets.workspace_card import WorkspaceCard
 
@@ -15,6 +16,7 @@ class WorkspacesWidget(QtWidgets.QWidget):
     def __init__(self, workspace_manager, current_workspace_id=1, parent=None):
         super().__init__(parent)
         self.workspace_manager = workspace_manager
+        self.settings_manager = QtSettingsManager()
         self.current_workspace_id = current_workspace_id  # Сохраняем переданный workspace
         self.workspace_cards = {}
 
@@ -161,12 +163,15 @@ class WorkspacesWidget(QtWidgets.QWidget):
                     display_text += f" - {workspace.description}"
                 self.ui.labelCurrentWorkspace.setText(display_text)
 
+                # ДОБАВЛЕНО: Сохраняем выбранный workspace в настройках
+                self.settings_manager.set_last_workspace(workspace_id)
+
                 self.update_stats()
                 # Отправляем сигнал с новым workspace_id
                 self.workspaceChanged.emit(workspace_id)
 
-                QtWidgets.QMessageBox.information(self, "Рабочее пространство изменено",
-                                                  f"Текущее рабочее пространство: {workspace.name}")
+                # Перезагружаем карточки, чтобы обновить подсветку
+                self.load_workspaces()
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Ошибка",

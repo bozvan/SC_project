@@ -85,13 +85,17 @@ class WorkspacesWidget(QtWidgets.QWidget):
                 card.workspaceEditRequested.connect(self.on_workspace_edit_requested)
                 card.workspaceDeleteRequested.connect(self.on_workspace_delete_requested)
 
-                self.ui.gridLayoutWorkspaces.addWidget(card, row, col)
+                self.ui.gridLayoutWorkspaces.addWidget(card, row, col,
+                                                       alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
                 self.workspace_cards[workspace.id] = card
 
                 col += 1
                 if col >= max_cols:
                     col = 0
                     row += 1
+
+            # ДОБАВЛЕНО: Добавляем растягивающий элемент, чтобы карточки были прижаты к верху
+            self.ui.gridLayoutWorkspaces.setRowStretch(row + 1, 1)
 
             # Обновляем статистику текущего workspace
             self.update_stats()

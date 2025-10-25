@@ -19,24 +19,19 @@ class WorkspaceCard(QFrame):
     def setup_ui(self):
         self.setFrameStyle(QtWidgets.QFrame.Shape.StyledPanel)
         self.setLineWidth(1)
-        # self.setStyleSheet("""
-        #     WorkspaceCard {
-        #         background-color: #ffffff;
-        #         border: 1px solid #bdc3c7;
-        #         border-radius: 8px;
-        #         padding: 12px;
-        #     }
-        #     WorkspaceCard:hover {
-        #         border-color: #3498db;
-        #         background-color: #f8f9fa;
-        #     }
-        #     .default-workspace {
-        #         background-color: #ecf0f1;
-        #         border-color: #95a5a6;
-        #     }
-        # """)
+        self.setMinimumHeight(160)
+        self.setMaximumHeight(160)
+
+        self.setMinimumWidth(self.frameGeometry().width() // 2)
+        self.setMaximumWidth(
+            self.frameGeometry().width() // 2)  # ширина карточки workspace определяется динамически по ширине виджета
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Fixed
+        )
 
         layout = QtWidgets.QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         # Заголовок с названием
         title_layout = QtWidgets.QHBoxLayout()
@@ -87,6 +82,9 @@ class WorkspaceCard(QFrame):
         date_label.setStyleSheet("color: #95a5a6; font-size: 10px; margin-top: 8px;")
         layout.addWidget(date_label)
 
+        # ДОБАВЬТЕ ЭТУ СТРОКУ - растягивающий элемент перед кнопкой
+        layout.addStretch()
+
         # Кнопка выбора
         self.btn_select = QtWidgets.QPushButton("Выбрать")
         self.btn_select.clicked.connect(self.on_select_clicked)
@@ -120,6 +118,9 @@ class WorkspaceCard(QFrame):
             """)
 
         layout.addWidget(self.btn_select)
+
+        # ДОБАВЬТЕ ЭТУ СТРОКУ - небольшой отступ снизу
+        layout.addSpacing(10)
 
         # Стиль для workspace по умолчанию
         if self.workspace.is_default:

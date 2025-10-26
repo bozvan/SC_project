@@ -245,8 +245,8 @@ class ThemeManager:
             
             
 /*======================================= WORKSPACE WIDGET =======================================*/
-            
-            
+
+
             QGroupBox#groupBoxStats, QGroupBox#groupBoxManage, QGroupBox#groupBoxCurrent {
                 border-radius: 3px;
                 border-color: black;
@@ -254,11 +254,79 @@ class ThemeManager:
                 border-width: 1px;
                 font-weight: bold;    
             }
+            QLineEdit#editSearch {
+                border: none;
+                border-bottom: 2px solid #E16428;
+                min-height: 10px;
+                max-height: 30px;
+                padding: 5px;
+                background-color: transparent;
+                selection-background-color: #E16428;
+            }
+            QLineEdit#editSearch:hover {
+                border-bottom: 2px solid #E16428;
+                background-color: rgba(225, 100, 40, 0.1);
+            }
+            QPushButton#btnCreate {
+                color: #E16428;
+                border: 1px solid #E16428;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-weight: bold;
+            }
+            QPushButton#btnCreate:hover {
+                background-color: rgba(225, 100, 40, 0.1);
+            }
+            QPushButton#btnCreate:pressed {
+                background-color: #ffffff;
+            }
+            #workspace_card {
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                background-color: #ffffff;
+                padding: 0px;
+            }
+            
+            /* Стили для кнопок выбора workspace в светлой теме */
+            WorkspaceCard QPushButton[class="select-button"] {
+                background-color: #A1A1A1;
+                color: white;
+                border: none;
+                padding: 8px;
+                border-radius: 4px;
+                font-weight: normal;
+                min-height: 15px;
+                max-height: 15px;
+            }
+            
+            WorkspaceCard QPushButton[class="select-button"]:hover {
+                background-color: #616161;
+            }
+            
+            WorkspaceCard QPushButton[class="select-button"]:pressed {
+                background-color: #545454;
+            }
+            
+            WorkspaceCard QPushButton[class="select-button"][current="true"] {
+                background-color: #E16428;
+                color: white;
+                border: none;
+                padding: 8px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            
+            WorkspaceCard QPushButton[class="select-button"][current="true"]:hover {
+                background-color: #ad420f;
+            }
+            
+            WorkspaceCard QPushButton[class="select-button"][current="true"]:pressed {
+                background-color: #8a350c;
+            }
             
             
 /*======================================= TASKS WIDGET =======================================*/
 
-/*======================================= TASKS WIDGET =======================================*/
 
 QListWidget#tasks_list {
     background-color: #ffffff;
@@ -351,6 +419,166 @@ QListWidget#tasks_list::item:alternate {
     text-decoration: line-through;
     color: #888888;
 }
+
+/*======================================= QInputDialog =======================================*/
+
+QInputDialog QLineEdit {
+    border: none;
+    border-bottom: 2px solid #E16428;
+    min-height: 10px;
+    max-height: 30px;
+    padding: 5px;
+    background-color: transparent;
+    selection-background-color: #E16428;
+}
+
+QInputDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QInputDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+QInputDialog QPushButton[text="OK"] {
+    background-color: transparent;
+    color: #E16428;
+    border: 2px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QInputDialog QPushButton[text="OK"]:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+QInputDialog QPushButton[text="OK"]:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
+}
+
+QInputDialog QPushButton[text="OK"]:disabled {
+    background-color: transparent;
+    color: #cccccc;
+    border: 2px solid #cccccc;
+}
+
+QInputDialog QPushButton[text="Cancel"],
+QInputDialog QPushButton[text="Отмена"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QInputDialog QPushButton[text="Cancel"]:hover,
+QInputDialog QPushButton[text="Отмена"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QInputDialog QPushButton[text="Cancel"]:pressed,
+QInputDialog QPushButton[text="Отмена"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+
+/*======================================= QMessageBox =======================================*/
+
+QMessageBox QPushButton[text="No"] {
+    background-color: white;
+    color: white;
+    border: 1px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="No"]:hover {
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+QMessageBox QPushButton[text="No"]:pressed {
+    background-color: #ad420f;
+    border-color: #ad420f;
+}
+
+QMessageBox QPushButton[text="Yes"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Yes"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QMessageBox QPushButton[text="Yes"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+/* Для русского текста */
+QMessageBox QPushButton[text="Нет"] {
+    background-color: white;
+    color: #E16428;
+    border: 1px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Нет"]:hover {
+    color: white;
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+QMessageBox QPushButton[text="Нет"]:pressed {
+    color: white;
+    background-color: #ad420f;
+    border-color: #ad420f;
+}
+
+QMessageBox QPushButton[text="Да"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Да"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QMessageBox QPushButton[text="Да"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+
         """
 
         # Темная тема
@@ -580,41 +808,82 @@ QListWidget#tasks_list::item:alternate {
        
             
 /*======================================= WORKSPACE WIDGET =======================================*/
-        
-            
-            QGroupBox#groupBoxStats, QGroupBox#groupBoxManage, QGroupBox#groupBoxCurrent {
-                border-radius: 3px;
-                border-color: white;
-                border-style: solid;
-                border-width: 1px;
-                font-weight: bold;    
-            }
-            QLineEdit#editSearch {
-                border: none;
-                border-bottom: 2px solid #E16428;
-                min-height: 10px;
-                max-height: 30px;
-                padding: 5px;
-                background-color: transparent;
-                selection-background-color: #E16428;
-            }
-            QLineEdit#editSearch:hover {
-                border-bottom: 2px solid #E16428;
-                background-color: rgba(225, 100, 40, 0.1);
-            }
-            QPushButton#btnCreate {
-                color: #E16428;
-                border: 1px solid #E16428;
-                border-radius: 5px;
-                padding: 8px 12px;
-                font-weight: bold;
-            }
-            QPushButton#btnCreate:hover {
-                background-color: #201611;
-            }
-            QPushButton#btnCreate:pressed {
-                background-color: #0d1117;
-            }
+
+
+QGroupBox#groupBoxStats, QGroupBox#groupBoxManage, QGroupBox#groupBoxCurrent {
+    border-radius: 3px;
+    border-color: white;
+    border-style: solid;
+    border-width: 1px;
+    font-weight: bold;    
+}
+QLineEdit#editSearch {
+    border: none;
+    border-bottom: 2px solid #E16428;
+    min-height: 10px;
+    max-height: 30px;
+    padding: 5px;
+    background-color: transparent;
+    selection-background-color: #E16428;
+}
+QLineEdit#editSearch:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+QPushButton#btnCreate {
+    color: #E16428;
+    border: 1px solid #E16428;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+QPushButton#btnCreate:hover {
+    background-color: #201611;
+}
+QPushButton#btnCreate:pressed {
+    background-color: #0d1117;
+}
+#workspace_card {
+    border: 1px solid #444444;
+    border-radius: 6px;
+    background-color: #0d1117;
+    padding: 0px;
+}
+
+/* Стили для кнопок выбора workspace в темной теме */
+WorkspaceCard QPushButton[class="select-button"] {
+    background-color: #2d2d2d;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    font-weight: normal;
+}
+
+WorkspaceCard QPushButton[class="select-button"]:hover {
+    background-color: #3a3a3a;
+}
+
+WorkspaceCard QPushButton[class="select-button"]:pressed {
+    background-color: #4a4a4a;
+}
+
+WorkspaceCard QPushButton[class="select-button"][current="true"] {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+WorkspaceCard QPushButton[class="select-button"][current="true"]:hover {
+    background-color: #ad420f;
+}
+
+WorkspaceCard QPushButton[class="select-button"][current="true"]:pressed {
+    background-color: #8a350c;
+}
             
             
 /*======================================= TASKS WIDGET =======================================*/
@@ -711,6 +980,164 @@ QListWidget#tasks_list::item:alternate {
                 text-decoration: line-through;
                 color: #888888;
             }
+
+/*======================================= QInputDialog =======================================*/
+
+QInputDialog QLineEdit {
+    border: none;
+    border-bottom: 2px solid #E16428;
+    min-height: 10px;
+    max-height: 30px;
+    padding: 5px;
+    background-color: transparent;
+    selection-background-color: #E16428;
+}
+
+QInputDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QInputDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+QInputDialog QPushButton[text="OK"] {
+    background-color: transparent;
+    color: #E16428;
+    border: 2px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QInputDialog QPushButton[text="OK"]:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+QInputDialog QPushButton[text="OK"]:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
+}
+
+QInputDialog QPushButton[text="OK"]:disabled {
+    background-color: transparent;
+    color: #cccccc;
+    border: 2px solid #cccccc;
+}
+
+QInputDialog QPushButton[text="Cancel"],
+QInputDialog QPushButton[text="Отмена"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QInputDialog QPushButton[text="Cancel"]:hover,
+QInputDialog QPushButton[text="Отмена"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QInputDialog QPushButton[text="Cancel"]:pressed,
+QInputDialog QPushButton[text="Отмена"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+
+/*======================================= QMessageBox =======================================*/
+
+QMessageBox QPushButton[text="No"] {
+    background-color: #E16428;
+    color: white;
+    border: 2px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="No"]:hover {
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+QMessageBox QPushButton[text="No"]:pressed {
+    background-color: #ad420f;
+    border-color: #ad420f;
+}
+
+QMessageBox QPushButton[text="Yes"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Yes"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QMessageBox QPushButton[text="Yes"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+/* Для русского текста */
+QMessageBox QPushButton[text="Нет"] {
+    background-color: #0D1117;
+    color: #E16428;
+    border: 1px solid #E16428;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: bold;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Нет"]:hover {
+    color: white;
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+QMessageBox QPushButton[text="Нет"]:pressed {
+    color: white;
+    background-color: #ad420f;
+    border-color: #ad420f;
+}
+
+QMessageBox QPushButton[text="Да"] {
+    background-color: transparent;
+    color: white;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 6px 12px;
+    min-width: 80px;
+}
+
+QMessageBox QPushButton[text="Да"]:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QMessageBox QPushButton[text="Да"]:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
         """
 
     def apply_theme(self, theme_name=None):

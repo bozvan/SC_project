@@ -24,6 +24,7 @@ class WorkspaceCard(QFrame):
         self.setLineWidth(1)
         self.setMinimumHeight(160)
         self.setMaximumHeight(160)
+        self.setObjectName("workspace_card")
 
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
@@ -88,34 +89,10 @@ class WorkspaceCard(QFrame):
         # Кнопка выбора
         self.btn_select = QtWidgets.QPushButton("Выбрать")
         self.btn_select.clicked.connect(self.on_select_clicked)
+        self.btn_select.setProperty("class", "select-button")
 
-        if self.workspace.id == self.settings_manager.get_last_workspace():
-            self.btn_select.setStyleSheet("""
-                QPushButton {
-                    background-color: #E16428;
-                    color: white;
-                    border: none;
-                    padding: 8px;
-                    border-radius: 4px;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background-color: #ad420f;
-                }
-            """)
-        else:
-            self.btn_select.setStyleSheet("""
-                QPushButton {
-                    background-color: #211914;
-                    color: white;
-                    border: none;
-                    padding: 8px;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: #362922;
-                }
-            """)
+        is_current = self.workspace.id == self.settings_manager.get_last_workspace()
+        self.btn_select.setProperty("current", "true" if is_current else "false")
 
         layout.addWidget(self.btn_select)
 
@@ -135,3 +112,10 @@ class WorkspaceCard(QFrame):
 
     def on_delete_clicked(self):
         self.workspaceDeleteRequested.emit(self.id)
+
+    def update_selection_state(self, is_current):
+        """Обновляет визуальное состояние кнопки выбора"""
+        self.btn_select.setProperty("current", "true" if is_current else "false")
+        # Принудительно обновляем стиль
+        self.btn_select.style().unpolish(self.btn_select)
+        self.btn_select.style().polish(self.btn_select)

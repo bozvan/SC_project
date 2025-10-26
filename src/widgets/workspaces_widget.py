@@ -173,31 +173,40 @@ class WorkspacesWidget(QtWidgets.QWidget):
             if not workspace or workspace.is_default:
                 return
 
-            new_name, ok = QtWidgets.QInputDialog.getText(
-                self, "Редактирование рабочего пространства",
-                "Введите новое название:",
-                text=workspace.name
-            )
+            # Создаем кастомный диалог для ввода названия
+            dialog_name = QtWidgets.QInputDialog(self)
+            dialog_name.setWindowTitle("Редактирование")
+            dialog_name.setLabelText("Введите новое название:")
+            dialog_name.setTextValue(workspace.name)
+            dialog_name.setOkButtonText("OK")
+            dialog_name.setCancelButtonText("Отмена")
 
-            if ok and new_name.strip():
-                new_description, ok = QtWidgets.QInputDialog.getText(
-                    self, "Новое описание",
-                    "Введите новое описание:",
-                    text=workspace.description or ""
-                )
+            if dialog_name.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                new_name = dialog_name.textValue().strip()
 
-                if ok:
-                    success = self.workspace_manager.update_workspace(
-                        workspace_id,
-                        new_name.strip(),
-                        new_description.strip() if new_description else ""
-                    )
+                if new_name:
+                    # Создаем кастомный диалог для ввода описания
+                    dialog_desc = QtWidgets.QInputDialog(self)
+                    dialog_desc.setWindowTitle("Новое описание")
+                    dialog_desc.setLabelText("Введите новое описание:")
+                    dialog_desc.setTextValue(workspace.description or "")
+                    dialog_desc.setOkButtonText("OK")
+                    dialog_desc.setCancelButtonText("Отмена")
 
-                    if success:
-                        self.load_workspaces()
-                    else:
-                        QtWidgets.QMessageBox.warning(self, "Ошибка",
-                                                      "Не удалось обновить рабочее пространство")
+                    if dialog_desc.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+                        new_description = dialog_desc.textValue().strip()
+
+                        success = self.workspace_manager.update_workspace(
+                            workspace_id,
+                            new_name,
+                            new_description
+                        )
+
+                        if success:
+                            self.load_workspaces()
+                        else:
+                            QtWidgets.QMessageBox.warning(self, "Ошибка",
+                                                          "Не удалось обновить рабочее пространство")
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Ошибка",
@@ -210,15 +219,26 @@ class WorkspacesWidget(QtWidgets.QWidget):
             if not workspace or workspace.is_default:
                 return
 
-            reply = QtWidgets.QMessageBox.question(
-                self, "Подтверждение удаления",
+            # Создаем кастомный MessageBox с кнопками Да/Нет
+            msg_box = QtWidgets.QMessageBox(self)
+            msg_box.setWindowTitle("Подтверждение удаления")
+            msg_box.setText(
                 f"Вы уверены, что хотите удалить рабочее пространство '{workspace.name}'?\n"
-                f"Все заметки, задачи и закладки в этом пространстве будут удалены!",
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
-                QtWidgets.QMessageBox.StandardButton.No
+                f"Все заметки, задачи и закладки в этом пространстве будут удалены!"
             )
+            msg_box.setIcon(QtWidgets.QMessageBox.Icon.Question)
 
-            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+            # Добавляем кнопки Да и Нет
+            btn_yes = msg_box.addButton("Да", QtWidgets.QMessageBox.ButtonRole.YesRole)
+            btn_no = msg_box.addButton("Нет", QtWidgets.QMessageBox.ButtonRole.NoRole)
+
+            # Устанавливаем кнопку Нет по умолчанию
+            msg_box.setDefaultButton(btn_no)
+
+            # Показываем диалог
+            msg_box.exec()
+
+            if msg_box.clickedButton() == btn_yes:
                 success = self.workspace_manager.delete_workspace(workspace_id)
 
                 if success:

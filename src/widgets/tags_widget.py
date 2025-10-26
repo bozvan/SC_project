@@ -54,51 +54,9 @@ class TagsWidget(QWidget):
         self.tags_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tags_list.setToolTip("Кликните для фильтрации по тегу\nПКМ для удаления")
 
-        # Настраиваем стиль списка
-        self.tags_list.setStyleSheet("""
-            QListWidget {
-                background-color: palette(base);
-                border: 1px solid palette(mid);
-                border-radius: 3px;
-            }
-            QListWidget::item {
-                padding: 5px;
-                border-bottom: 1px solid palette(midlight);
-            }
-            QListWidget::item:selected {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-            QListWidget::item:hover {
-                background-color: palette(alternate-base);
-            }
-        """)
-
-        # Кнопка сброса фильтра
-        self.clear_filter_btn = QPushButton("Сбросить фильтр")
-        self.clear_filter_btn.setVisible(False)
-        self.clear_filter_btn.setStyleSheet("""
-            QPushButton {
-                background-color: palette(mid);
-                color: palette(text);
-                border: none;
-                padding: 5px;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-        """)
-
-        # Статистика
-        self.stats_label = QLabel("Всего тегов: 0")
-        self.stats_label.setStyleSheet("color: white; font-size: 11px; margin-top: 5px;")
 
         layout.addLayout(input_layout)
         layout.addWidget(self.tags_list)
-        layout.addWidget(self.clear_filter_btn)
-        layout.addWidget(self.stats_label)
 
         # Подключение сигналов
         self.add_button.clicked.connect(self.add_tag)
@@ -106,7 +64,6 @@ class TagsWidget(QWidget):
         self.tags_list.customContextMenuRequested.connect(self.show_context_menu)
         self.tag_input.returnPressed.connect(self.add_tag)
         self.tag_input.textChanged.connect(self.on_input_changed)
-        self.clear_filter_btn.clicked.connect(self.clear_selection)
 
     def on_input_changed(self, text):
         """Обновление состояния кнопки добавления"""
@@ -157,9 +114,6 @@ class TagsWidget(QWidget):
         # Восстанавливаем выделение если есть активный тег
         if self.selected_tag:
             self.select_tag_by_name(self.selected_tag)
-
-        # Обновляем статистику
-        self.stats_label.setText(f"Тегов в workspace {self.workspace_id}: {len(filtered_tags)}")
 
         print(f"✅ Загружено {len(filtered_tags)} тегов для workspace {self.workspace_id}")
 
@@ -263,7 +217,6 @@ class TagsWidget(QWidget):
         """Устанавливает выбранный тег и обновляет выделение"""
         self.selected_tag = tag_name
         self.update_selection_visuals()
-        self.clear_filter_btn.setVisible(bool(tag_name))
 
     def select_tag_by_name(self, tag_name):
         """Выбирает тег по имени (для внешнего использования)"""
@@ -295,13 +248,11 @@ class TagsWidget(QWidget):
         """Обновляет визуальное выделение тегов"""
         # QListWidget сам управляет выделением через setCurrentItem
         # Нам нужно только обновить состояние кнопки сброса
-        self.clear_filter_btn.setVisible(bool(self.selected_tag))
 
     def clear_selection(self):
         """Снимает выделение со всех тегов"""
         self.selected_tag = None
         self.tags_list.clearSelection()
-        self.clear_filter_btn.setVisible(False)
         self.tag_selected.emit("")  # Сигнал для сброса фильтра
         print(f"🗑️ Сброшен фильтр по тегам в workspace {self.workspace_id}")
 

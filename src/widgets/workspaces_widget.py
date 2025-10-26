@@ -129,8 +129,6 @@ class WorkspacesWidget(QtWidgets.QWidget):
                     )
 
                     if workspace:
-                        QtWidgets.QMessageBox.information(self, "Успех",
-                                                          f"Рабочее пространство '{workspace.name}' создано!")
                         self.load_workspaces()
                     else:
                         QtWidgets.QMessageBox.warning(self, "Ошибка",
@@ -196,8 +194,6 @@ class WorkspacesWidget(QtWidgets.QWidget):
                     )
 
                     if success:
-                        QtWidgets.QMessageBox.information(self, "Успех",
-                                                          "Рабочее пространство обновлено!")
                         self.load_workspaces()
                     else:
                         QtWidgets.QMessageBox.warning(self, "Ошибка",
@@ -226,9 +222,6 @@ class WorkspacesWidget(QtWidgets.QWidget):
                 success = self.workspace_manager.delete_workspace(workspace_id)
 
                 if success:
-                    QtWidgets.QMessageBox.information(self, "Успех",
-                                                      "Рабочее пространство удалено!")
-
                     # Если удалили текущий workspace, переключаемся на default
                     if workspace_id == self.current_workspace_id:
                         self.current_workspace_id = 1

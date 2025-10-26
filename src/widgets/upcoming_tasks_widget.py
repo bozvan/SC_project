@@ -1,5 +1,7 @@
-from PyQt6.QtWidgets import QListWidgetItem, QWidget, QHBoxLayout, QCheckBox, QLabel, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import QListWidgetItem, QWidget, QHBoxLayout, QCheckBox, QLabel, QPushButton, QVBoxLayout, \
+    QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6 import QtWidgets, QtCore
 
 from gui.ui_task_widget import Ui_TaskWidget
 
@@ -26,7 +28,25 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
     def setup_additional_ui(self):
         """Дополнительная настройка UI"""
         # Настройка списка задач
-        self.tasks_list.setAlternatingRowColors(True)
+        self.tasks_list.setObjectName("tasks_list")
+        #self.tasks_list.setAlternatingRowColors(True)
+
+        # Убираем фиксированные размеры
+        self.setMinimumSize(0, 0)
+
+        # Настраиваем политику размеров для списка
+        self.tasks_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
+
+        # Убираем фиксированные отступы основного layout
+        self.gridLayout_2.setContentsMargins(10, 10, 10, 10)
+
+        # ДОБАВЬТЕ ЭТИ СТРОКИ:
+        # Настраиваем растягивание списка
+        self.tasks_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.tasks_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Добавляем недостающие фильтры в комбо-боксы
         self.add_missing_filters()
@@ -276,7 +296,12 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
         # Создаем виджет задачи
         task_widget = self.create_task_widget(task)
 
+        # ИСПРАВЛЕНО: Устанавливаем размер, соответствующий ширине списка
         list_item.setSizeHint(task_widget.sizeHint())
+
+        # ДОБАВЬТЕ ЭТУ СТРОКУ: Устанавливаем ширину элемента равной ширине списка
+        list_item.setSizeHint(QtCore.QSize(self.tasks_list.width(), 50))
+
         self.tasks_list.addItem(list_item)
         self.tasks_list.setItemWidget(list_item, task_widget)
 
@@ -288,6 +313,19 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
             "low": "Низкий"
         }
         return priority_texts.get(priority, "Средний")
+
+    def resizeEvent(self, event):
+        """Обработчик изменения размера виджета"""
+        super().resizeEvent(event)
+        # Обновляем размеры элементов при изменении размера виджета
+        self.update_items_width()
+
+    def update_items_width(self):
+        """Обновляет ширину всех элементов списка"""
+        for i in range(self.tasks_list.count()):
+            item = self.tasks_list.item(i)
+            if item:
+                item.setSizeHint(QtCore.QSize(self.tasks_list.width() - 20, 50))  # -20 для учета отступов и скроллбара
 
     def is_overdue(self, due_date):
         """Проверяет, просрочена ли задача"""
@@ -368,98 +406,110 @@ class UpcomingTasksWidget(QWidget, Ui_TaskWidget):
         """Создает виджет задачи с ГАРАНТИРОВАННЫМ отображением дедлайна"""
         # Создаем кастомный виджет для элемента списка
         item_widget = QWidget()
+        item_widget.setObjectName("task_item_widget")
+
+        # Устанавливаем свойство priority для CSS
+        priority = getattr(task, 'priority', 'none')
+        item_widget.setProperty("priority", priority)
+
+        # Устанавливаем свойство completed для CSS
+        if task.is_completed:
+            item_widget.setProperty("completed", "true")
+        else:
+            item_widget.setProperty("completed", "false")
+
+        item_widget.setMinimumHeight(50)
+        item_widget.setMaximumHeight(50)
+
+        # Правильная политика размеров
+        item_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+
         layout = QHBoxLayout(item_widget)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(10)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # Чекбокс задачи
         checkbox = QCheckBox()
+        checkbox.setObjectName("check_task")
         checkbox.setChecked(task.is_completed)
         checkbox.stateChanged.connect(
             lambda state, task_id=task.id: self.on_task_toggled(task_id, state)
         )
-        checkbox.setFixedSize(20, 20)
+        checkbox.setFixedSize(18, 18)
+        checkbox.setToolTip("Отметить как выполненную/невыполненную")
         layout.addWidget(checkbox)
 
-        # ИКОНКА ПРИОРИТЕТА
-        priority_icons = {
-            "high": "🔴",
-            "medium": "🟡",
-            "low": "🟢"
-        }
-        priority_icon = priority_icons.get(task.priority, "⚪")
-
-        priority_label = QLabel(priority_icon)
-        priority_label.setToolTip(f"Приоритет: {self.get_priority_text(task.priority)}")
-        priority_label.setFixedWidth(25)
-        layout.addWidget(priority_label)
-
-        # ОПИСАНИЕ ЗАДАЧИ И ДЕДЛАЙН
+        # ОПИСАНИЕ ЗАДАЧИ И ДЕДЛАЙН - ОСНОВНОЙ КОНТЕНТ
         content_widget = QWidget()
+        content_widget.setObjectName("content_widget")
+        content_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding
+        )
+
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(2)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         # Описание задачи
         task_label = QLabel(task.description)
-        task_label.setWordWrap(True)
+        task_label.setWordWrap(False)
+        task_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        task_label.setMaximumHeight(18)
+        task_label.setToolTip(f"Задача: {task.description}")
 
-        # Стили в зависимости от статуса и приоритета
+        # Устанавливаем свойство completed для label
         if task.is_completed:
-            task_label.setStyleSheet("text-decoration: line-through; color: gray; font-size: 12px;")
-        elif task.priority == "high":
-            task_label.setStyleSheet("font-weight: bold; font-size: 12px;")
-        elif task.priority == "low":
-            task_label.setStyleSheet("color: #666; font-size: 12px;")
+            task_label.setProperty("completed", "true")
         else:
-            task_label.setStyleSheet("font-size: 12px;")
+            task_label.setProperty("completed", "false")
 
         content_layout.addWidget(task_label)
 
-        # ДЕДЛАЙН - ВСЕГДА ОТОБРАЖАЕМ, ДАЖЕ ЕСЛИ ЕГО НЕТ!
+        # ДЕДЛАЙН
         due_date_str = task.due_date.strftime('%d.%m.%Y') if task.due_date else "не установлен"
         due_label = QLabel(f"📅 {due_date_str}")
+        due_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed
+        )
+        due_label.setMaximumHeight(14)
 
-        # Стиль для дедлайна
+        # Устанавливаем свойство completed для due_label
         if task.is_completed:
-            # Выполненная задача - серый, зачеркнутый, но ВИДИМЫЙ
-            due_label.setStyleSheet("color: gray; font-size: 10px; text-decoration: line-through;")
+            due_label.setProperty("completed", "true")
+        else:
+            due_label.setProperty("completed", "false")
+
+        # Устанавливаем подсказку для дедлайна в зависимости от статуса
+        if task.is_completed:
             due_label.setToolTip(f"Срок выполнения: {due_date_str} (задача выполнена)")
         elif task.due_date and self.is_overdue(task.due_date):
-            # Просроченная активная задача - красный
-            due_label.setStyleSheet("color: red; font-weight: bold; font-size: 10px;")
             due_label.setToolTip("ПРОСРОЧЕНО!")
         elif task.due_date:
-            # Обычный дедлайн - серый
-            due_label.setStyleSheet("color: #666; font-size: 10px;")
             due_label.setToolTip(f"Срок выполнения: {due_date_str}")
         else:
-            # Нет дедлайна - светло-серый
-            due_label.setStyleSheet("color: #999; font-size: 10px;")
             due_label.setToolTip("Срок не установлен")
 
         content_layout.addWidget(due_label)
 
-        layout.addWidget(content_widget)
-        layout.addStretch()
+        # ДОБАВЛЯЕМ ОСНОВНОЙ КОНТЕНТ С РАСТЯЖКОЙ
+        layout.addWidget(content_widget, 1)
 
         # Кнопка перехода к заметке
         if hasattr(task, 'note_id') and task.note_id:
             note_title = getattr(task, 'note_title', f"Заметка {task.note_id}")
-            note_btn = QPushButton(f"📝")
+            note_btn = QPushButton("📝")
             note_btn.setToolTip(f"Перейти к заметке: {note_title}")
-            note_btn.setFixedSize(30, 30)
-            note_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    border: 1px solid gray;
-                    border-radius: 3px;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-            """)
+            note_btn.setFixedSize(26, 26)
             note_btn.clicked.connect(
                 lambda checked, note_id=task.note_id: self.navigate_to_note_requested.emit(note_id)
             )

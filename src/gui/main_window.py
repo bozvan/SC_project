@@ -250,6 +250,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 border: none;
                 border-top: 1px solid #e0e0e0;
                 border-bottom: 1px solid #e0e0e0;
+                border-left: none;
+                border-right: none;
                 border-radius: 0px;
                 text-align: left;
                 background-color: #E16428;

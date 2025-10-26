@@ -13,21 +13,33 @@ class Ui_TaskWidget(object):
     def setupUi(self, TaskWidget):
         TaskWidget.setObjectName("TaskWidget")
         TaskWidget.resize(370, 371)
+        TaskWidget.setStyleSheet("QToolTip {\n"
+"                background-color: #1e1e1e;\n"
+"                color: #e0e0e0;\n"
+"                border: 1px solid #404040;\n"
+"                border-radius: 6px;\n"
+"                padding: 4px 6px;\n"
+"                font-family: \"Segoe UI\", Arial, sans-serif;\n"
+"                font-size: 13px;\n"
+"                font-weight: normal;\n"
+"                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);\n"
+"            }")
         self.gridLayout_2 = QtWidgets.QGridLayout(TaskWidget)
+        self.gridLayout_2.setContentsMargins(20, 20, 20, 20)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         self.tasks_header = QtWidgets.QHBoxLayout()
         self.tasks_header.setObjectName("tasks_header")
-        self.refresh_btn = QtWidgets.QLabel(parent=TaskWidget)
-        self.refresh_btn.setStyleSheet("font-family: \"Times New Roman\";\n"
+        self.task_window_title = QtWidgets.QLabel(parent=TaskWidget)
+        self.task_window_title.setStyleSheet("font-family: \"Times New Roman\";\n"
 "font-size: 16px;\n"
 "font-weight: bold;\n"
 "text-align: center;\n"
 "qproperty-alignment: \'AlignCenter\';")
-        self.refresh_btn.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.refresh_btn.setObjectName("refresh_btn")
-        self.tasks_header.addWidget(self.refresh_btn)
+        self.task_window_title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.task_window_title.setObjectName("task_window_title")
+        self.tasks_header.addWidget(self.task_window_title)
         self.verticalLayout.addLayout(self.tasks_header)
         self.tasks_filter = QtWidgets.QHBoxLayout()
         self.tasks_filter.setObjectName("tasks_filter")
@@ -141,7 +153,7 @@ class Ui_TaskWidget(object):
     def retranslateUi(self, TaskWidget):
         _translate = QtCore.QCoreApplication.translate
         TaskWidget.setWindowTitle(_translate("TaskWidget", "Form"))
-        self.refresh_btn.setText(_translate("TaskWidget", "Предстоящие задачи"))
+        self.task_window_title.setText(_translate("TaskWidget", "Предстоящие задачи"))
         self.sort_combo.setItemText(0, _translate("TaskWidget", "По дате создания"))
         self.sort_combo.setItemText(1, _translate("TaskWidget", "По сроку выполнения"))
         self.sort_combo.setItemText(2, _translate("TaskWidget", "По приоритету"))

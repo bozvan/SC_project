@@ -122,8 +122,42 @@ class ThemeManager:
                 font-weight: normal;
             }
             QCheckBox {
-                font-weight: normal;
-            }
+        font-weight: normal;
+        color: black;
+        spacing: 5px;
+    }
+    QCheckBox::indicator {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #666666;
+        border-radius: 3px;
+        background-color: #ffffff;
+    }
+    QCheckBox::indicator:hover {
+        border: 1px solid #E16428;
+        background-color: #f0f0f0;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #E16428;
+        border: 1px solid #E16428;
+    }
+    QCheckBox::indicator:checked:hover {
+        background-color: #c8531f;
+        border: 1px solid #c8531f;
+    }
+    QCheckBox::indicator:checked:disabled {
+        background-color: #cccccc;
+        border: 1px solid #999999;
+    }
+    QCheckBox::indicator:unchecked:disabled {
+        background-color: #f0f0f0;
+        border: 1px solid #cccccc;
+    }
+
+    /* Стиль для галочки внутри чекбокса */
+    QCheckBox::indicator:checked {
+        image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path fill='white' d='M13.485 3.429L6.354 10.56 3.171 7.377 2 8.548l4.354 4.354 7.667-7.667z'/></svg>");
+    }
             QComboBox {
                 font-weight: normal;
             }
@@ -220,6 +254,103 @@ class ThemeManager:
                 border-width: 1px;
                 font-weight: bold;    
             }
+            
+            
+/*======================================= TASKS WIDGET =======================================*/
+
+/*======================================= TASKS WIDGET =======================================*/
+
+QListWidget#tasks_list {
+    background-color: #ffffff;
+    border: 1px solid black;
+    border-radius: 3px;
+    outline: none;
+}
+
+/* Убедитесь, что элементы списка занимают всю ширину */
+QListWidget#tasks_list::item {
+    border: none;
+    padding: 0px;
+    margin: 0px 0px 2px 0px;
+    height: 50px;
+}
+
+QListWidget#tasks_list::item:selected {
+    background-color: transparent;
+}
+
+QListWidget#tasks_list::item:alternate {
+    background-color: #ffffff;
+}
+
+/* Базовые стили для кастомных виджетов */
+#task_item_widget {
+    background-color: #ffffff;
+    border-bottom: 1px solid #E16428;
+    min-height: 49px;
+    max-height: 49px;
+    font-weight: normal;
+    font-size: 12px;
+    width: 100%;
+}
+
+/* Прозрачные стили для внутренних элементов */
+#task_item_widget QWidget,
+#task_item_widget QLabel,
+#task_item_widget QPushButton {
+    background-color: transparent;
+}
+
+
+/* Стили для кнопки заметки - прозрачная с серой рамкой */
+#task_item_widget QPushButton {
+    background-color: transparent;
+    border: 1px solid #666666;
+    border-radius: 3px;
+    font-size: 11px;
+    color: black;
+}
+
+#task_item_widget QPushButton:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    border: 1px solid #888888;
+}
+
+#task_item_widget QPushButton:pressed {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Стили для разных приоритетов */
+#task_item_widget[priority="high"] {
+    border-bottom: 1px solid #ff4444;
+}
+
+#task_item_widget[priority="medium"] {
+    border-bottom: 1px solid #ffaa00;
+}
+
+#task_item_widget[priority="low"] {
+    border-bottom: 1px solid #44ff44;
+}
+
+#task_item_widget[priority="none"] {
+    border-bottom: 1px solid #cccccc;
+}
+
+/* При наведении меняем фон только родительского виджета */
+#task_item_widget:hover {
+    background-color: #f0f0f0;
+}
+
+/* Стили для выполненной задачи */
+#task_item_widget[completed="true"] {
+    border-bottom: 1px solid #cccccc;
+}
+
+#task_item_widget[completed="true"] QLabel {
+    text-decoration: line-through;
+    color: #888888;
+}
         """
 
         # Темная тема
@@ -326,8 +457,42 @@ class ThemeManager:
                 font-weight: normal;
             }
             QCheckBox {
-                font-weight: normal;
-            }
+        font-weight: normal;
+        color: white;
+        spacing: 5px;
+    }
+    QCheckBox::indicator {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #666666;
+        border-radius: 3px;
+        background-color: #0d1117;
+    }
+    QCheckBox::indicator:hover {
+        border: 1px solid #E16428;
+        background-color: #1a1f29;
+    }
+    QCheckBox::indicator:checked {
+        background-color: #E16428;
+        border: 1px solid #E16428;
+    }
+    QCheckBox::indicator:checked:hover {
+        background-color: #c8531f;
+        border: 1px solid #c8531f;
+    }
+    QCheckBox::indicator:checked:disabled {
+        background-color: #444444;
+        border: 1px solid #666666;
+    }
+    QCheckBox::indicator:unchecked:disabled {
+        background-color: #1a1f29;
+        border: 1px solid #444444;
+    }
+
+    /* Стиль для галочки внутри чекбокса */
+    QCheckBox::indicator:checked {
+        image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path fill='white' d='M13.485 3.429L6.354 10.56 3.171 7.377 2 8.548l4.354 4.354 7.667-7.667z'/></svg>");
+    }
             QComboBox {
                 font-weight: normal;
             }
@@ -449,6 +614,102 @@ class ThemeManager:
             }
             QPushButton#btnCreate:pressed {
                 background-color: #0d1117;
+            }
+            
+            
+/*======================================= TASKS WIDGET =======================================*/
+
+
+            QListWidget#tasks_list {
+                background-color: #0D1117;
+                border: 1px solid white;
+                border-radius: 3px;
+                outline: none;
+            }
+            
+            /* Убедитесь, что элементы списка занимают всю ширину */
+            QListWidget#tasks_list::item {
+                border: none;
+                padding: 0px;
+                margin: 0px 0px 2px 0px;
+                height: 50px;
+            }
+            
+            QListWidget#tasks_list::item:selected {
+                background-color: transparent;
+            }
+            
+            QListWidget#tasks_list::item:alternate {
+                background-color: #0D1117;
+            }
+            
+            /* Базовые стили для кастомных виджетов */
+            #task_item_widget {
+                background-color: #0D1117;
+                border-bottom: 1px solid orange;
+                min-height: 49px;
+                max-height: 49px;
+                font-weight: normal;
+                font-size: 12px;
+                width: 100%;
+            }
+            
+            /* Прозрачные стили для внутренних элементов */
+            #task_item_widget QWidget,
+            #task_item_widget QLabel,
+            #task_item_widget QPushButton {
+                background-color: transparent;
+            }
+            
+            
+            /* Стили для кнопки заметки - прозрачная с серой рамкой */
+            #task_item_widget QPushButton {
+                background-color: transparent;
+                border: 1px solid #666666;
+                border-radius: 3px;
+                font-size: 11px;
+                color: white;
+            }
+            
+            #task_item_widget QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                border: 1px solid #888888;
+            }
+            
+            #task_item_widget QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+            
+            /* Стили для разных приоритетов */
+            #task_item_widget[priority="high"] {
+                border-bottom: 1px solid #ff4444;
+            }
+            
+            #task_item_widget[priority="medium"] {
+                border-bottom: 1px solid #ffaa00;
+            }
+            
+            #task_item_widget[priority="low"] {
+                border-bottom: 1px solid #44ff44;
+            }
+            
+            #task_item_widget[priority="none"] {
+                border-bottom: 1px solid #666666;
+            }
+            
+            /* При наведении меняем фон только родительского виджета */
+            #task_item_widget:hover {
+                background-color: #1a1f29;
+            }
+            
+            /* Стили для выполненной задачи */
+            #task_item_widget[completed="true"] {
+                border-bottom: 1px solid #666666;
+            }
+            
+            #task_item_widget[completed="true"] QLabel {
+                text-decoration: line-through;
+                color: #888888;
             }
         """
 

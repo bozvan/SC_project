@@ -14,6 +14,7 @@ class Ui_NotesPage(object):
         NotesPage.setObjectName("NotesPage")
         NotesPage.resize(336, 207)
         self.gridLayout = QtWidgets.QGridLayout(NotesPage)
+        self.gridLayout.setContentsMargins(20, -1, -1, -1)
         self.gridLayout.setObjectName("gridLayout")
         self.splitter = QtWidgets.QSplitter(parent=NotesPage)
         self.splitter.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.ArrowCursor))
@@ -83,8 +84,6 @@ class Ui_NotesPage(object):
         self.verticalLayout_2.addWidget(self.content_editor)
         self.editor_buttons_layout = QtWidgets.QHBoxLayout()
         self.editor_buttons_layout.setObjectName("editor_buttons_layout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.editor_buttons_layout.addItem(spacerItem)
         self.verticalLayout_2.addLayout(self.editor_buttons_layout)
         self.gridLayout.addWidget(self.splitter, 0, 0, 1, 1)
 

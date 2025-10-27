@@ -14,11 +14,11 @@ class Ui_BookmarksWidget(object):
         BookmarksWidget.setObjectName("BookmarksWidget")
         BookmarksWidget.resize(600, 500)
         self.verticalLayout = QtWidgets.QVBoxLayout(BookmarksWidget)
-        self.verticalLayout.setContentsMargins(5, 5, 5, 5)
+        self.verticalLayout.setContentsMargins(20, 20, 20, 20)
         self.verticalLayout.setSpacing(5)
         self.verticalLayout.setObjectName("verticalLayout")
         self.title_label = QtWidgets.QLabel(parent=BookmarksWidget)
-        self.title_label.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 5px;")
+        self.title_label.setStyleSheet("")
         self.title_label.setObjectName("title_label")
         self.verticalLayout.addWidget(self.title_label)
         self.search_layout = QtWidgets.QHBoxLayout()
@@ -40,22 +40,7 @@ class Ui_BookmarksWidget(object):
         self.verticalLayout.addLayout(self.search_layout)
         self.bookmarks_list = QtWidgets.QListWidget(parent=BookmarksWidget)
         self.bookmarks_list.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.bookmarks_list.setStyleSheet("QListWidget {\n"
-"    background-color: palette(base);\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 3px;\n"
-"}\n"
-"QListWidget::item {\n"
-"    border: none;\n"
-"    padding: 0px;\n"
-"    margin: 2px;\n"
-"}\n"
-"QListWidget::item:selected {\n"
-"    background-color: transparent;\n"
-"}\n"
-"QListWidget::item:hover {\n"
-"    background-color: transparent;\n"
-"}")
+        self.bookmarks_list.setStyleSheet("")
         self.bookmarks_list.setObjectName("bookmarks_list")
         self.verticalLayout.addWidget(self.bookmarks_list)
         self.groupBoxStats = QtWidgets.QGroupBox(parent=BookmarksWidget)

@@ -16,16 +16,7 @@ class Ui_BookmarkItemWidget(object):
         BookmarkItemWidget.setFrameShape(QtWidgets.QFrame.Shape.Box)
         BookmarkItemWidget.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
         BookmarkItemWidget.setLineWidth(1)
-        BookmarkItemWidget.setStyleSheet("BookmarkItemWidget {\n"
-"    background-color: palette(base);\n"
-"    border: 1px solid palette(midlight);\n"
-"    border-radius: 5px;\n"
-"    padding: 8px;\n"
-"}\n"
-"BookmarkItemWidget:hover {\n"
-"    background-color: palette(alternate-base);\n"
-"    border: 1px solid palette(highlight);\n"
-"}")
+
         self.verticalLayout = QtWidgets.QVBoxLayout(BookmarkItemWidget)
         self.verticalLayout.setContentsMargins(8, 8, 8, 8)
         self.verticalLayout.setSpacing(4)
@@ -34,7 +25,6 @@ class Ui_BookmarkItemWidget(object):
         self.top_layout.setSpacing(5)
         self.top_layout.setObjectName("top_layout")
         self.title_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.title_label.setStyleSheet("font-weight: bold; font-size: 12px;")
         self.title_label.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
         self.title_label.setObjectName("title_label")
         self.top_layout.addWidget(self.title_label)
@@ -42,67 +32,22 @@ class Ui_BookmarkItemWidget(object):
         self.top_layout.addItem(spacerItem)
         self.edit_btn = QtWidgets.QPushButton(parent=BookmarkItemWidget)
         self.edit_btn.setMaximumSize(QtCore.QSize(24, 24))
-        self.edit_btn.setStyleSheet("QPushButton {\n"
-"    background-color: palette(button);\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 3px;\n"
-"    font-size: 10px;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #e6f3ff;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: palette(mid);\n"
-"}")
+
         self.edit_btn.setObjectName("edit_btn")
         self.top_layout.addWidget(self.edit_btn)
         self.copy_btn = QtWidgets.QPushButton(parent=BookmarkItemWidget)
         self.copy_btn.setMaximumSize(QtCore.QSize(24, 24))
-        self.copy_btn.setStyleSheet("QPushButton {\n"
-"    background-color: palette(button);\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 3px;\n"
-"    font-size: 10px;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #e6ffe6;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: palette(mid);\n"
-"}")
+
         self.copy_btn.setObjectName("copy_btn")
         self.top_layout.addWidget(self.copy_btn)
         self.open_btn = QtWidgets.QPushButton(parent=BookmarkItemWidget)
         self.open_btn.setMaximumSize(QtCore.QSize(24, 24))
-        self.open_btn.setStyleSheet("QPushButton {\n"
-"    background-color: palette(button);\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 3px;\n"
-"    font-size: 10px;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #fff0e6;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: palette(mid);\n"
-"}")
+
         self.open_btn.setObjectName("open_btn")
         self.top_layout.addWidget(self.open_btn)
         self.delete_btn = QtWidgets.QPushButton(parent=BookmarkItemWidget)
         self.delete_btn.setMaximumSize(QtCore.QSize(24, 24))
-        self.delete_btn.setStyleSheet("QPushButton {\n"
-"    background-color: palette(button);\n"
-"    border: 1px solid palette(mid);\n"
-"    border-radius: 3px;\n"
-"    font-size: 10px;\n"
-"}\n"
-"QPushButton:hover {\n"
-"    background-color: #ffe6e6;\n"
-"    border: 1px solid #ff4444;\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #ffcccc;\n"
-"}")
+
         self.delete_btn.setObjectName("delete_btn")
         self.top_layout.addWidget(self.delete_btn)
         self.verticalLayout.addLayout(self.top_layout)
@@ -110,19 +55,10 @@ class Ui_BookmarkItemWidget(object):
         self.url_layout.setSpacing(5)
         self.url_layout.setObjectName("url_layout")
         self.url_prefix_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.url_prefix_label.setStyleSheet("font-size: 10px; color: palette(mid);")
         self.url_prefix_label.setObjectName("url_prefix_label")
         self.url_layout.addWidget(self.url_prefix_label)
         self.url_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.url_label.setStyleSheet("QLabel {\n"
-"    background-color: palette(alternate-base);\n"
-"    border: 1px solid palette(midlight);\n"
-"    border-radius: 3px;\n"
-"    padding: 4px;\n"
-"    font-family: monospace;\n"
-"    font-size: 10px;\n"
-"    color: palette(text);\n"
-"}")
+
         self.url_label.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
         self.url_label.setWordWrap(True)
         self.url_label.setObjectName("url_label")
@@ -132,25 +68,11 @@ class Ui_BookmarkItemWidget(object):
         self.description_layout.setSpacing(2)
         self.description_layout.setObjectName("description_layout")
         self.description_title_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.description_title_label.setStyleSheet("font-size: 10px; color: palette(mid); font-weight: bold;")
         self.description_title_label.setObjectName("description_title_label")
         self.description_layout.addWidget(self.description_title_label)
         self.description_edit = QtWidgets.QTextEdit(parent=BookmarkItemWidget)
         self.description_edit.setMaximumHeight(50)
-        self.description_edit.setStyleSheet("QTextEdit {\n"
-"    background-color: palette(alternate-base);\n"
-"    border: 1px solid palette(midlight);\n"
-"    border-radius: 3px;\n"
-"    padding: 4px;\n"
-"    font-size: 10px;\n"
-"    color: palette(text);\n"
-"}\n"
-"QTextEdit:focus {\n"
-"    border: 1px solid palette(highlight);\n"
-"}\n"
-"QTextEdit[readOnly=\"true\"] {\n"
-"    background-color: palette(window);\n"
-"}")
+
         self.description_edit.setReadOnly(True)
         self.description_edit.setAcceptRichText(False)
         self.description_edit.setObjectName("description_edit")
@@ -160,13 +82,11 @@ class Ui_BookmarkItemWidget(object):
         self.meta_layout.setSpacing(10)
         self.meta_layout.setObjectName("meta_layout")
         self.tags_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.tags_label.setStyleSheet("font-size: 9px; color: palette(placeholder-text);")
         self.tags_label.setObjectName("tags_label")
         self.meta_layout.addWidget(self.tags_label)
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.meta_layout.addItem(spacerItem1)
         self.date_label = QtWidgets.QLabel(parent=BookmarkItemWidget)
-        self.date_label.setStyleSheet("font-size: 9px; color: palette(placeholder-text);")
         self.date_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight|QtCore.Qt.AlignmentFlag.AlignTrailing|QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.date_label.setObjectName("date_label")
         self.meta_layout.addWidget(self.date_label)

@@ -1901,7 +1901,434 @@ QLineEdit:read-only {
     border-bottom: 2px solid #adb5bd;
     background-color: #f8f9fa;
 }
+
+
+
+/*======================================= ADD BOOKMARK DIALOG =======================================*/
+
+AddBookmarkDialog {
+    background-color: #f8f9fa;
+}
+
+AddBookmarkDialog QLabel {
+    color: #495057;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    background-color: transparent;
+}
+
+AddBookmarkDialog QLabel[style*="font-weight: bold"] {
+    font-weight: bold;
+    font-size: 14px;
+    color: #2c3e50;
+    padding: 2px 0px;
+}
+
+AddBookmarkDialog QLineEdit {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+AddBookmarkDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+AddBookmarkDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+AddBookmarkDialog QTextEdit {
+    background-color: #ffffff;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+AddBookmarkDialog QTextEdit:focus {
+    border: 1px solid #E16428;
+}
+
+AddBookmarkDialog QPushButton#add_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+AddBookmarkDialog QPushButton#add_btn:hover {
+    background-color: #c8531f;
+}
+
+AddBookmarkDialog QPushButton#add_btn:pressed {
+    background-color: #ad420f;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn:pressed {
+    background-color: #495057;
+    border-color: #495057;
+    color: white;
+}
+
+/*======================================= BOOKMARK ITEM WIDGET =======================================*/
+
+BookmarkItemWidget {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 8px;
+}
+
+BookmarkItemWidget:hover {
+    background-color: #f8f9fa;
+    border: 1px solid #E16428;
+}
+
+BookmarkItemWidget QLabel {
+    background-color: transparent;
+    color: #495057;
+}
+
+BookmarkItemWidget QLabel#title_label {
+    font-weight: bold;
+    font-size: 12px;
+    color: #2c3e50;
+}
+
+BookmarkItemWidget QLabel#url_prefix_label {
+    font-size: 10px;
+    color: #6c757d;
+}
+
+BookmarkItemWidget QLabel#url_label {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    padding: 4px;
+    font-family: monospace;
+    font-size: 10px;
+    color: #495057;
+}
+
+BookmarkItemWidget QLabel#description_title_label {
+    font-size: 10px;
+    color: #6c757d;
+    font-weight: bold;
+}
+
+BookmarkItemWidget QLabel#tags_label {
+    font-size: 9px;
+    color: #adb5bd;
+}
+
+BookmarkItemWidget QLabel#date_label {
+    font-size: 9px;
+    color: #adb5bd;
+}
+
+BookmarkItemWidget QPushButton {
+    background-color: #ffffff;
+    border: 1px solid #adb5bd;
+    border-radius: 3px;
+    font-size: 10px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+}
+
+BookmarkItemWidget QPushButton#edit_btn:hover {
+    background-color: #e6f3ff;
+    border-color: #0d6efd;
+}
+
+BookmarkItemWidget QPushButton#copy_btn:hover {
+    background-color: #e6ffe6;
+    border-color: #198754;
+}
+
+BookmarkItemWidget QPushButton#open_btn:hover {
+    background-color: #fff0e6;
+    border-color: #E16428;
+}
+
+BookmarkItemWidget QPushButton#delete_btn:hover {
+    background-color: #ffe6e6;
+    border: 1px solid #dc3545;
+}
+
+BookmarkItemWidget QPushButton:pressed {
+    background-color: #e9ecef;
+}
+
+BookmarkItemWidget QTextEdit#description_edit {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    padding: 4px;
+    font-size: 10px;
+    color: #495057;
+}
+
+BookmarkItemWidget QTextEdit#description_edit:focus {
+    border: 1px solid #E16428;
+}
+
+BookmarkItemWidget QTextEdit#description_edit[readOnly="true"] {
+    background-color: #ffffff;
+}
+
+/*======================================= BOOKMARKS WIDGET =======================================*/
+
+BookmarksWidget {
+    background-color: #f8f9fa;
+}
+
+BookmarksWidget QLabel#title_label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+BookmarksWidget QLineEdit#search_input {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+BookmarksWidget QLineEdit#search_input:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+BookmarksWidget QLineEdit#search_input:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+BookmarksWidget QPushButton#add_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-weight: bold;
+}
+
+BookmarksWidget QPushButton#add_btn:hover {
+    background-color: #c8531f;
+}
+
+BookmarksWidget QPushButton#add_btn:pressed {
+    background-color: #ad420f;
+}
+
+BookmarksWidget QPushButton#clear_search_btn {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    min-width: 30px;
+    min-height: 30px;
+    max-width: 30px;
+    max-height: 30px;
+}
+
+BookmarksWidget QPushButton#clear_search_btn:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+BookmarksWidget QListWidget#bookmarks_list {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item {
+    border: none;
+    padding: 0px;
+    margin: 2px;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item:selected {
+    background-color: transparent;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item:hover {
+    background-color: transparent;
+}
+
+BookmarksWidget QGroupBox#groupBoxStats {
+    border-radius: 3px;
+    border-color: #dee2e6;
+    border-style: solid;
+    border-width: 1px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+BookmarksWidget QGroupBox#groupBoxStats::title {
+    color: #2c3e50;
+}
+
+BookmarksWidget QLabel {
+    color: #495057;
+    font-size: 12px;
+}
+
+/*======================================= EDIT BOOKMARK DIALOG =======================================*/
+
+EditBookmarkDialog {
+    background-color: #f8f9fa;
+}
+
+EditBookmarkDialog QLabel {
+    color: #495057;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    background-color: transparent;
+}
+
+EditBookmarkDialog QLabel[style*="font-weight: bold"] {
+    font-weight: bold;
+    font-size: 14px;
+    color: #2c3e50;
+    padding: 2px 0px;
+}
+
+EditBookmarkDialog QLineEdit {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+EditBookmarkDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+EditBookmarkDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+EditBookmarkDialog QTextEdit {
+    background-color: #ffffff;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+EditBookmarkDialog QTextEdit:focus {
+    border: 1px solid #E16428;
+}
+
+EditBookmarkDialog QPushButton#save_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+EditBookmarkDialog QPushButton#save_btn:hover {
+    background-color: #c8531f;
+}
+
+EditBookmarkDialog QPushButton#save_btn:pressed {
+    background-color: #ad420f;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:pressed {
+    background-color: #495057;
+    border-color: #495057;
+    color: white;
+}
         """
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         # Темная тема
         self.stylesheets["dark"] = """
@@ -3638,6 +4065,427 @@ QLabel {
     color: #cccccc;
     font-size: 12px;
     padding: 0px 5px;
+}
+
+/*======================================= ADD BOOKMARK DIALOG =======================================*/
+
+AddBookmarkDialog {
+    background-color: #0d1117 !important;
+}
+
+AddBookmarkDialog QLabel {
+    color: #e0e0e0 !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    font-size: 13px !important;
+    background-color: transparent !important;
+}
+
+AddBookmarkDialog QLabel[style*="font-weight: bold"] {
+    font-weight: bold !important;
+    font-size: 14px !important;
+    color: white !important;
+    padding: 2px 0px !important;
+}
+
+AddBookmarkDialog QLineEdit {
+    background-color: transparent !important;
+    color: white !important;
+    border: none !important;
+    border-bottom: 2px solid #E16428 !important;
+    padding: 8px 5px !important;
+    font-size: 14px !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    selection-background-color: #E16428 !important;
+}
+
+AddBookmarkDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.1) !important;
+}
+
+AddBookmarkDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.05) !important;
+}
+
+AddBookmarkDialog QTextEdit {
+    background-color: #0D1117 !important;
+    color: white !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    font-size: 13px !important;
+    selection-background-color: #E16428 !important;
+}
+
+AddBookmarkDialog QTextEdit:focus {
+    border: 1px solid #E16428 !important;
+}
+
+AddBookmarkDialog QPushButton#add_btn {
+    background-color: #E16428 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
+    min-width: 80px !important;
+}
+
+AddBookmarkDialog QPushButton#add_btn:hover {
+    background-color: #c8531f !important;
+}
+
+AddBookmarkDialog QPushButton#add_btn:pressed {
+    background-color: #ad420f !important;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn {
+    background-color: transparent !important;
+    color: #888888 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    min-width: 80px !important;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn:hover {
+    background-color: #444444 !important;
+    color: white !important;
+}
+
+AddBookmarkDialog QPushButton#cancel_btn:pressed {
+    background-color: #555555 !important;
+    border-color: #555555 !important;
+    color: white !important;
+}
+
+/*======================================= BOOKMARK ITEM WIDGET =======================================*/
+
+BookmarkItemWidget {
+    background-color: #0D1117 !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 6px !important;
+    padding: 8px !important;
+}
+
+BookmarkItemWidget:hover {
+    background-color: #2a3140 !important;
+    border: 1px solid #E16428 !important;
+}
+
+BookmarkItemWidget QLabel {
+    background-color: transparent !important;
+    color: #cccccc !important;
+}
+
+BookmarkItemWidget QLabel#title_label {
+    font-weight: bold !important;
+    font-size: 12px !important;
+    color: white !important;
+}
+
+BookmarkItemWidget QLabel#url_prefix_label {
+    font-size: 10px !important;
+    color: #888888 !important;
+}
+
+BookmarkItemWidget QLabel#url_label {
+    background-color: #0d1117 !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 4px !important;
+    padding: 4px 6px !important;
+    font-family: monospace !important;
+    font-size: 10px !important;
+    color: #cccccc !important;
+}
+
+BookmarkItemWidget QLabel#description_title_label {
+    font-size: 10px !important;
+    color: #888888 !important;
+    font-weight: bold !important;
+}
+
+BookmarkItemWidget QLabel#tags_label {
+    font-size: 9px !important;
+    color: #E16428 !important;
+    font-weight: bold !important;
+}
+
+BookmarkItemWidget QLabel#date_label {
+    font-size: 9px !important;
+    color: #888888 !important;
+}
+
+BookmarkItemWidget QPushButton {
+    background-color: #2d3746 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+    color: #cccccc !important;
+}
+
+BookmarkItemWidget QPushButton:hover {
+    background-color: #3d4756 !important;
+    border-color: #555555 !important;
+}
+
+BookmarkItemWidget QPushButton#edit_btn:hover {
+    background-color: #E16428 !important;
+    border-color: #E16428 !important;
+}
+
+BookmarkItemWidget QPushButton#copy_btn:hover {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+BookmarkItemWidget QPushButton#open_btn:hover {
+    background-color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+}
+
+BookmarkItemWidget QPushButton#delete_btn:hover {
+    background-color: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+}
+
+BookmarkItemWidget QPushButton:pressed {
+    background-color: #0D1117 !important;
+}
+
+BookmarkItemWidget QTextEdit#description_edit {
+    background-color: #0d1117 !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 4px !important;
+    padding: 6px !important;
+    font-size: 10px !important;
+    color: #cccccc !important;
+    selection-background-color: #E16428 !important;
+}
+
+BookmarkItemWidget QTextEdit#description_edit:focus {
+    border: 1px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.05) !important;
+}
+
+BookmarkItemWidget QTextEdit#description_edit[readOnly="true"] {
+    background-color: #0D1117 !important;
+}
+
+/*======================================= BOOKMARKS WIDGET =======================================*/
+
+BookmarksWidget {
+    background-color: #0d1117 !important;
+}
+
+BookmarksWidget QLabel#title_label {
+    font-weight: bold !important;
+    font-size: 14px !important;
+    color: white !important;
+    margin-bottom: 5px !important;
+}
+
+BookmarksWidget QLineEdit#search_input {
+    background-color: transparent !important;
+    color: white !important;
+    border: none !important;
+    border-bottom: 2px solid #E16428 !important;
+    padding: 8px 5px !important;
+    font-size: 14px !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    selection-background-color: #E16428 !important;
+}
+
+BookmarksWidget QLineEdit#search_input:hover {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.1) !important;
+}
+
+BookmarksWidget QLineEdit#search_input:focus {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.05) !important;
+}
+
+BookmarksWidget QPushButton#add_btn {
+    background-color: #E16428 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+    font-weight: bold !important;
+}
+
+BookmarksWidget QPushButton#add_btn:hover {
+    background-color: #c8531f !important;
+}
+
+BookmarksWidget QPushButton#add_btn:pressed {
+    background-color: #ad420f !important;
+}
+
+BookmarksWidget QPushButton#clear_search_btn {
+    background-color: transparent !important;
+    color: #888888 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 4px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    max-width: 30px !important;
+    max-height: 30px !important;
+}
+
+BookmarksWidget QPushButton#clear_search_btn:hover {
+    background-color: #444444 !important;
+    color: white !important;
+}
+
+BookmarksWidget QListWidget#bookmarks_list {
+    background-color: #0D1117 !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 6px !important;
+    padding: 2px !important;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item {
+    border: none !important;
+    padding: 0px !important;
+    margin: 2px !important;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item:selected {
+    background-color: transparent !important;
+}
+
+BookmarksWidget QListWidget#bookmarks_list::item:hover {
+    background-color: transparent !important;
+}
+
+BookmarksWidget QGroupBox#groupBoxStats {
+    border-radius: 6px !important;
+    border-color: #2d3746 !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    font-weight: bold !important;
+    color: white !important;
+    background-color: #0D1117 !important;
+    margin-top: 10px !important;
+}
+
+BookmarksWidget QGroupBox#groupBoxStats::title {
+    color: white !important;
+    subcontrol-origin: margin !important;
+    left: 10px !important;
+    padding: 0 5px 0 5px !important;
+}
+
+BookmarksWidget QLabel {
+    color: #cccccc !important;
+    font-size: 12px !important;
+    background-color: transparent !important;
+}
+
+/*======================================= EDIT BOOKMARK DIALOG =======================================*/
+
+EditBookmarkDialog {
+    background-color: #0d1117 !important;
+}
+
+EditBookmarkDialog QLabel {
+    color: #e0e0e0 !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    font-size: 13px !important;
+    background-color: transparent !important;
+}
+
+EditBookmarkDialog QLabel[style*="font-weight: bold"] {
+    font-weight: bold !important;
+    font-size: 14px !important;
+    color: white !important;
+    padding: 2px 0px !important;
+}
+
+EditBookmarkDialog QLineEdit {
+    background-color: transparent !important;
+    color: white !important;
+    border: none !important;
+    border-bottom: 2px solid #E16428 !important;
+    padding: 8px 5px !important;
+    font-size: 14px !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    selection-background-color: #E16428 !important;
+}
+
+EditBookmarkDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.1) !important;
+}
+
+EditBookmarkDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428 !important;
+    background-color: rgba(225, 100, 40, 0.05) !important;
+}
+
+EditBookmarkDialog QTextEdit {
+    background-color: #0D1117 !important;
+    color: white !important;
+    border: 1px solid #2d3746 !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    font-family: "Segoe UI", "Arial", sans-serif !important;
+    font-size: 13px !important;
+    selection-background-color: #E16428 !important;
+}
+
+EditBookmarkDialog QTextEdit:focus {
+    border: 1px solid #E16428 !important;
+}
+
+EditBookmarkDialog QPushButton#save_btn {
+    background-color: #E16428 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
+    min-width: 80px !important;
+}
+
+EditBookmarkDialog QPushButton#save_btn:hover {
+    background-color: #c8531f !important;
+}
+
+EditBookmarkDialog QPushButton#save_btn:pressed {
+    background-color: #ad420f !important;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn {
+    background-color: transparent !important;
+    color: #888888 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    min-width: 80px !important;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:hover {
+    background-color: #444444 !important;
+    color: white !important;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:pressed {
+    background-color: #555555 !important;
+    border-color: #555555 !important;
+    color: white !important;
 }
         """
 

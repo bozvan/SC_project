@@ -97,6 +97,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.tags_update_timer.setSingleShot(True)
         self.tags_update_timer.timeout.connect(self.delayed_tags_update)
 
+
         # Добавляем таймер для отложенного обновления списка заметок
         self.update_list_timer = QTimer()
         self.update_list_timer.setSingleShot(True)
@@ -489,12 +490,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.toggle_options_btn.setChecked(False)
         self.toggle_options_btn.clicked.connect(self.toggle_extended_options)
 
-        # Устанавливаем objectName для стилизации
-        self.add_task_btn.setObjectName("add_task_btn")
-        self.toggle_options_btn.setObjectName("toggle_options_btn")
-        self.clear_due_date_btn.setObjectName("clear_due_date_btn")
-        self.due_date_edit.setObjectName("due_date_edit")
-
         # Собираем всю форму
         task_form_layout.addLayout(description_layout)
         task_form_layout.addWidget(self.toggle_options_btn)
@@ -737,7 +732,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         layout.addLayout(due_date_layout)
 
         # Кнопки
-        button_layout = QHBoxLayout()
+        #button_layout = QHBoxLayout()
         #save_btn = QPushButton("Сохранить")
         #cancel_btn = QPushButton("Отмена")
 
@@ -746,7 +741,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         #button_layout.addWidget(save_btn)
         #button_layout.addWidget(cancel_btn)
-        layout.addLayout(button_layout)
+        #layout.addLayout(button_layout)
 
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             # Обновляем задачу

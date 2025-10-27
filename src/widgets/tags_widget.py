@@ -288,8 +288,7 @@ class TagsWidget(QWidget):
         reply = QMessageBox.question(
             self,
             "Подтверждение удаления",
-            f"Вы уверены, что хотите удалить тег '{tag_name}'?\n\n"
-            f"Это действие удалит тег из всех записей в workspace {self.workspace_id}.",
+            f"Вы уверены, что хотите удалить тег '{tag_name}'?\n\n",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )

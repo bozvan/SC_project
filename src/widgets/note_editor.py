@@ -11,13 +11,16 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
 
     note_saved = pyqtSignal(int)  # Сигнал при сохранении заметки
     window_closed = pyqtSignal(int)  # Сигнал при закрытии окна
-    note_updated = pyqtSignal(int, str, str, list)  # ← ДОБАВЬТЕ ЭТОТ СИГНАЛ
+    note_updated = pyqtSignal(int, str, str, list)
 
     def __init__(self, note_manager, note_id):
         super().__init__()  # Без parent для независимости
         self.setupUi(self)
 
-        # Установите флаги для настоящего независимого окна
+        # Явно устанавливаем objectName для всех виджетов
+        self.setup_object_names()
+
+        # Устанавливаем флаги для настоящего независимого окна
         self.setWindowFlags(
             Qt.WindowType.Window |
             Qt.WindowType.WindowCloseButtonHint |
@@ -38,6 +41,19 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
         self.load_note()
         self.setup_connections()
 
+    def setup_object_names(self):
+        """Явно устанавливает objectName для всех виджетов"""
+        # Для QLineEdit и других важных виджетов
+        self.title_input.setObjectName("title_input")
+        self.tags_input.setObjectName("tags_input")
+        self.content_editor.setObjectName("content_editor")
+        self.save_btn.setObjectName("save_btn")
+        self.cancel_btn.setObjectName("cancel_btn")
+        self.status_label.setObjectName("status_label")
+        self.title_label.setObjectName("title_label")
+        self.content_label.setObjectName("content_label")
+        self.tags_label.setObjectName("tags_label")
+
     def setup_rich_editor(self):
         """Заменяет стандартный QTextEdit на RichTextEditor"""
         try:
@@ -48,6 +64,7 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
 
             # Создаем богатый текстовый редактор
             self.rich_editor = RichTextEditor()
+            self.rich_editor.setObjectName("content_editor")  # Важно: тот же objectName
 
             # Заменяем в layout
             layout = self.centralwidget.layout()
@@ -99,7 +116,6 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
                 tags_text = ", ".join([tag.name for tag in note.tags])
                 self.tags_input.setText(tags_text)
 
-            #self.setWindowTitle(f"Редактор: {note.title}")
             self.setWindowIcon(QIcon("assets/icons/icon3.png"))
             self.setWindowTitle("")
             self.update_status("✅ Загружено")
@@ -111,7 +127,7 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
 
     def schedule_auto_save(self):
         """Планирует автосохранение через 3 секунды после последнего изменения"""
-        self.auto_save_timer.start(50)  # 50 мс
+        self.auto_save_timer.start(3000)  # 3 секунды
         self.update_status("⏳ Сохранение через 3с...")
 
     def auto_save_note(self):
@@ -138,7 +154,7 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
             if success:
                 self.update_status("✅ Автосохранено")
                 self.note_saved.emit(self.note_id)
-                self.note_updated.emit(self.note_id, title, content, tags)  # ← Используем новый сигнал
+                self.note_updated.emit(self.note_id, title, content, tags)
                 print(f"✅ Автосохранение заметки {self.note_id} в отдельном окне")
             else:
                 self.update_status("❌ Ошибка автосохранения")
@@ -153,15 +169,21 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
         """Обновляет статус сохранения"""
         self.status_label.setText(message)
 
-        # Цвета статуса
+        # Устанавливаем свойство для CSS класса
         if "✅" in message:
-            self.status_label.setStyleSheet("color: green; font-size: 11px;")
-        elif "❌" in message or "⚠️" in message:
-            self.status_label.setStyleSheet("color: red; font-size: 11px;")
+            self.status_label.setProperty("status", "success")
+        elif "❌" in message:
+            self.status_label.setProperty("status", "error")
+        elif "⚠️" in message:
+            self.status_label.setProperty("status", "warning")
         elif "⏳" in message:
-            self.status_label.setStyleSheet("color: orange; font-size: 11px;")
+            self.status_label.setProperty("status", "warning")
         else:
-            self.status_label.setStyleSheet("color: gray; font-size: 11px;")
+            self.status_label.setProperty("status", "info")
+
+        # Принудительно обновляем стиль
+        self.status_label.style().unpolish(self.status_label)
+        self.status_label.style().polish(self.status_label)
 
     def save_note(self):
         """Ручное сохранение заметки"""
@@ -190,7 +212,7 @@ class NoteEditorWindow(QMainWindow, Ui_NoteEditorWindow):
         if success:
             self.update_status("✅ Сохранено")
             self.note_saved.emit(self.note_id)
-            self.note_updated.emit(self.note_id, title, content, tags)  # ← Используем новый сигнал
+            self.note_updated.emit(self.note_id, title, content, tags)
             QMessageBox.information(self, "Успех", "Заметка сохранена!")
             print(f"✅ Заметка {self.note_id} сохранена в отдельном окне")
         else:

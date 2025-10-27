@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QTextEdit, QToolBar, QVBoxLayout, QWidget,
-                             QFontComboBox, QSpinBox, QColorDialog)
+                             QFontComboBox, QSpinBox, QColorDialog, QToolButton)
 from PyQt6.QtGui import (QTextCharFormat, QFont, QTextListFormat,
                          QTextBlockFormat, QTextCursor, QAction)
 from PyQt6.QtCore import Qt, QSize
@@ -41,95 +41,190 @@ class RichTextEditor(QWidget):
         self.text_edit.cursorPositionChanged.connect(self.update_format_actions)
         self.text_edit.currentCharFormatChanged.connect(self.on_char_format_changed)
 
+    def create_toolbar(self):
+        """Создание панели инструментов"""
+        toolbar = QToolBar("Форматирование")
+        toolbar.setIconSize(QSize(16, 16))
+        toolbar.setFixedHeight(32)
+
+        # Шрифт
+        self.font_combo = QFontComboBox()
+        self.font_combo.setCurrentFont(QFont(self.default_font_family))
+        self.font_combo.setFixedHeight(24)
+        self.font_combo.currentFontChanged.connect(self.set_font_family)
+        toolbar.addWidget(self.font_combo)
+
+        # Размер шрифта - увеличенная ширина
+        self.font_size = QSpinBox()
+        self.font_size.setRange(8, 72)
+        self.font_size.setValue(self.default_font_size)
+        self.font_size.setFixedHeight(24)
+        self.font_size.setFixedWidth(70)  # Увеличили ширину
+
+        # Явно устанавливаем стиль для спинбокса
+        spinbox_style = """
+               QSpinBox {
+                   background-color: #0d1117;
+                   color: white;
+                   border: 1px solid #444444;
+                   border-radius: 3px;
+                   padding: 4px 8px;
+                   font-family: "Segoe UI", "Arial", sans-serif;
+                   font-size: 12px;
+               }
+               QSpinBox:hover {
+                   border: 1px solid #666666;
+               }
+               QSpinBox:focus {
+                   border: 1px solid #E16428;
+               }
+               QSpinBox::up-button, QSpinBox::down-button {
+                   background-color: #2d3746;
+                   border: none;
+                   width: 15px;
+                   height: 10px;
+                   margin: 0px;
+               }
+               QSpinBox::up-button {
+                   subcontrol-position: top right;
+                   border-bottom: 1px solid #1a1f29;
+               }
+               QSpinBox::down-button {
+                   subcontrol-position: bottom right;
+                   border-top: 1px solid #1a1f29;
+               }
+               QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+                   background-color: #3d4756;
+               }
+               QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {
+                   background-color: #E16428;
+               }
+               QSpinBox::up-arrow {
+                   width: 0px;
+                   height: 0px;
+                   border-left: 4px solid transparent;
+                   border-right: 4px solid transparent;
+                   border-bottom: 5px solid #cccccc;
+               }
+               QSpinBox::down-arrow {
+                   width: 0px;
+                   height: 0px;
+                   border-left: 4px solid transparent;
+                   border-right: 4px solid transparent;
+                   border-top: 5px solid #cccccc;
+               }
+               QSpinBox::up-button:hover::up-arrow {
+                   border-bottom-color: white;
+               }
+               QSpinBox::down-button:hover::down-arrow {
+                   border-top-color: white;
+               }
+               QSpinBox::up-button:pressed::up-arrow, 
+               QSpinBox::down-button:pressed::down-arrow {
+                   border-bottom-color: white;
+                   border-top-color: white;
+               }
+           """
+        self.font_size.setStyleSheet(spinbox_style)
+
+        self.font_size.valueChanged.connect(self.set_font_size)
+        toolbar.addWidget(self.font_size)
+
+
+        # Добавляем разделитель с отступом
+        toolbar.addSeparator()
+
+        # Создаем кнопки с фиксированным размером
+        button_style = "QToolButton { min-width: 28px; min-height: 24px; max-height: 24px; }"
+
+        # Жирный
+        bold_btn = QToolButton()
+        bold_btn.setText("B")
+        bold_btn.setCheckable(True)
+        bold_btn.setStyleSheet(button_style)
+        bold_btn.clicked.connect(self.toggle_bold)
+        toolbar.addWidget(bold_btn)
+        self.format_actions['bold'] = bold_btn
+
+        # Курсив
+        italic_btn = QToolButton()
+        italic_btn.setText("I")
+        italic_btn.setCheckable(True)
+        italic_btn.setStyleSheet(button_style)
+        italic_btn.clicked.connect(self.toggle_italic)
+        toolbar.addWidget(italic_btn)
+        self.format_actions['italic'] = italic_btn
+
+        # Подчеркивание
+        underline_btn = QToolButton()
+        underline_btn.setText("U")
+        underline_btn.setCheckable(True)
+        underline_btn.setStyleSheet(button_style)
+        underline_btn.clicked.connect(self.toggle_underline)
+        toolbar.addWidget(underline_btn)
+        self.format_actions['underline'] = underline_btn
+
+        toolbar.addSeparator()
+
+        # Цвет текста
+        color_btn = QToolButton()
+        color_btn.setText("Ц")
+        color_btn.setStyleSheet(button_style)
+        color_btn.clicked.connect(self.set_text_color)
+        toolbar.addWidget(color_btn)
+
+        toolbar.addSeparator()
+
+        # Выравнивание
+        align_left_btn = QToolButton()
+        align_left_btn.setText("◀")
+        align_left_btn.setCheckable(True)
+        align_left_btn.setStyleSheet(button_style)
+        align_left_btn.clicked.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignLeft))
+        toolbar.addWidget(align_left_btn)
+        self.format_actions['align_left'] = align_left_btn
+
+        align_center_btn = QToolButton()
+        align_center_btn.setText("Ⓧ")
+        align_center_btn.setCheckable(True)
+        align_center_btn.setStyleSheet(button_style)
+        align_center_btn.clicked.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignCenter))
+        toolbar.addWidget(align_center_btn)
+        self.format_actions['align_center'] = align_center_btn
+
+        align_right_btn = QToolButton()
+        align_right_btn.setText("▶")
+        align_right_btn.setCheckable(True)
+        align_right_btn.setStyleSheet(button_style)
+        align_right_btn.clicked.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignRight))
+        toolbar.addWidget(align_right_btn)
+        self.format_actions['align_right'] = align_right_btn
+
+        toolbar.addSeparator()
+
+        # Отменить/Повторить
+        undo_btn = QToolButton()
+        undo_btn.setText("↶")
+        undo_btn.setToolTip("Отменить (Ctrl+Z)")
+        undo_btn.setStyleSheet(button_style)
+        undo_btn.clicked.connect(self.text_edit.undo)
+        toolbar.addWidget(undo_btn)
+
+        redo_btn = QToolButton()
+        redo_btn.setText("↷")
+        redo_btn.setToolTip("Повторить (Ctrl+Y)")
+        redo_btn.setStyleSheet(button_style)
+        redo_btn.clicked.connect(self.text_edit.redo)
+        toolbar.addWidget(redo_btn)
+
+        return toolbar
+
+    # Остальные методы остаются без изменений...
     def on_char_format_changed(self, fmt):
         """Обработчик изменения текущего формата символов"""
         if self._updating_format:
             return
         self.update_format_actions()
-
-    def create_toolbar(self):
-        """Создание панели инструментов"""
-        toolbar = QToolBar("Форматирование")
-        toolbar.setIconSize(QSize(16, 16))
-
-        # Шрифт
-        self.font_combo = QFontComboBox()
-        self.font_combo.setCurrentFont(QFont(self.default_font_family))
-        self.font_combo.currentFontChanged.connect(self.set_font_family)
-        toolbar.addWidget(self.font_combo)
-
-        # Размер шрифта
-        self.font_size = QSpinBox()
-        self.font_size.setRange(8, 72)
-        self.font_size.setValue(self.default_font_size)
-        self.font_size.valueChanged.connect(self.set_font_size)
-        toolbar.addWidget(self.font_size)
-
-        toolbar.addSeparator()
-
-        # Жирный
-        bold_action = QAction("B", self)
-        bold_action.setCheckable(True)
-        bold_action.triggered.connect(self.toggle_bold)
-        toolbar.addAction(bold_action)
-        self.format_actions['bold'] = bold_action
-
-        # Курсив
-        italic_action = QAction("I", self)
-        italic_action.setCheckable(True)
-        italic_action.triggered.connect(self.toggle_italic)
-        toolbar.addAction(italic_action)
-        self.format_actions['italic'] = italic_action
-
-        # Подчеркивание
-        underline_action = QAction("U", self)
-        underline_action.setCheckable(True)
-        underline_action.triggered.connect(self.toggle_underline)
-        toolbar.addAction(underline_action)
-        self.format_actions['underline'] = underline_action
-
-        toolbar.addSeparator()
-
-        # Цвет текста
-        color_action = QAction("Ц", self)
-        color_action.triggered.connect(self.set_text_color)
-        toolbar.addAction(color_action)
-
-        toolbar.addSeparator()
-
-        # Выравнивание
-        align_left_action = QAction("◀", self)
-        align_left_action.setCheckable(True)
-        align_left_action.triggered.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignLeft))
-        toolbar.addAction(align_left_action)
-        self.format_actions['align_left'] = align_left_action
-
-        align_center_action = QAction("Ⓧ", self)
-        align_center_action.setCheckable(True)
-        align_center_action.triggered.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignCenter))
-        toolbar.addAction(align_center_action)
-        self.format_actions['align_center'] = align_center_action
-
-        align_right_action = QAction("▶", self)
-        align_right_action.setCheckable(True)
-        align_right_action.triggered.connect(lambda: self.set_alignment(Qt.AlignmentFlag.AlignRight))
-        toolbar.addAction(align_right_action)
-        self.format_actions['align_right'] = align_right_action
-
-        toolbar.addSeparator()
-
-        # Отменить/Повторить
-        undo_action = QAction("↶", self)
-        undo_action.setToolTip("Отменить (Ctrl+Z)")
-        undo_action.triggered.connect(self.text_edit.undo)
-        toolbar.addAction(undo_action)
-
-        redo_action = QAction("↷", self)
-        redo_action.setToolTip("Повторить (Ctrl+Y)")
-        redo_action.triggered.connect(self.text_edit.redo)
-        toolbar.addAction(redo_action)
-
-        return toolbar
 
     def get_current_format(self):
         """Получает текущий формат символов"""

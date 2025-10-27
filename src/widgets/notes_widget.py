@@ -97,10 +97,6 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.tags_update_timer.setSingleShot(True)
         self.tags_update_timer.timeout.connect(self.delayed_tags_update)
 
-        # Убираем кнопку Сохранить из UI
-        self.save_btn.setVisible(False)
-        self.save_btn.setEnabled(False)
-
         # Добавляем таймер для отложенного обновления списка заметок
         self.update_list_timer = QTimer()
         self.update_list_timer.setSingleShot(True)
@@ -213,23 +209,14 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.tags_widget.tag_selected.connect(self.on_tag_selected_from_widget)
         self.verticalLayout.addWidget(self.tags_widget)
 
-        # УБИРАЕМ КНОПКУ СОХРАНЕНИЯ
-        self.save_btn.setVisible(False)
-        self.save_btn.setEnabled(False)
-        self.cancel_btn.setVisible(False)
-
-        # Добавляем кнопку открепления
-        self.detach_btn = QPushButton("📌 Открепить")
+        # СОЗДАЕМ КНОПКУ ОТКРЕПЛЕНИЯ
+        self.detach_btn = QPushButton("⧉")
+        self.detach_btn.setObjectName("detach_btn")  # Важно для стилей!
         self.detach_btn.setToolTip("Открыть в отдельном окне")
         self.detach_btn.clicked.connect(self.detach_note)
 
-        # Добавьте кнопку в ваш layout, например в заголовок:
-        header_layout = QHBoxLayout()
-        header_layout.addWidget(QLabel("Редактор заметки"))
-        header_layout.addStretch()
-        header_layout.addWidget(self.detach_btn)
-
-        self.verticalLayout.insertLayout(0, header_layout)
+        # ДОБАВЛЯЕМ КНОПКУ В СУЩЕСТВУЮЩИЙ LAYOUT КНОПОК
+        self.search_layout.addWidget(self.detach_btn)
 
         self.left_widget.setMaximumWidth(250)
         self.left_widget.setMinimumWidth(250)
@@ -349,7 +336,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             self.tags_input.setText(tags_text)
 
         # Выключаем кнопку Сохранить (нет изменений)
-        self.save_btn.setEnabled(False)
+        #self.save_btn.setEnabled(False)
         self.current_note_id = None
         self.current_bookmark_id = bookmark.id
 
@@ -414,7 +401,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         # Создаем контейнер для задач
         self.tasks_container = QWidget()
         tasks_layout = QVBoxLayout(self.tasks_container)
-        tasks_layout.setContentsMargins(0, 10, 0, 0)
+        tasks_layout.setContentsMargins(0, 0, 0, 0)
 
         # Заголовок
         tasks_label = QLabel("Задачи этой заметки:")
@@ -501,6 +488,12 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         self.toggle_options_btn.setCheckable(True)
         self.toggle_options_btn.setChecked(False)
         self.toggle_options_btn.clicked.connect(self.toggle_extended_options)
+
+        # Устанавливаем objectName для стилизации
+        self.add_task_btn.setObjectName("add_task_btn")
+        self.toggle_options_btn.setObjectName("toggle_options_btn")
+        self.clear_due_date_btn.setObjectName("clear_due_date_btn")
+        self.due_date_edit.setObjectName("due_date_edit")
 
         # Собираем всю форму
         task_form_layout.addLayout(description_layout)
@@ -745,14 +738,14 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
 
         # Кнопки
         button_layout = QHBoxLayout()
-        save_btn = QPushButton("Сохранить")
-        cancel_btn = QPushButton("Отмена")
+        #save_btn = QPushButton("Сохранить")
+        #cancel_btn = QPushButton("Отмена")
 
-        save_btn.clicked.connect(dialog.accept)
-        cancel_btn.clicked.connect(dialog.reject)
+        #save_btn.clicked.connect(dialog.accept)
+        #cancel_btn.clicked.connect(dialog.reject)
 
-        button_layout.addWidget(save_btn)
-        button_layout.addWidget(cancel_btn)
+        #button_layout.addWidget(save_btn)
+        #button_layout.addWidget(cancel_btn)
         layout.addLayout(button_layout)
 
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
@@ -921,7 +914,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         """Настройка соединений"""
         self.new_note_btn.clicked.connect(self.on_new_note)
         self.delete_note_btn.clicked.connect(self.on_delete_note)
-        self.search_button.clicked.connect(self.on_search_clicked)
+        #self.search_button.clicked.connect(self.on_search_clicked)
 
         self.notes_list.currentItemChanged.connect(self.on_note_selected)
 

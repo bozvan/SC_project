@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_EditBookmarkDialog(object):
     def setupUi(self, EditBookmarkDialog):
         EditBookmarkDialog.setObjectName("EditBookmarkDialog")
-        EditBookmarkDialog.resize(500, 400)
+        EditBookmarkDialog.resize(500, 433)
         self.verticalLayout = QtWidgets.QVBoxLayout(EditBookmarkDialog)
         self.verticalLayout.setContentsMargins(10, 10, 10, 10)
         self.verticalLayout.setSpacing(10)
@@ -36,7 +36,6 @@ class Ui_EditBookmarkDialog(object):
         self.description_label.setObjectName("description_label")
         self.verticalLayout.addWidget(self.description_label)
         self.description_edit = QtWidgets.QTextEdit(parent=EditBookmarkDialog)
-        self.description_edit.setMaximumHeight(80)
         self.description_edit.setAcceptRichText(False)
         self.description_edit.setObjectName("description_edit")
         self.verticalLayout.addWidget(self.description_edit)

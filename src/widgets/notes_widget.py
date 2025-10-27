@@ -1325,6 +1325,13 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             focused_widget = self.focusWidget()
             print(f"🎯 Текущий фокус: {focused_widget}")
 
+            # ЕСЛИ ФОКУС В ПОЛЕ ВВОДА ЗАДАЧИ - НЕ МЕНЯЕМ ЕГО
+            if (focused_widget == self.new_task_input or
+                    (hasattr(self, 'priority_combo') and focused_widget == self.priority_combo) or
+                    (hasattr(self, 'due_date_edit') and focused_widget == self.due_date_edit)):
+                print("🎯 Фокус остается в форме задач")
+                return
+
             # Если фокус потерян, восстанавливаем его в поле тегов
             if (focused_widget != self.title_input and
                     focused_widget != self.tags_input and

@@ -495,90 +495,1412 @@ QInputDialog QPushButton[text="Отмена"]:pressed {
 
 /*======================================= QMessageBox =======================================*/
 
-QMessageBox QPushButton[text="No"] {
-    background-color: white;
-    color: white;
-    border: 1px solid #E16428;
-    border-radius: 4px;
-    padding: 6px 12px;
-    font-weight: bold;
-    min-width: 80px;
+QMessageBox {
+    background-color: #ffffff;
+    color: #2c3e50;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
 }
 
-QMessageBox QPushButton[text="No"]:hover {
+/* Заголовок окна */
+QMessageBox QLabel#qt_msgbox_label {
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: transparent;
+    padding: 10px;
+}
+
+/* Текст сообщения */
+QMessageBox QLabel#qt_msgboxex_label {
+    color: #495057;
+    font-size: 14px;
+    background-color: transparent;
+    line-height: 1.5;
+    padding: 10px;
+}
+
+/* Иконка сообщения */
+QMessageBox QLabel#qt_msgboxex_icon_label {
+    background-color: transparent;
+}
+
+/* ОБЩИЕ СТИЛИ КНОПОК */
+QMessageBox QPushButton {
+    background-color: transparent;
+    color: #495057;
+    border: 1px solid #adb5bd;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 12px;
+    min-width: 80px;
+    margin: 2px;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+QMessageBox QPushButton:pressed {
+    background-color: #e9ecef;
+    border-color: #495057;
+}
+
+QMessageBox QPushButton:focus {
+    border: 2px solid #E16428;
+    outline: none;
+}
+
+/* === СИСТЕМА КНОПОК === */
+
+/* 1. ПРИЗЫВАЮЩИЕ К ДЕЙСТВИЮ (ОСНОВНЫЕ) - ОРАНЖЕВАЯ ЗАЛИВКА */
+/* Подтверждение, сохранение, повторить */
+QMessageBox QPushButton[text="Yes"],
+QMessageBox QPushButton[text="Да"],
+QMessageBox QPushButton[text="OK"],
+QMessageBox QPushButton[text="ОК"],
+QMessageBox QPushButton[text="Save"], 
+QMessageBox QPushButton[text="Сохранить"],
+QMessageBox QPushButton[text="Retry"],
+QMessageBox QPushButton[text="Повторить"] {
+    background-color: #E16428;
+    color: white;
+    border: 1px solid #E16428;
+    font-weight: bold;
+}
+
+QMessageBox QPushButton[text="Yes"]:hover,
+QMessageBox QPushButton[text="Да"]:hover,
+QMessageBox QPushButton[text="OK"]:hover,
+QMessageBox QPushButton[text="ОК"]:hover,
+QMessageBox QPushButton[text="Save"]:hover,
+QMessageBox QPushButton[text="Сохранить"]:hover,
+QMessageBox QPushButton[text="Retry"]:hover,
+QMessageBox QPushButton[text="Повторить"]:hover {
+    background-color: #f17337;
+    border-color: #f17337;
+}
+
+QMessageBox QPushButton[text="Yes"]:pressed,
+QMessageBox QPushButton[text="Да"]:pressed,
+QMessageBox QPushButton[text="OK"]:pressed,
+QMessageBox QPushButton[text="ОК"]:pressed,
+QMessageBox QPushButton[text="Save"]:pressed,
+QMessageBox QPushButton[text="Сохранить"]:pressed,
+QMessageBox QPushButton[text="Retry"]:pressed,
+QMessageBox QPushButton[text="Повторить"]:pressed {
     background-color: #c8531f;
     border-color: #c8531f;
 }
 
-QMessageBox QPushButton[text="No"]:pressed {
-    background-color: #ad420f;
-    border-color: #ad420f;
+/* 2. ОТМЕНА ДЕЙСТВИЯ (ВТОРИЧНЫЕ) - БЕЗ ЗАЛИВКИ */
+/* Отмена, закрыть, нет, игнорировать */
+QMessageBox QPushButton[text="No"],
+QMessageBox QPushButton[text="Нет"], 
+QMessageBox QPushButton[text="Cancel"],
+QMessageBox QPushButton[text="Отмена"],
+QMessageBox QPushButton[text="Close"],
+QMessageBox QPushButton[text="Закрыть"],
+QMessageBox QPushButton[text="Ignore"],
+QMessageBox QPushButton[text="Игнорировать"],
+QMessageBox QPushButton[text="Discard"],
+QMessageBox QPushButton[text="Не сохранять"] {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #adb5bd;
+    font-weight: normal;
 }
 
-QMessageBox QPushButton[text="Yes"] {
+QMessageBox QPushButton[text="No"]:hover,
+QMessageBox QPushButton[text="Нет"]:hover,
+QMessageBox QPushButton[text="Cancel"]:hover,
+QMessageBox QPushButton[text="Отмена"]:hover,
+QMessageBox QPushButton[text="Close"]:hover,
+QMessageBox QPushButton[text="Закрыть"]:hover,
+QMessageBox QPushButton[text="Ignore"]:hover,
+QMessageBox QPushButton[text="Игнорировать"]:hover,
+QMessageBox QPushButton[text="Discard"]:hover,
+QMessageBox QPushButton[text="Не сохранять"]:hover {
+    background-color: #f8f9fa;
+    border-color: #6c757d;
+}
+
+QMessageBox QPushButton[text="No"]:pressed,
+QMessageBox QPushButton[text="Нет"]:pressed,
+QMessageBox QPushButton[text="Cancel"]:pressed,
+QMessageBox QPushButton[text="Отмена"]:pressed,
+QMessageBox QPushButton[text="Close"]:pressed,
+QMessageBox QPushButton[text="Закрыть"]:pressed,
+QMessageBox QPushButton[text="Ignore"]:pressed,
+QMessageBox QPushButton[text="Игнорировать"]:pressed,
+QMessageBox QPushButton[text="Discard"]:pressed,
+QMessageBox QPushButton[text="Не сохранять"]:pressed {
+    background-color: #e9ecef;
+    border-color: #495057;
+}
+
+/* 3. ОПАСНЫЕ ДЕЙСТВИЯ (КРАСНАЯ ЗАЛИВКА) */
+QMessageBox QPushButton[text="Delete"],
+QMessageBox QPushButton[text="Удалить"],
+QMessageBox QPushButton[text="Remove"],
+QMessageBox QPushButton[text="Удалить навсегда"] {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+    font-weight: bold;
+}
+
+QMessageBox QPushButton[text="Delete"]:hover,
+QMessageBox QPushButton[text="Удалить"]:hover,
+QMessageBox QPushButton[text="Remove"]:hover,
+QMessageBox QPushButton[text="Удалить навсегда"]:hover {
+    background-color: #e74c5c;
+    border-color: #e74c5c;
+}
+
+QMessageBox QPushButton[text="Delete"]:pressed,
+QMessageBox QPushButton[text="Удалить"]:pressed,
+QMessageBox QPushButton[text="Remove"]:pressed,
+QMessageBox QPushButton[text="Удалить навсегда"]:pressed {
+    background-color: #c82333;
+    border-color: #c82333;
+}
+
+/* Область кнопок */
+QMessageBox QDialogButtonBox {
+    background-color: transparent;
+    border-top: 1px solid #dee2e6;
+    padding: 10px;
+}
+
+/*======================================= NOTE EDITOR WINDOW =======================================*/
+
+NoteEditorWindow {
+    background-color: #ffffff;
+}
+
+/* Базовые стили для всех QLineEdit в окне */
+NoteEditorWindow QLineEdit {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+NoteEditorWindow QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+NoteEditorWindow QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Убираем inline стили и применяем наши */
+NoteEditorWindow QLabel {
+    color: #333333;
+    font-family: "Segoe UI", "Arial", sans-serif;
+}
+
+NoteEditorWindow QLabel#title_label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333333;
+}
+
+NoteEditorWindow QLabel#content_label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333333;
+}
+
+NoteEditorWindow QLabel#tags_label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333333;
+}
+
+/* Текстовый редактор */
+NoteEditorWindow QTextEdit#content_editor {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+NoteEditorWindow QTextEdit#content_editor:focus {
+    border: 1px solid #E16428;
+}
+
+/* Статус бар с классами для разных состояний */
+NoteEditorWindow QLabel#status_label {
+    color: #666666;
+    font-size: 11px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    background-color: transparent;
+    padding: 2px 5px;
+}
+
+/* Классы для разных состояний статуса */
+NoteEditorWindow QLabel#status_label[status="success"] {
+    color: #4CAF50;
+}
+
+NoteEditorWindow QLabel#status_label[status="error"] {
+    color: #F44336;
+}
+
+NoteEditorWindow QLabel#status_label[status="warning"] {
+    color: #FF9800;
+}
+
+NoteEditorWindow QLabel#status_label[status="info"] {
+    color: #2196F3;
+}
+
+/* Кнопка сохранения */
+NoteEditorWindow QPushButton#save_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+NoteEditorWindow QPushButton#save_btn:hover {
+    background-color: #c8531f;
+}
+
+NoteEditorWindow QPushButton#save_btn:pressed {
+    background-color: #ad420f;
+}
+
+/* Кнопка отмены */
+NoteEditorWindow QPushButton#cancel_btn {
     background-color: transparent;
     color: #666666;
     border: 1px solid #666666;
     border-radius: 4px;
-    padding: 6px 12px;
+    padding: 8px 16px;
+    font-size: 13px;
     min-width: 80px;
 }
 
-QMessageBox QPushButton[text="Yes"]:hover {
+NoteEditorWindow QPushButton#cancel_btn:hover {
     background-color: #666666;
     color: white;
 }
 
-QMessageBox QPushButton[text="Yes"]:pressed {
+NoteEditorWindow QPushButton#cancel_btn:pressed {
     background-color: #555555;
     border-color: #555555;
     color: white;
 }
 
-/* Для русского текста */
-QMessageBox QPushButton[text="Нет"] {
-    background-color: white;
+/*======================================= TASK WIDGET =======================================*/
+
+TaskWidget {
+    background-color: transparent;
+}
+
+TaskWidget QCheckBox {
+    background-color: transparent;
+    color: #333333;
+    spacing: 5px;
+}
+
+TaskWidget QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #999999;
+    border-radius: 3px;
+    background-color: #ffffff;
+}
+
+TaskWidget QCheckBox::indicator:hover {
+    border: 1px solid #E16428;
+    background-color: #f5f5f5;
+}
+
+TaskWidget QCheckBox::indicator:checked {
+    background-color: #E16428;
+    border: 1px solid #E16428;
+}
+
+TaskWidget QCheckBox::indicator:checked:hover {
+    background-color: #c8531f;
+    border: 1px solid #c8531f;
+}
+
+TaskWidget QLineEdit {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 1px solid #cccccc;
+    padding: 5px 2px;
+    font-size: 13px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+TaskWidget QLineEdit:hover {
+    border-bottom: 1px solid #999999;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+TaskWidget QLineEdit:focus {
+    border-bottom: 1px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+TaskWidget QLineEdit[style*="line-through"] {
+    color: #888888;
+    border-bottom: 1px solid #cccccc;
+}
+
+/*======================================= TAGS WIDGET =======================================*/
+
+TagsWidget {
+    background-color: transparent;
+}
+
+TagsWidget QLabel {
+    color: #333333;
+    font-weight: bold;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    background-color: transparent;
+}
+
+TagsWidget QLineEdit {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 1px solid #999999;
+    padding: 6px 5px;
+    font-size: 13px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+TagsWidget QLineEdit:hover {
+    border-bottom: 1px solid #666666;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+TagsWidget QLineEdit:focus {
+    border-bottom: 1px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+TagsWidget QPushButton {
+    background-color: transparent;
+    color: #E16428;
+    border: 1px solid #E16428;
+    border-radius: 4px;
+    padding: 2px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+TagsWidget QPushButton:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+TagsWidget QPushButton:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
+}
+
+TagsWidget QPushButton:disabled {
+    background-color: transparent;
+    color: #cccccc;
+    border: 1px solid #cccccc;
+}
+
+/* Основной стиль списка тегов - как у заметок */
+TagsWidget QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    padding: 4px;
+    outline: none;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    margin: 0px 2px;
+}
+
+/* Элемент списка тегов с серым border снизу */
+TagsWidget QListWidget::item {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 0px;
+    padding: 8px 10px;
+    margin: 0px;
+    min-height: 20px;
+}
+
+/* Убираем border у последнего элемента */
+TagsWidget QListWidget::item:last {
+    border-bottom: none;
+}
+
+/* Выделенный элемент - как активная кнопка */
+TagsWidget QListWidget::item:selected {
+    background-color: #E16428;
+    color: white;
+    border-bottom: 1px solid #E16428;
+}
+
+/* Hover эффект ТОЛЬКО для невыделенных элементов */
+TagsWidget QListWidget::item:hover:!selected {
+    background-color: rgba(225, 100, 40, 0.2);
+    color: #333333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Активный тег НЕ меняется при наведении */
+TagsWidget QListWidget::item:selected:hover {
+    background-color: #E16428;
+    color: white;
+    border-bottom: 1px solid #E16428;
+}
+
+/* Эффект нажатия только для невыделенных */
+TagsWidget QListWidget::item:pressed:!selected {
+    background-color: rgba(225, 100, 40, 0.3);
+    color: #333333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Активный тег при нажатии */
+TagsWidget QListWidget::item:selected:pressed {
+    background-color: #c8531f;
+    color: white;
+}
+
+/* Полоса прокрутки */
+TagsWidget QListWidget QScrollBar:vertical {
+    background-color: #f5f5f5;
+    width: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+TagsWidget QListWidget QScrollBar::handle:vertical {
+    background-color: #cccccc;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+TagsWidget QListWidget QScrollBar::handle:vertical:hover {
+    background-color: #999999;
+}
+
+TagsWidget QListWidget QScrollBar::handle:vertical:pressed {
+    background-color: #E16428;
+}
+
+TagsWidget QListWidget QScrollBar::add-line:vertical,
+TagsWidget QListWidget QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+}
+
+/* Убираем границу фокуса */
+TagsWidget QListWidget:focus {
+    border: 1px solid #cccccc;
+}
+
+/* Стиль для пустого списка */
+TagsWidget QListWidget:empty {
+    color: #999999;
+    font-style: italic;
+    border-bottom: none;
+}
+
+/* Контекстное меню тегов */
+TagsWidget QMenu {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    color: #333333;
+}
+
+TagsWidget QMenu::item {
+    background-color: transparent;
+    padding: 6px 16px;
+    color: #333333;
+}
+
+TagsWidget QMenu::item:selected {
+    background-color: #E16428;
+    color: white;
+}
+
+TagsWidget QMenu::item:disabled {
+    color: #cccccc;
+}
+
+/*======================================= RICH TEXT EDITOR =======================================*/
+
+
+RichTextEditor {
+    background-color: transparent;
+}
+
+RichTextEditor QTextEdit {
+    background-color: #ffffff;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+RichTextEditor QTextEdit:focus {
+    border: 1px solid #E16428;
+}
+
+/* Панель инструментов Rich Text Editor */
+RichTextEditor QToolBar {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    spacing: 6px;
+    padding: 4px;
+    margin: 0px;
+}
+
+/* Выравнивание всех элементов панели инструментов по высоте */
+RichTextEditor QToolBar QComboBox {
+    background-color: #ffffff;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 4px 6px;
+    min-width: 120px;
+    height: 24px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 12px;
+}
+
+RichTextEditor QToolBar QComboBox:hover {
+    border: 1px solid #adb5bd;
+}
+
+RichTextEditor QToolBar QComboBox:focus {
+    border: 1px solid #E16428;
+}
+
+RichTextEditor QToolBar QComboBox::drop-down {
+    border-left: 1px solid #dee2e6;
+    width: 20px;
+}
+
+RichTextEditor QToolBar QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    min-height: 24px;
+}
+
+/* Стили для QSpinBox (размер шрифта) - ПОЛНОСТЬЮ ПЕРЕОПРЕДЕЛЕНЫ */
+RichTextEditor QToolBar QSpinBox {
+    background-color: #ffffff !important;
+    color: #495057 !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 3px;
+    padding: 4px 8px;
+    min-width: 70px;
+    width: 70px;
+    height: 24px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+RichTextEditor QToolBar QSpinBox:hover {
+    border: 1px solid #adb5bd !important;
+}
+
+RichTextEditor QToolBar QSpinBox:focus {
+    border: 1px solid #E16428 !important;
+}
+
+/* Область ввода текста в спинбоксе */
+RichTextEditor QToolBar QSpinBox::text {
+    background-color: #ffffff !important;
+    color: #495057 !important;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+/* Кнопки спинбокса - ПОЛНОСТЬЮ СВЕТЛЫЕ */
+RichTextEditor QToolBar QSpinBox::up-button,
+RichTextEditor QToolBar QSpinBox::down-button {
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 2px;
+    width: 16px;
+    height: 11px;
+    margin: 0px;
+    subcontrol-origin: border;
+}
+
+RichTextEditor QToolBar QSpinBox::up-button {
+    border-bottom: 1px solid #ffffff !important;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+RichTextEditor QToolBar QSpinBox::down-button {
+    border-top: 1px solid #ffffff !important;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}
+
+RichTextEditor QToolBar QSpinBox::up-button:hover,
+RichTextEditor QToolBar QSpinBox::down-button:hover {
+    background-color: #e9ecef !important;
+    border-color: #adb5bd !important;
+}
+
+RichTextEditor QToolBar QSpinBox::up-button:pressed,
+RichTextEditor QToolBar QSpinBox::down-button:pressed {
+    background-color: #E16428 !important;
+    border-color: #E16428 !important;
+}
+
+/* Стрелки для светлой темы */
+RichTextEditor QToolBar QSpinBox::up-arrow {
+    width: 9px;
+    height: 9px;
+    border-left: 4.5px solid transparent;
+    border-right: 4.5px solid transparent;
+    border-bottom: 9px solid #495057 !important;
+}
+
+RichTextEditor QToolBar QSpinBox::down-arrow {
+    width: 9px;
+    height: 9px;
+    border-left: 4.5px solid transparent;
+    border-right: 4.5px solid transparent;
+    border-top: 9px solid #495057 !important;
+}
+
+RichTextEditor QToolBar QSpinBox::up-button:hover::up-arrow {
+    border-bottom-color: #2c3e50 !important;
+}
+
+RichTextEditor QToolBar QSpinBox::down-button:hover::down-arrow {
+    border-top-color: #2c3e50 !important;
+}
+
+RichTextEditor QToolBar QSpinBox::up-button:pressed::up-arrow,
+RichTextEditor QToolBar QSpinBox::down-button:pressed::down-arrow {
+    border-bottom-color: white !important;
+    border-top-color: white !important;
+}
+
+/* Кнопки действий */
+RichTextEditor QToolBar QToolButton {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    min-width: 28px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0px;
+    margin: 0px 1px;
+    color: #495057;
+}
+
+RichTextEditor QToolBar QToolButton:hover {
+    background-color: rgba(225, 100, 40, 0.2);
+    border: 1px solid #E16428;
+}
+
+RichTextEditor QToolBar QToolButton:pressed {
+    background-color: rgba(225, 100, 40, 0.3);
+}
+
+RichTextEditor QToolBar QToolButton:checked {
+    background-color: #E16428;
+    color: white;
+    border: 1px solid #E16428;
+}
+
+RichTextEditor QToolBar QToolButton:checked:hover {
+    background-color: #c8531f;
+    border: 1px solid #c8531f;
+}
+
+/* Стили для разделителей */
+RichTextEditor QToolBar QWidget[objectName="qt_toolbar_ext_button"],
+RichTextEditor QToolBar QWidget[objectName="qt_toolbar_separator"] {
+    background-color: #dee2e6;
+    width: 1px;
+    margin: 2px 8px;
+}
+
+/* Дополнительные стили для всего приложения, чтобы перекрыть тёмные */
+QSpinBox {
+    background-color: #ffffff !important;
+    color: #495057 !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 12px;
+}
+
+QSpinBox::up-button, QSpinBox::down-button {
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+QSpinBox::up-arrow {
+    border-bottom-color: #495057 !important;
+}
+
+QSpinBox::down-arrow {
+    border-top-color: #495057 !important;
+}
+
+/* QColorDialog для выбора цвета текста */
+QColorDialog {
+    background-color: #ffffff;
+    color: #333333;
+}
+
+QColorDialog QWidget {
+    background-color: #ffffff;
+    color: #333333;
+}
+
+QColorDialog QLabel {
+    color: #333333;
+}
+
+/* Scrollbars для Rich Text Editor */
+RichTextEditor QScrollBar:vertical {
+    background-color: #f5f5f5;
+    width: 12px;
+    margin: 0px;
+}
+
+RichTextEditor QScrollBar::handle:vertical {
+    background-color: #cccccc;
+    border-radius: 6px;
+    min-height: 20px;
+}
+
+RichTextEditor QScrollBar::handle:vertical:hover {
+    background-color: #999999;
+}
+
+RichTextEditor QScrollBar::handle:vertical:pressed {
+    background-color: #E16428;
+}
+
+RichTextEditor QScrollBar:horizontal {
+    background-color: #f5f5f5;
+    height: 12px;
+    margin: 0px;
+}
+
+RichTextEditor QScrollBar::handle:horizontal {
+    background-color: #cccccc;
+    border-radius: 6px;
+    min-width: 20px;
+}
+
+RichTextEditor QScrollBar::handle:horizontal:hover {
+    background-color: #999999;
+}
+
+RichTextEditor QScrollBar::handle:horizontal:pressed {
+    background-color: #E16428;
+}
+
+/*======================================= NOTES LIST =======================================*/
+
+/* Основной стиль списка заметок */
+NotesWidget QListWidget#notes_list {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    padding: 4px;
+    outline: none;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    margin: 0px 2px;
+}
+
+/* Элемент списка заметок с серым border снизу */
+NotesWidget QListWidget#notes_list::item {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 0px;
+    padding: 8px 10px;
+    margin: 0px;
+    min-height: 20px;
+}
+
+/* Убираем border у последнего элемента */
+NotesWidget QListWidget#notes_list::item:last {
+    border-bottom: none;
+}
+
+/* Выделенный элемент - как активная кнопка */
+NotesWidget QListWidget#notes_list::item:selected {
+    background-color: #E16428;
+    color: white;
+    border-bottom: 1px solid #E16428;
+}
+
+/* Hover эффект ТОЛЬКО для невыделенных элементов */
+NotesWidget QListWidget#notes_list::item:hover:!selected {
+    background-color: rgba(225, 100, 40, 0.2);
+    color: #333333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Активная заметка НЕ меняется при наведении */
+NotesWidget QListWidget#notes_list::item:selected:hover {
+    background-color: #E16428;
+    color: white;
+    border-bottom: 1px solid #E16428;
+}
+
+/* Эффект нажатия только для невыделенных */
+NotesWidget QListWidget#notes_list::item:pressed:!selected {
+    background-color: rgba(225, 100, 40, 0.3);
+    color: #333333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Активная заметка при нажатии */
+NotesWidget QListWidget#notes_list::item:selected:pressed {
+    background-color: #c8531f;
+    color: white;
+    border-bottom: 1px solid #c8531f;
+}
+
+/* Полоса прокрутки */
+NotesWidget QListWidget#notes_list QScrollBar:vertical {
+    background-color: #f5f5f5;
+    width: 8px;
+    margin: 0px;
+    border-radius: 4px;
+}
+
+NotesWidget QListWidget#notes_list QScrollBar::handle:vertical {
+    background-color: #cccccc;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+NotesWidget QListWidget#notes_list QScrollBar::handle:vertical:hover {
+    background-color: #999999;
+}
+
+NotesWidget QListWidget#notes_list QScrollBar::handle:vertical:pressed {
+    background-color: #E16428;
+}
+
+NotesWidget QListWidget#notes_list QScrollBar::add-line:vertical,
+NotesWidget QListWidget#notes_list QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+}
+
+/* Убираем границу фокуса */
+NotesWidget QListWidget#notes_list:focus {
+    border: 1px solid #E16428;
+}
+
+/* Стиль для пустого списка */
+NotesWidget QListWidget#notes_list:empty {
+    color: #999999;
+    font-style: italic;
+    border-bottom: none;
+}
+
+/*======================================= EDIT BOOKMARK DIALOG =======================================*/
+
+EditBookmarkDialog {
+    background-color: #ffffff;
+}
+
+EditBookmarkDialog QLabel {
+    color: #333333;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    background-color: transparent;
+}
+
+/* Стили для конкретных лейблов */
+EditBookmarkDialog QLabel#title_label,
+EditBookmarkDialog QLabel#url_label, 
+EditBookmarkDialog QLabel#description_label,
+EditBookmarkDialog QLabel#tags_label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333333;
+    padding: 2px 0px;
+}
+
+/* Стили для полей ввода */
+EditBookmarkDialog QLineEdit {
+    background-color: transparent;
+    color: #333333;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+EditBookmarkDialog QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+EditBookmarkDialog QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Стили для текстового поля описания */
+EditBookmarkDialog QTextEdit {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 13px;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+EditBookmarkDialog QTextEdit:focus {
+    border: 1px solid #E16428;
+}
+
+/* Кнопки */
+EditBookmarkDialog QPushButton#save_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+EditBookmarkDialog QPushButton#save_btn:hover {
+    background-color: #c8531f;
+}
+
+EditBookmarkDialog QPushButton#save_btn:pressed {
+    background-color: #ad420f;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:hover {
+    background-color: #666666;
+    color: white;
+}
+
+EditBookmarkDialog QPushButton#cancel_btn:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+/*======================================= NOTES PAGE BUTTONS =======================================*/
+
+/* Кнопка создания новой заметки */
+QWidget#NotesPage QPushButton#new_note_btn {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0px;
+    margin: 0px;
+    min-height: 35px;
+    max-height: 35px;
+    min-width: 35px;
+    max-width: 35px;
+}
+
+QWidget#NotesPage QPushButton#new_note_btn:hover {
+    background-color: #f17337;
+}
+
+QWidget#NotesPage QPushButton#new_note_btn:pressed {
+    background-color: #c8531f;
+}
+
+/* Кнопка удаления заметки */
+QWidget#NotesPage QPushButton#delete_note_btn {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 0px;
+    margin: 0px;
+    min-height: 35px;
+    max-height: 35px;
+    min-width: 30px;
+    max-width: 30px;
+}
+
+QWidget#NotesPage QPushButton#delete_note_btn:hover {
+    background-color: #666666;
+    color: white;
+}
+
+QWidget#NotesPage QPushButton#delete_note_btn:pressed {
+    background-color: #555555;
+    border-color: #555555;
+    color: white;
+}
+
+QWidget#NotesPage QPushButton#delete_note_btn:disabled {
+    background-color: transparent;
+    color: #cccccc;
+    border: 1px solid #cccccc;
+}
+
+/* Кнопка открепления заметки */
+QPushButton#detach_btn {
+    background-color: transparent;
     color: #E16428;
     border: 1px solid #E16428;
     border-radius: 4px;
     padding: 6px 12px;
+    font-size: 12px;
     font-weight: bold;
+    min-height: 22px;
+    max-height: 23px;
+}
+
+QPushButton#detach_btn:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+QPushButton#detach_btn:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
+}
+
+/*======================================= TASK FORM STYLES =======================================*/
+
+/* Кнопка добавления задачи - общий селектор */
+QPushButton[text="Добавить"] {
+    background-color: #E16428;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: bold;
+    min-height: 25px;
+    max-height: 25px;
     min-width: 80px;
 }
 
-QMessageBox QPushButton[text="Нет"]:hover {
-    color: white;
+QPushButton[text="Добавить"]:hover {
+    background-color: #f17337;
+}
+
+QPushButton[text="Добавить"]:pressed {
     background-color: #c8531f;
-    border-color: #c8531f;
 }
 
-QMessageBox QPushButton[text="Нет"]:pressed {
-    color: white;
-    background-color: #ad420f;
-    border-color: #ad420f;
+QPushButton[text="Добавить"]:disabled {
+    background-color: #cccccc;
+    color: #888888;
 }
 
-QMessageBox QPushButton[text="Да"] {
+/* Кнопка переключения расширенных опций */
+QPushButton[text="⚙️ Дополнительно"],
+QPushButton[text="⚙️ Скрыть"] {
     background-color: transparent;
     color: #666666;
     border: 1px solid #666666;
     border-radius: 4px;
     padding: 6px 12px;
-    min-width: 80px;
+    font-size: 11px;
+    min-height: 20px;
+    max-height: 20px;
 }
 
-QMessageBox QPushButton[text="Да"]:hover {
+QPushButton[text="⚙️ Дополнительно"]:hover,
+QPushButton[text="⚙️ Скрыть"]:hover {
+    background-color: #f0f0f0;
+    border-color: #888888;
+}
+
+QPushButton[text="⚙️ Дополнительно"]:pressed,
+QPushButton[text="⚙️ Скрыть"]:pressed {
+    background-color: #e0e0e0;
+    border-color: #999999;
+}
+
+/* Поле выбора даты - общий селектор */
+QDateEdit {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 12px;
+    min-height: 18px;
+    max-height: 18px;
+    min-width: 120px;
+}
+
+QDateEdit:hover {
+    border: 1px solid #999999;
+}
+
+QDateEdit:focus {
+    border: 1px solid #E16428;
+}
+
+/* Кнопка очистки даты - по тексту */
+QPushButton[text="×"] {
+    background-color: transparent;
+    color: #666666;
+    border: 1px solid #666666;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0px;
+    margin: 0px;
+}
+
+QPushButton[text="×"]:hover {
     background-color: #666666;
     color: white;
 }
 
-QMessageBox QPushButton[text="Да"]:pressed {
+QPushButton[text="×"]:pressed {
     background-color: #555555;
     border-color: #555555;
     color: white;
 }
 
+/* Стили для выпадающего календаря */
+QCalendarWidget {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 4px;
+}
 
+QCalendarWidget QToolButton {
+    background-color: #f0f0f0;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    padding: 4px 8px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background-color: #e0e0e0;
+    border-color: #999999;
+}
+
+QCalendarWidget QMenu {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    color: #333333;
+}
+
+QCalendarWidget QSpinBox {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    border-radius: 3px;
+    padding: 4px;
+}
+
+/* Заголовки в layout с датой */
+QLabel {
+    color: #333333;
+    font-size: 12px;
+    padding: 0px 5px;
+}
+
+
+/*======================================= SEARCH, TITLE, TAGS INPUTS =======================================*/
+
+/* Стили для поля поиска */
+QLineEdit#search_input {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+QLineEdit#search_input:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QLineEdit#search_input:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Стили для поля заголовка */
+QLineEdit#title_input {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 16px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-weight: bold;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+QLineEdit#title_input:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QLineEdit#title_input:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Стили для поля тегов */
+QLineEdit#tags_input {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+QLineEdit#tags_input:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QLineEdit#tags_input:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Общие стили для всех полей ввода (как fallback) */
+QLineEdit {
+    background-color: transparent;
+    color: #495057;
+    border: none;
+    border-bottom: 2px solid #E16428;
+    padding: 8px 5px;
+    font-size: 14px;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    selection-background-color: #E16428;
+    selection-color: white;
+}
+
+QLineEdit:hover {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.1);
+}
+
+QLineEdit:focus {
+    border-bottom: 2px solid #E16428;
+    background-color: rgba(225, 100, 40, 0.05);
+}
+
+/* Placeholder текст */
+QLineEdit::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+/* Отключенные поля */
+QLineEdit:disabled {
+    color: #adb5bd;
+    border-bottom: 2px solid #adb5bd;
+    background-color: transparent;
+}
+
+/* Поля только для чтения */
+QLineEdit:read-only {
+    color: #6c757d;
+    border-bottom: 2px solid #adb5bd;
+    background-color: #f8f9fa;
+}
         """
 
         # Темная тема

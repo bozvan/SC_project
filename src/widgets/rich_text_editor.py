@@ -61,75 +61,11 @@ class RichTextEditor(QWidget):
         self.font_size.setFixedHeight(24)
         self.font_size.setFixedWidth(70)  # Увеличили ширину
 
-        # Явно устанавливаем стиль для спинбокса
-        spinbox_style = """
-               QSpinBox {
-                   background-color: #0d1117;
-                   color: white;
-                   border: 1px solid #444444;
-                   border-radius: 3px;
-                   padding: 4px 8px;
-                   font-family: "Segoe UI", "Arial", sans-serif;
-                   font-size: 12px;
-               }
-               QSpinBox:hover {
-                   border: 1px solid #666666;
-               }
-               QSpinBox:focus {
-                   border: 1px solid #E16428;
-               }
-               QSpinBox::up-button, QSpinBox::down-button {
-                   background-color: #2d3746;
-                   border: none;
-                   width: 15px;
-                   height: 10px;
-                   margin: 0px;
-               }
-               QSpinBox::up-button {
-                   subcontrol-position: top right;
-                   border-bottom: 1px solid #1a1f29;
-               }
-               QSpinBox::down-button {
-                   subcontrol-position: bottom right;
-                   border-top: 1px solid #1a1f29;
-               }
-               QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-                   background-color: #3d4756;
-               }
-               QSpinBox::up-button:pressed, QSpinBox::down-button:pressed {
-                   background-color: #E16428;
-               }
-               QSpinBox::up-arrow {
-                   width: 0px;
-                   height: 0px;
-                   border-left: 4px solid transparent;
-                   border-right: 4px solid transparent;
-                   border-bottom: 5px solid #cccccc;
-               }
-               QSpinBox::down-arrow {
-                   width: 0px;
-                   height: 0px;
-                   border-left: 4px solid transparent;
-                   border-right: 4px solid transparent;
-                   border-top: 5px solid #cccccc;
-               }
-               QSpinBox::up-button:hover::up-arrow {
-                   border-bottom-color: white;
-               }
-               QSpinBox::down-button:hover::down-arrow {
-                   border-top-color: white;
-               }
-               QSpinBox::up-button:pressed::up-arrow, 
-               QSpinBox::down-button:pressed::down-arrow {
-                   border-bottom-color: white;
-                   border-top-color: white;
-               }
-           """
-        self.font_size.setStyleSheet(spinbox_style)
+        # УБИРАЕМ жестко заданные стили - позволим теме управлять внешним видом
+        # self.font_size.setStyleSheet(spinbox_style)
 
         self.font_size.valueChanged.connect(self.set_font_size)
         toolbar.addWidget(self.font_size)
-
 
         # Добавляем разделитель с отступом
         toolbar.addSeparator()
@@ -219,7 +155,6 @@ class RichTextEditor(QWidget):
 
         return toolbar
 
-    # Остальные методы остаются без изменений...
     def on_char_format_changed(self, fmt):
         """Обработчик изменения текущего формата символов"""
         if self._updating_format:

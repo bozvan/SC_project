@@ -276,11 +276,28 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
             print(f"✅ Данные заметки {note_id} обновлены в основном редакторе")
 
         # Принудительно обновляем список заметок
-        self.load_notes(self.search_input.text())
+        # self.load_notes(self.search_input.text())
+            # Вместо этого просто обновляем заголовок в списке если заметка там есть
+            self.refresh_note_title_in_list(note_id, title)
 
         # Обновляем виджет тегов если есть
         if hasattr(self, 'tags_widget'):
             self.tags_widget.refresh()
+
+    def refresh_note_title_in_list(self, note_id, new_title):
+        """Обновляет только заголовок заметки в списке, не перезагружая весь список"""
+        try:
+            # Ищем заметку в списке и обновляем только ее заголовок
+            for i in range(self.notes_list.count()):
+                item = self.notes_list.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                    old_title = item.text()
+                    if old_title != new_title:
+                        item.setText(new_title)
+                        print(f"🔄 Заголовок обновлен в списке: '{old_title}' -> '{new_title}'")
+                    break
+        except Exception as e:
+            print(f"❌ Ошибка обновления заголовка в списке: {e}")
 
     def on_note_saved_from_window(self, note_id):
         """Обработчик сохранения заметки из отдельного окна"""

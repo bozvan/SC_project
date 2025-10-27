@@ -59,6 +59,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def setup_ui(self):
         """Настройка дополнительных параметров UI"""
         self.setWindowTitle("MINDSPACE")
+        self.setWindowIcon(QIcon("assets/icons/app_icon.png"))
         self.setMinimumSize(1100, 600)
         self.main_splitter.setSizes([100, 600])
 

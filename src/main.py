@@ -1,117 +1,186 @@
-"""
-Главный файл запуска приложения
-"""
-import os
 import sys
-import traceback
-from pathlib import Path
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplashScreen,
+                             QProgressBar, QLabel, QVBoxLayout, QWidget)
+from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QRect, pyqtProperty, QEasingCurve
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon
+
+# Импортируем MainWindow из вашего модуля
+try:
+    from gui.main_window import MainWindow
+except ImportError:
+    # Если модуль не найден, используем локальный класс как запасной вариант
+    print("Модуль gui.main_window не найден, используется локальный MainWindow")
 
 
-def setup_paths():
-    """Настройка путей для импорта модулей"""
-    if getattr(sys, 'frozen', False):
-        base_path = Path(sys.executable).parent
-    else:
-        base_path = Path(__file__).parent
+    class MainWindow(QMainWindow):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("Main Application")
+            self.setGeometry(300, 300, 800, 600)
 
-    paths_to_add = [
-        str(base_path),
-        str(base_path / 'core'),
-        str(base_path / 'gui'),
-        str(base_path / 'widgets')
-    ]
+            central_widget = QWidget()
+            self.setCentralWidget(central_widget)
 
-    for path in paths_to_add:
-        if path not in sys.path and os.path.exists(path):
-            sys.path.insert(0, path)
-
-    return base_path
+            layout = QVBoxLayout()
+            label = QLabel("Добро пожаловать в приложение!")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
+            central_widget.setLayout(layout)
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    """Глобальный обработчик исключений"""
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
+class SmoothProgressBar(QProgressBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._progress = 0
+        self.animation = QPropertyAnimation(self, b"progress")
+        self.animation.setDuration(100)
+        self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-    print("❌ Критическая ошибка:")
-    traceback.print_exception(exc_type, exc_value, exc_traceback)
+    @pyqtProperty(int)
+    def progress(self):
+        return self._progress
 
-    if getattr(sys, 'frozen', False):
-        input("Нажмите Enter для выхода...")
+    @progress.setter
+    def progress(self, value):
+        self._progress = value
+        self.setValue(value)
 
-    sys.exit(1)
+    def set_progress_animated(self, value):
+        self.animation.setStartValue(self._progress)
+        self.animation.setEndValue(value)
+        self.animation.start()
 
 
-sys.excepthook = handle_exception
-app_base_path = setup_paths()
+class AnimatedSplashScreen(QSplashScreen):
+    def __init__(self, pixmap):
+        super().__init__(pixmap)
+        self.progress = 0
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
+        self.progress_bar = SmoothProgressBar(self)
+        self.progress_bar.setGeometry(40, pixmap.height() - 80,
+                                      pixmap.width() - 80, 25)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #34495e;
+                border-radius: 12px;
+                text-align: center;
+                color: #2c3e50;
+                font-weight: bold;
+                background-color: rgba(236, 240, 241, 0.8);
+            }
+            QProgressBar::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #3498db, stop:0.5 #9b59b6, stop:1 #e74c3c);
+                border-radius: 10px;
+                margin: 2px;
+            }
+        """)
+
+        self.loading_text = QLabel("Загрузка...", self)
+        self.loading_text.setGeometry(0, pixmap.height() - 40,
+                                      pixmap.width(), 20)
+        self.loading_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.loading_text.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                font-weight: bold;
+                font-size: 12px;
+                background: transparent;
+            }
+        """)
+
+    def set_progress(self, value):
+        self.progress = value
+        self.progress_bar.set_progress_animated(value)
+        self.repaint()
+
+
+def create_gradient_background(width, height):
+    """Создает градиентный фон для сплеш-скрина"""
+    pixmap = QPixmap(width, height)
+    painter = QPainter(pixmap)
+
+    from PyQt6.QtGui import QLinearGradient
+    gradient = QLinearGradient(0, 0, width, height)
+    gradient.setColorAt(0.0, QColor(102, 126, 234))
+    gradient.setColorAt(1.0, QColor(118, 75, 162))
+
+    painter.fillRect(0, 0, width, height, gradient)
+
+    painter.setBrush(QColor(255, 255, 255, 180))
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.drawRoundedRect(20, 20, width - 40, height - 120, 15, 15)
+
+    painter.end()
+    return pixmap
 
 
 def main():
-    """Метод запуска приложения"""
+    app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("assets/icons/app_icon.png"))
+
     try:
-        print("🚀 Запуск приложения...")
-        print(f"✅ Base path: {app_base_path}")
-        print(f"✅ Sys.path: {sys.path}")
+        pixmap = QPixmap("assets/icons/app_icon.png")
+        pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.SmoothTransformation)
 
-        # pylint: disable=unused-import, no-name-in-module
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6.QtGui import QIcon
-        from PyQt6.QtCore import QTimer
-        # pylint: enable=unused-import, no-name-in-module
+        if pixmap.isNull():
+            print("Файл app_icon.png не найден. Создаю градиентный фон...")
+            pixmap = create_gradient_background(500, 400)
 
-        print("✅ PyQt6 модули импортированы")
+            painter = QPainter(pixmap)
+            painter.setBrush(QColor(52, 152, 219))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(150, 80, 200, 200)
 
-        # Пересоздаем QApplication если нужно
-        app = QApplication.instance()
-        if app is not None:
-            print("⚠️ Принудительное закрытие предыдущего экземпляра QApplication")
-            app.quit()
-            QTimer.singleShot(100, lambda: None)
+            painter.setPen(QColor(255, 255, 255))
+            font = QFont("Arial", 24, QFont.Weight.Bold)
+            painter.setFont(font)
+            painter.drawText(QRect(150, 80, 200, 200),
+                             Qt.AlignmentFlag.AlignCenter, "LOGO")
 
-        # Создаем новое приложение
-        app = QApplication(sys.argv)
-        app.setApplicationName("MINDSPACE")
-        app.setApplicationVersion("1.0")
-        print("✅ QApplication создан")
-
-        # Проверяем путь к иконке
-        icon_path = app_base_path / "assets" / "icons" / "app_icon.png"
-
-        from gui.main_window import MainWindow
-        window = MainWindow()
-
-        if icon_path.exists():
-            window.setWindowIcon(QIcon(str(icon_path)))
-            print("✅ Иконка установлена")
-        else:
-            print("⚠️ Иконка не найдена, используется стандартная")
-
-        print("✅ MainWindow создан")
-
-        # Восстанавливаем состояние окна
-        try:
-            window.restore_window_state()
-            print("✅ Состояние окна восстановлено")
-        except Exception as e:
-            print(f"⚠️ Ошибка восстановления состояния: {e}")
-
-        window.show()
-        print("✅ Окно показано")
-
-        app.setQuitOnLastWindowClosed(True)
-        return_code = app.exec()
-        print(f"📱 Приложение завершено с кодом: {return_code}")
-        sys.exit(return_code)
-
+            font.setPointSize(14)
+            painter.setFont(font)
+            painter.setPen(QColor(44, 62, 80))
+            painter.drawText(QRect(50, 280, 400, 40),
+                             Qt.AlignmentFlag.AlignCenter, "Мое Приложение")
+            painter.end()
     except Exception as e:
-        print(f"❌ Критическая ошибка при запуске: {e}")
-        traceback.print_exc()
+        print(f"Ошибка загрузки иконки: {e}")
+        pixmap = create_gradient_background(500, 400)
 
-        if getattr(sys, 'frozen', False):
-            input("Нажмите Enter для выхода...")
+    splash = AnimatedSplashScreen(pixmap)
+    splash.show()
 
-        sys.exit(1)
+    # Сохраняем ссылку на главное окно в глобальной переменной
+    global main_window
+    main_window = None
+
+    def update_progress():
+        current = splash.progress + 1
+        if current <= 100:
+            splash.set_progress(current)
+            delay = 20 if current < 30 else 30 if current < 70 else 50
+            QTimer.singleShot(delay, update_progress)
+        else:
+            # Создаем и показываем главное окно
+            global main_window
+            main_window = MainWindow()
+            main_window.show()
+
+            # Закрываем сплеш-скрин
+            splash.close()
+
+            print("✅ Главное окно успешно показано")
+
+    # Запускаем загрузку
+    QTimer.singleShot(500, update_progress)
+
+    # Запускаем главный цикл приложения
+    result = app.exec()
+    print("Приложение завершено")
+    sys.exit(result)
 
 
 if __name__ == "__main__":

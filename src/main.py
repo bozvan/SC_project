@@ -4,11 +4,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QSplashScreen,
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QRect, pyqtProperty, QEasingCurve
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon
 
-# Импортируем MainWindow из вашего модуля
 try:
     from gui.main_window import MainWindow
 except ImportError:
-    # Если модуль не найден, используем локальный класс как запасной вариант
     print("Модуль gui.main_window не найден, используется локальный MainWindow")
 
 

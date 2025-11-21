@@ -462,23 +462,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.apply_styles()
         self.setup_icons(theme_name)
 
-    def apply_theme(self, theme_name):
-        """Устаревший метод - используйте theme_manager вместо этого"""
-        print(f"⚠️  Используется устаревший метод apply_theme, используйте theme_manager")
-        self.theme_manager.set_theme(theme_name)
-
-    def show_settings(self):
-        """Переключает на вкладку настроек"""
-        if hasattr(self, 'main_tabs'):
-            # Находим индекс вкладки настроек
-            for i in range(self.main_tabs.count()):
-                if self.main_tabs.tabText(i) == "⚙️ Настройки":
-                    self.main_tabs.setCurrentIndex(i)
-                    break
-        elif hasattr(self, 'content_stack'):
-            # Переключаем на виджет настроек в stacked widget
-            self.content_stack.setCurrentWidget(self.settings_widget)
-
     def show_settings_widget(self):
         """Показать виджет настроек"""
         try:

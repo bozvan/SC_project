@@ -121,7 +121,6 @@ class DatabaseManager:
                 """
             ]
 
-            print("🔍 Проверяем структуру таблиц...")
             self.check_table_structure("tags")
             self.check_table_structure("notes")
 
@@ -141,49 +140,42 @@ class DatabaseManager:
                 # Проверяем, что workspace создан
                 cursor.execute("SELECT * FROM workspaces")
                 workspaces = cursor.fetchall()
-                print(f"✅ Workspaces после создания: {workspaces}")
+                #print(f"✅ Workspaces после создания: {workspaces}")
 
                 # Миграция: добавляем workspace_id если его нет
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN workspace_id INTEGER DEFAULT 1")
-                    print("✅ Добавлена колонка workspace_id в таблицу notes")
                 except sqlite3.OperationalError:
                     pass
 
                 try:
                     cursor.execute("ALTER TABLE tasks ADD COLUMN workspace_id INTEGER DEFAULT 1")
-                    print("✅ Добавлена колонка workspace_id в таблицу tasks")
                 except sqlite3.OperationalError:
                     pass
 
                 try:
                     cursor.execute("ALTER TABLE bookmarks ADD COLUMN workspace_id INTEGER DEFAULT 1")
-                    print("✅ Добавлена колонка workspace_id в таблицу bookmarks")
                 except sqlite3.OperationalError:
                     pass
 
                 # Существующие миграции остаются
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN note_type TEXT DEFAULT 'note'")
-                    print("✅ Добавлена колонка note_type в таблицу notes")
                 except sqlite3.OperationalError:
                     pass
 
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN url TEXT")
-                    print("✅ Добавлена колонка url в таблицу notes")
                 except sqlite3.OperationalError:
                     pass
 
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN page_title TEXT")
-                    print("✅ Добавлена колонка page_title в таблицу notes")
                 except sqlite3.OperationalError:
                     pass
 
                 try:
                     cursor.execute("ALTER TABLE notes ADD COLUMN page_description TEXT")
-                    print("✅ Добавлена колонка page_description в таблицу notes")
                 except sqlite3.OperationalError:
                     pass
 
@@ -427,7 +419,7 @@ class DatabaseManager:
                 # Нельзя удалить рабочее пространство по умолчанию
                 cursor.execute("SELECT is_default FROM workspaces WHERE id = ?", (workspace_id,))
                 workspace = cursor.fetchone()
-                if workspace and workspace[3]:  # is_default поле
+                if workspace and workspace[0]:  # is_default теперь первый элемент
                     print("❌ Нельзя удалить рабочее пространство по умолчанию")
                     return False
 

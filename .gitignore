@@ -102,7 +102,7 @@ pip-delete-this-directory.txt
 .cache
 
 # ui
-src/ui
+# src/ui
 
 # Файлы операционных систем
 Thumbs.db

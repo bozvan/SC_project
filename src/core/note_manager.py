@@ -263,7 +263,10 @@ class NoteManager:
                 update_fields = []
                 update_values = []
 
-                if title is not None and title.strip():
+                if title is not None:
+                    if not title.strip():
+                        print("❌ Ошибка: заголовок не может быть пустым")
+                        return False
                     update_fields.append("title = ?")
                     update_values.append(title.strip())
 
@@ -295,8 +298,10 @@ class NoteManager:
                     update_fields.append("workspace_id = ?")
                     update_values.append(workspace_id)
 
-                # Если нет изменений, выходим раньше
-                if not update_fields:
+                # Проверяем, есть ли изменения (включая теги)
+                has_updates = bool(update_fields) or tags is not None
+
+                if not has_updates:
                     print("⚠️  Нет изменений для сохранения")
                     return True
 
@@ -304,21 +309,30 @@ class NoteManager:
                 update_fields.append("updated_at = CURRENT_TIMESTAMP")
                 update_values.append(note_id)
 
-                update_query = f"UPDATE notes SET {', '.join(update_fields)} WHERE id = ?"
-                cursor.execute(update_query, update_values)
+                # Выполняем обновление основных полей, если они есть
+                if update_fields:
+                    update_query = f"UPDATE notes SET {', '.join(update_fields)} WHERE id = ?"
+                    cursor.execute(update_query, update_values)
 
-                # Обновляем теги только если они переданы
+                # Обновляем теги если переданы (включая пустой список)
                 if tags is not None:
+                    # Удаляем старые связи с тегами
                     cursor.execute("DELETE FROM note_tag_relation WHERE note_id = ?", (note_id,))
-                    for tag_name in tags:
-                        # ИСПОЛЬЗУЕМ workspace_id существующей заметки при создании тегов
-                        current_workspace_id = workspace_id if workspace_id is not None else existing_note.workspace_id
-                        tag = self._get_or_create_tag_with_connection(cursor, tag_name, current_workspace_id)
-                        if tag and tag.id:
-                            cursor.execute(
-                                "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
-                                (note_id, tag.id)
-                            )
+
+                    # Добавляем новые теги только если список не пустой
+                    if tags:
+                        for tag_name in tags:
+                            # ИСПОЛЬЗУЕМ workspace_id существующей заметки при создании тегов
+                            current_workspace_id = workspace_id if workspace_id is not None else existing_note.workspace_id
+                            tag = self._get_or_create_tag_with_connection(cursor, tag_name, current_workspace_id)
+                            if tag and tag.id:
+                                cursor.execute(
+                                    "INSERT INTO note_tag_relation (note_id, tag_id) VALUES (?, ?)",
+                                    (note_id, tag.id)
+                                )
+                        print(f"✅ Обновлены теги для заметки {note_id}: {tags}")
+                    else:
+                        print(f"✅ Удалены все теги для заметки {note_id}")
 
                 conn.commit()
 
@@ -328,11 +342,18 @@ class NoteManager:
                     print(f"   🔗 URL обновлен: {url}")
                 if workspace_id is not None:
                     print(f"   📁 Workspace обновлен: {workspace_id}")
+                if tags is not None:
+                    if tags:
+                        print(f"   🏷️ Теги обновлены: {tags}")
+                    else:
+                        print(f"   🏷️ Все теги удалены")
 
                 return True
 
         except Exception as e:
             print(f"❌ Ошибка при обновлении записи с ID {note_id}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def _get_or_create_tag_with_connection(self, cursor, tag_name: str, workspace_id: int = 1) -> Optional[Tag]:
@@ -685,11 +706,23 @@ class NoteManager:
 
         url = url.strip()
 
-        # Простая проверка формата URL
         try:
             result = urlparse(url)
             # URL должен иметь схему (http, https) и домен
-            return all([result.scheme in ['http', 'https'], result.netloc])
+            if not all([result.scheme in ['http', 'https'], result.netloc]):
+                return False
+
+            # Более строгая проверка домена - должен содержать точку и не быть localhost
+            domain = result.netloc.lower()
+            if '.' not in domain or domain == 'localhost':
+                return False
+
+            # Проверяем, что домен не состоит только из одного слова (исключает 'invalid-url')
+            domain_parts = domain.split('.')
+            if len(domain_parts) < 2:
+                return False
+
+            return True
         except:
             return False
 

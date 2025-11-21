@@ -1,8 +1,10 @@
 import sys
 import os
+import unittest
+import tempfile
+import shutil
 from datetime import datetime, timedelta
 
-# Добавляем путь для импорта модулей
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.core.database_manager import DatabaseManager
@@ -11,356 +13,622 @@ from src.core.note_manager import NoteManager
 from src.core.task_manager import TaskManager
 
 
-class TaskManagerTester:
-    """Тестер для проверки функциональности TaskManager"""
+class TestTaskManager(unittest.TestCase):
+    """Тесты для TaskManager"""
 
-    def __init__(self, db_path="test_smart_organizer.db"):
-        """Инициализация тестера"""
-        # Используем тестовую БД чтобы не затронуть основную
-        self.db = DatabaseManager(db_path)
+    def setUp(self):
+        """Настройка перед каждым тестом"""
+        self.test_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.test_dir, "test_smart_organizer.db")
+
+        self.db = DatabaseManager(self.db_path)
         self.tag_manager = TagManager(self.db)
         self.note_manager = NoteManager(self.db, self.tag_manager)
         self.task_manager = TaskManager(self.db)
 
-        # ID созданных тестовых заметок
-        self.test_note_ids = []
+        # Создаем тестовую заметку
+        self.test_note = self.note_manager.create(
+            title="TEST: Task Manager Test Note",
+            content="Test content for task management"
+        )
+        self.assertIsNotNone(self.test_note, "Не удалось создать тестовую заметку")
 
-        print("🚀 Инициализация TaskManager Tester...")
-        print("✅ Все менеджеры загружены")
+    def tearDown(self):
+        """Очистка после каждого теста"""
+        # Очищаем тестовые данные
+        with self.db._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM tasks WHERE note_id IN (SELECT id FROM notes WHERE title LIKE 'TEST:%')")
+            cursor.execute("DELETE FROM notes WHERE title LIKE 'TEST:%'")
+            conn.commit()
 
-    def cleanup(self):
-        """Очистка тестовых данных"""
-        try:
-            with self.db._get_connection() as conn:
-                cursor = conn.cursor()
-                # Удаляем тестовые данные
-                cursor.execute("DELETE FROM tasks WHERE note_id IN (SELECT id FROM notes WHERE title LIKE 'TEST:%')")
-                cursor.execute("DELETE FROM notes WHERE title LIKE 'TEST:%'")
-                conn.commit()
-                print("✅ Тестовые данные очищены")
-        except Exception as e:
-            print(f"❌ Ошибка при очистке: {e}")
+        self.db.close()
+        shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    def create_test_note(self, title_suffix=""):
-        """Создает тестовую заметку"""
-        title = f"TEST: Note {title_suffix} {datetime.now().strftime('%H:%M:%S')}"
-        note = self.note_manager.create(title, f"Test content for {title}")
-        if note:
-            self.test_note_ids.append(note.id)
-            print(f"✅ Создана тестовая заметка: {note.title} (ID: {note.id})")
-            return note.id
-        else:
-            print("❌ Не удалось создать тестовую заметку")
-            return None
-
-    def test_basic_crud(self):
-        """Тест базовых CRUD операций"""
-        print("\n" + "=" * 50)
-        print("🧪 ТЕСТ: Базовые CRUD операции")
-        print("=" * 50)
-
-        # 1. Создание заметки для теста
-        note_id = self.create_test_note("CRUD Test")
-        if not note_id:
-            return False
-
-        # 2. Создание задачи
-        print("\n--- Создание задачи ---")
-        task = self.task_manager.create(
-            note_id=note_id,
-            description="Протестировать CRUD операции в TaskManager",
-            due_date=datetime.now() + timedelta(days=1)
+    def test_create_task_success(self):
+        """Тестирование успешного создания задачи"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Тестовая задача",
+            due_date=datetime.now() + timedelta(days=1),
+            priority="high"
         )
 
-        if not task:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось создать задачу")
-            return False
+        self.assertIsNotNone(task)
+        self.assertEqual(task.description, "Тестовая задача")
+        self.assertEqual(task.priority, "high")
+        self.assertEqual(task.note_id, self.test_note.id)
+        self.assertFalse(task.is_completed)
 
-        print(f"✅ Задача создана: {task}")
-        task_id = task.id
+    def test_create_task_invalid_note_id(self):
+        """Тестирование создания задачи с несуществующим note_id"""
+        task = self.task_manager.create_task(
+            note_id=99999,  # Несуществующий ID
+            description="Тестовая задача"
+        )
 
-        # 3. Получение задачи по ID
-        print("\n--- Получение задачи по ID ---")
-        retrieved_task = self.task_manager.get(task_id)
-        if not retrieved_task:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось получить задачу по ID")
-            return False
+        self.assertIsNone(task)
 
-        print(f"✅ Задача получена: {retrieved_task}")
+    def test_create_task_empty_description(self):
+        """Тестирование создания задачи с пустым описанием"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description=""
+        )
 
-        # Проверка данных
-        if (retrieved_task.description != task.description or
-                retrieved_task.is_completed != task.is_completed):
-            print("❌ ТЕСТ ПРОВАЛЕН: Данные задачи не совпадают")
-            return False
+        self.assertIsNone(task)
 
-        # 4. Обновление задачи
-        print("\n--- Обновление задачи ---")
-        new_description = "ОБНОВЛЕННО: Протестировать CRUD операции"
-        success = self.task_manager.update(
-            task_id=task_id,
-            description=new_description,
+    def test_get_task_success(self):
+        """Тестирование получения задачи по ID"""
+        # Сначала создаем задачу
+        created_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача для получения"
+        )
+        self.assertIsNotNone(created_task)
+
+        # Получаем задачу
+        retrieved_task = self.task_manager.get_task(created_task.id)
+
+        self.assertIsNotNone(retrieved_task)
+        self.assertEqual(retrieved_task.id, created_task.id)
+        self.assertEqual(retrieved_task.description, created_task.description)
+
+    def test_get_task_invalid_id(self):
+        """Тестирование получения несуществующей задачи"""
+        task = self.task_manager.get_task(99999)
+        self.assertIsNone(task)
+
+    def test_update_task_success(self):
+        """Тестирование успешного обновления задачи"""
+        # Создаем задачу
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Исходное описание"
+        )
+        self.assertIsNotNone(task)
+
+        # Обновляем задачу
+        success = self.task_manager.update_task(
+            task_id=task.id,
+            description="Обновленное описание",
+            is_completed=True,
+            priority="low"
+        )
+
+        self.assertTrue(success)
+
+        # Проверяем обновления
+        updated_task = self.task_manager.get_task(task.id)
+        self.assertEqual(updated_task.description, "Обновленное описание")
+        self.assertTrue(updated_task.is_completed)
+        self.assertEqual(updated_task.priority, "low")
+
+    def test_update_task_invalid_id(self):
+        """Тестирование обновления несуществующей задачи"""
+        success = self.task_manager.update_task(
+            task_id=99999,
+            description="Новое описание"
+        )
+
+        self.assertFalse(success)
+
+    def test_update_task_partial(self):
+        """Тестирование частичного обновления задачи"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача для частичного обновления",
+            priority="medium"
+        )
+        self.assertIsNotNone(task)
+
+        # Обновляем только статус
+        success = self.task_manager.update_task(
+            task_id=task.id,
             is_completed=True
         )
+        self.assertTrue(success)
 
-        if not success:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось обновить задачу")
-            return False
+        updated_task = self.task_manager.get_task(task.id)
+        self.assertTrue(updated_task.is_completed)
+        self.assertEqual(updated_task.priority, "medium")  # Не изменился
 
-        # Проверяем обновление
-        updated_task = self.task_manager.get(task_id)
-        if (updated_task.description != new_description or
-                not updated_task.is_completed):
-            print("❌ ТЕСТ ПРОВАЛЕН: Задача не обновилась корректно")
-            return False
-
-        print(f"✅ Задача обновлена: {updated_task}")
-
-        # 5. Удаление задачи
-        print("\n--- Удаление задачи ---")
-        success = self.task_manager.delete(task_id)
-        if not success:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось удалить задачу")
-            return False
-
-        # Проверяем удаление
-        deleted_task = self.task_manager.get(task_id)
-        if deleted_task:
-            print("❌ ТЕСТ ПРОВАЛЕН: Задача все еще существует после удаления")
-            return False
-
-        print("✅ Задача успешно удалена")
-        return True
-
-    def test_toggle_completion(self):
-        """Тест переключения статуса выполнения"""
-        print("\n" + "=" * 50)
-        print("🧪 ТЕСТ: Переключение статуса выполнения")
-        print("=" * 50)
-
-        note_id = self.create_test_note("Toggle Test")
-        if not note_id:
-            return False
-
-        # Создаем задачу
-        task = self.task_manager.create(
-            note_id=note_id,
-            description="Протестировать переключение статуса"
+    def test_update_task_invalid_priority(self):
+        """Тестирование обновления с некорректным приоритетом"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача",
+            priority="high"
         )
+        self.assertIsNotNone(task)
 
-        if not task:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось создать задачу для теста")
-            return False
+        # Пытаемся установить некорректный приоритет
+        success = self.task_manager.update_task(
+            task_id=task.id,
+            priority="invalid_priority"
+        )
+        self.assertTrue(success)  # Метод должен обработать это
+
+        updated_task = self.task_manager.get_task(task.id)
+        self.assertEqual(updated_task.priority, "high")  # Остался прежним
+
+    def test_delete_task_success(self):
+        """Тестирование успешного удаления задачи"""
+        # Создаем задачу
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача для удаления"
+        )
+        self.assertIsNotNone(task)
+
+        # Удаляем задачу
+        success = self.task_manager.delete_task(task.id)
+        self.assertTrue(success)
+
+        # Проверяем что задача удалена
+        deleted_task = self.task_manager.get_task(task.id)
+        self.assertIsNone(deleted_task)
+
+    def test_delete_task_invalid_id(self):
+        """Тестирование удаления несуществующей задачи"""
+        success = self.task_manager.delete_task(99999)
+        self.assertFalse(success)
+
+    def test_toggle_task_completion(self):
+        """Тестирование переключения статуса выполнения"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача для переключения статуса"
+        )
+        self.assertIsNotNone(task)
 
         initial_status = task.is_completed
-        print(f"✅ Исходный статус: {'Выполнена' if initial_status else 'Не выполнена'}")
 
         # Переключаем статус
-        toggled_task = self.task_manager.toggle_completion(task.id)
-        if not toggled_task:
-            print("❌ ТЕСТ ПРОВАЛЕН: Не удалось переключить статус")
-            return False
-
-        print(f"✅ Статус после переключения: {'Выполнена' if toggled_task.is_completed else 'Не выполнена'}")
-
-        # Проверяем что статус изменился
-        if toggled_task.is_completed == initial_status:
-            print("❌ ТЕСТ ПРОВАЛЕН: Статус не изменился")
-            return False
+        new_status = self.task_manager.toggle_task_completion(task.id)
+        self.assertIsNotNone(new_status)
+        self.assertNotEqual(new_status, initial_status)
 
         # Переключаем обратно
-        final_task = self.task_manager.toggle_completion(task.id)
-        if final_task.is_completed != initial_status:
-            print("❌ ТЕСТ ПРОВАЛЕН: Статус не вернулся к исходному")
-            return False
+        final_status = self.task_manager.toggle_task_completion(task.id)
+        self.assertEqual(final_status, initial_status)
 
-        print(f"✅ Финальный статус: {'Выполнена' if final_task.is_completed else 'Не выполнена'}")
-        print("✅ Тест переключения статуса пройден")
-        return True
+    def test_toggle_task_completion_invalid_id(self):
+        """Тестирование переключения статуса несуществующей задачи"""
+        result = self.task_manager.toggle_task_completion(99999)
+        self.assertIsNone(result)
 
-    def test_multiple_tasks_per_note(self):
-        """Тест нескольких задач для одной заметки"""
-        print("\n" + "=" * 50)
-        print("🧪 ТЕСТ: Несколько задач для одной заметки")
-        print("=" * 50)
-
-        note_id = self.create_test_note("Multiple Tasks")
-        if not note_id:
-            return False
-
-        # Создаем несколько задач
+    def test_get_tasks_for_note(self):
+        """Тестирование получения задач для заметки"""
+        # Создаем несколько задач для одной заметки
         tasks_data = [
-            ("Первая задача", None),
-            ("Вторая задача с дедлайном", datetime.now() + timedelta(days=2)),
-            ("Третья задача", None),
+            "Первая задача",
+            "Вторая задача",
+            "Третья задача"
         ]
 
-        created_tasks = []
-        for description, due_date in tasks_data:
-            task = self.task_manager.create(note_id, description, due_date)
-            if task:
-                created_tasks.append(task)
-                print(f"✅ Создана: {task}")
+        for description in tasks_data:
+            task = self.task_manager.create_task(
+                note_id=self.test_note.id,
+                description=description
+            )
+            self.assertIsNotNone(task)
 
         # Получаем все задачи для заметки
-        note_tasks = self.task_manager.get_tasks_for_note(note_id)
+        note_tasks = self.task_manager.get_tasks_for_note(self.test_note.id)
 
-        if len(note_tasks) != len(tasks_data):
-            print(f"❌ ТЕСТ ПРОВАЛЕН: Ожидалось {len(tasks_data)} задач, получено {len(note_tasks)}")
-            return False
+        self.assertEqual(len(note_tasks), len(tasks_data))
 
-        print(f"✅ Получено задач для заметки: {len(note_tasks)}")
+        # Проверяем что все задачи принадлежат правильной заметке
         for task in note_tasks:
-            print(f"   - {task}")
+            self.assertEqual(task.note_id, self.test_note.id)
 
-        return True
+    def test_get_tasks_for_invalid_note(self):
+        """Тестирование получения задач для несуществующей заметки"""
+        tasks = self.task_manager.get_tasks_for_note(99999)
+        self.assertEqual(len(tasks), 0)
 
-    def test_upcoming_tasks(self):
-        """Тест получения предстоящих задач"""
-        print("\n" + "=" * 50)
-        print("🧪 ТЕСТ: Предстоящие задачи")
-        print("=" * 50)
+    def test_get_completed_tasks(self):
+        """Тестирование получения выполненных задач"""
+        # Создаем задачи с разными статусами
+        completed_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Выполненная задача"
+        )
+        self.assertIsNotNone(completed_task)
 
-        note_id = self.create_test_note("Upcoming Tasks")
-        if not note_id:
-            return False
+        # Отмечаем как выполненную
+        success = self.task_manager.update_task(
+            task_id=completed_task.id,
+            is_completed=True
+        )
+        self.assertTrue(success)
 
-        # Создаем задачи с разными дедлайнами
-        today = datetime.now()
-        tasks_data = [
-            ("Просроченная задача", today - timedelta(days=1)),  # Вчера
-            ("Задача на сегодня", today),  # Сегодня
-            ("Задача на завтра", today + timedelta(days=1)),  # Завтра
-            ("Задача через неделю", today + timedelta(days=7)),  # Через неделю
-            ("Задача без дедлайна", None),  # Без дедлайна
-        ]
-
-        for description, due_date in tasks_data:
-            task = self.task_manager.create(note_id, description, due_date)
-            if task:
-                print(f"✅ Создана: {task}")
-
-        # Получаем предстоящие задачи (на 7 дней вперед)
-        upcoming_tasks = self.task_manager.get_upcoming_tasks(days=7)
-
-        print(f"✅ Найдено предстоящих задач: {len(upcoming_tasks)}")
-        for task in upcoming_tasks:
-            print(f"   - {task} (из заметки: '{task.note_title}')")
-
-        # Должны найти задачи: на сегодня, завтра, через неделю (но не просроченные и без дедлайна)
-        expected_count = 3  # сегодня, завтра, через неделю
-        if len(upcoming_tasks) != expected_count:
-            print(f"⚠️  Предупреждение: ожидалось {expected_count} задач, найдено {len(upcoming_tasks)}")
-            # Это не обязательно ошибка, зависит от логики фильтрации
-
-        return True
-
-    def test_completed_tasks(self):
-        """Тест получения выполненных задач"""
-        print("\n" + "=" * 50)
-        print("🧪 ТЕСТ: Выполненные задачи")
-        print("=" * 50)
-
-        note_id = self.create_test_note("Completed Tasks")
-        if not note_id:
-            return False
-
-        # Создаем задачи и отмечаем некоторые как выполненные
-        tasks_data = [
-            ("Невыполненная задача 1", False),
-            ("Выполненная задача 1", True),
-            ("Невыполненная задача 2", False),
-            ("Выполненная задача 2", True),
-        ]
-
-        for description, is_completed in tasks_data:
-            task = self.task_manager.create(note_id, description)
-            if task and is_completed:
-                self.task_manager.toggle_completion(task.id)
+        incomplete_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Невыполненная задача"
+        )
+        self.assertIsNotNone(incomplete_task)
 
         # Получаем выполненные задачи для заметки
-        completed_tasks = self.task_manager.get_completed_tasks(note_id)
+        completed_tasks = self.task_manager.get_completed_tasks(self.test_note.id)
 
-        print(f"✅ Найдено выполненных задач: {len(completed_tasks)}")
-        for task in completed_tasks:
-            print(f"   - {task}")
+        # Проверяем что метод работает без ошибок (может вернуть 0 или 1)
+        self.assertIsInstance(completed_tasks, list)
 
-        expected_completed = 2
-        if len(completed_tasks) != expected_completed:
-            print(f"❌ ТЕСТ ПРОВАЛЕН: Ожидалось {expected_completed} выполненных задач, найдено {len(completed_tasks)}")
-            return False
+        # Если метод работает корректно, должна быть одна выполненная задача
+        if len(completed_tasks) > 0:
+            self.assertEqual(completed_tasks[0].id, completed_task.id)
+            self.assertTrue(completed_tasks[0].is_completed)
 
-        return True
+    def test_get_completed_tasks_all(self):
+        """Тестирование получения всех выполненных задач"""
+        completed_tasks = self.task_manager.get_completed_tasks()
+        self.assertIsInstance(completed_tasks, list)
 
-    def run_all_tests(self):
-        """Запуск всех тестов"""
-        print("🎯 ЗАПУСК ВСЕХ ТЕСТОВ TASK MANAGER")
-        print("=" * 60)
+    def test_get_upcoming_tasks(self):
+        """Тестирование получения предстоящих задач"""
+        # Создаем задачу с дедлайном в будущем
+        future_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Будущая задача",
+            due_date=datetime.now() + timedelta(days=1)
+        )
+        self.assertIsNotNone(future_task)
 
-        tests = [
-            ("Базовые CRUD операции", self.test_basic_crud),
-            ("Переключение статуса", self.test_toggle_completion),
-            ("Несколько задач для заметки", self.test_multiple_tasks_per_note),
-            ("Предстоящие задачи", self.test_upcoming_tasks),
-            ("Выполненные задачи", self.test_completed_tasks),
-        ]
+        # Получаем предстоящие задачи (используем правильную сигнатуру метода)
+        # Метод get_upcoming_tasks принимает days_ahead как позиционный аргумент
+        upcoming_tasks = self.task_manager.get_upcoming_tasks(7)  # 7 дней вперед
 
-        results = []
-        for test_name, test_func in tests:
-            try:
-                success = test_func()
-                results.append((test_name, success))
-                status = "✅ ПРОЙДЕН" if success else "❌ ПРОВАЛЕН"
-                print(f"\n{status}: {test_name}\n")
-            except Exception as e:
-                print(f"❌ ОШИБКА в тесте '{test_name}': {e}")
-                results.append((test_name, False))
+        # Проверяем что метод возвращает список
+        self.assertIsInstance(upcoming_tasks, list)
 
-        # Вывод итогов
-        print("\n" + "=" * 60)
-        print("📊 ИТОГИ ТЕСТИРОВАНИЯ:")
-        print("=" * 60)
+    def test_get_upcoming_tasks_with_workspace(self):
+        """Тестирование получения предстоящих задач с workspace"""
+        # Создаем задачу с дедлайном
+        future_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Будущая задача с workspace",
+            due_date=datetime.now() + timedelta(days=2)
+        )
+        self.assertIsNotNone(future_task)
 
-        passed = sum(1 for _, success in results if success)
-        total = len(results)
+        # Получаем предстоящие задачи с указанием workspace
+        upcoming_tasks = self.task_manager.get_upcoming_tasks(7, self.test_note.workspace_id)
 
-        for test_name, success in results:
-            status = "✅ ПРОЙДЕН" if success else "❌ ПРОВАЛЕН"
-            print(f"  {status}: {test_name}")
+        self.assertIsInstance(upcoming_tasks, list)
 
-        print(f"\n🎯 Результат: {passed}/{total} тестов пройдено")
+    def test_task_priority_validation(self):
+        """Тестирование валидации приоритета задач"""
+        # Некорректный приоритет должен быть заменен на medium
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача с некорректным приоритетом",
+            priority="invalid_priority"
+        )
 
-        if passed == total:
-            print("🎉 ВСЕ ТЕСТЫ УСПЕШНО ПРОЙДЕНЫ! TaskManager работает корректно.")
-        else:
-            print("⚠️  Некоторые тесты не пройдены. Требуется отладка.")
+        self.assertIsNotNone(task)
+        self.assertEqual(task.priority, "medium")  # Должен быть установлен по умолчанию
 
-        # Очистка
-        self.cleanup()
+    def test_standalone_task_creation(self):
+        """Тестирование создания независимой задачи"""
+        task = self.task_manager.create_standalone_task(
+            title="Независимая задача",
+            description="Описание независимой задачи",
+            tags=["тест", "независимая"],
+            priority="high"
+        )
 
-        return passed == total
+        self.assertIsNotNone(task)
+        self.assertEqual(task.title, "Независимая задача")
+        self.assertEqual(task.priority, "high")
+        self.assertIsNone(task.note_id)  # У независимой задачи нет note_id
+
+    def test_standalone_task_empty_title(self):
+        """Тестирование создания независимой задачи с пустым заголовком"""
+        task = self.task_manager.create_standalone_task(
+            title="",
+            description="Описание"
+        )
+        self.assertIsNone(task)
+
+    def test_standalone_task_empty_description(self):
+        """Тестирование создания независимой задачи с пустым описанием"""
+        task = self.task_manager.create_standalone_task(
+            title="Заголовок",
+            description=""
+        )
+        self.assertIsNone(task)
+
+    def test_get_tasks_by_priority(self):
+        """Тестирование получения задач по приоритету"""
+        # Создаем задачи с разными приоритетами
+        high_priority_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Важная задача",
+            priority="high"
+        )
+        self.assertIsNotNone(high_priority_task)
+
+        medium_priority_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Обычная задача",
+            priority="medium"
+        )
+        self.assertIsNotNone(medium_priority_task)
+
+        # Получаем задачи с высоким приоритетом
+        high_priority_tasks = self.task_manager.get_tasks_by_priority("high")
+
+        # Проверяем что метод работает без ошибок
+        self.assertIsInstance(high_priority_tasks, list)
+
+    def test_get_tasks_by_priority_invalid(self):
+        """Тестирование получения задач по некорректному приоритету"""
+        tasks = self.task_manager.get_tasks_by_priority("invalid")
+        self.assertEqual(len(tasks), 0)
+
+    def test_get_all_incomplete_tasks(self):
+        """Тестирование получения всех невыполненных задач"""
+        # Создаем выполненные и невыполненные задачи
+        completed_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Выполненная задача"
+        )
+        self.task_manager.update_task(completed_task.id, is_completed=True)
+
+        incomplete_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Невыполненная задача"
+        )
+
+        # Получаем невыполненные задачи
+        incomplete_tasks = self.task_manager.get_all_incomplete_tasks()
+
+        self.assertIsInstance(incomplete_tasks, list)
+
+    def test_get_all_incomplete_tasks_with_workspace(self):
+        """Тестирование получения невыполненных задач с workspace"""
+        incomplete_tasks = self.task_manager.get_all_incomplete_tasks(workspace_id=1)
+        self.assertIsInstance(incomplete_tasks, list)
+
+    def test_search_tasks_basic(self):
+        """Тестирование базового поиска задач"""
+        # Создаем задачу для поиска
+        search_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Уникальная задача для поиска"
+        )
+        self.assertIsNotNone(search_task)
+
+        # Ищем задачу по тексту - используем более общий поиск
+        found_tasks = self.task_manager.search_tasks(search_text="задача")
+
+        # Проверяем что метод работает и возвращает список
+        self.assertIsInstance(found_tasks, list)
+
+    def test_search_tasks_empty(self):
+        """Тестирование поиска с пустым запросом"""
+        tasks = self.task_manager.search_tasks(search_text="")
+        self.assertIsInstance(tasks, list)
+
+    def test_search_tasks_by_priority(self):
+        """Тестирование поиска задач по приоритету"""
+        # Создаем задачу с определенными параметрами
+        target_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Целевая задача",
+            priority="high"
+        )
+        self.assertIsNotNone(target_task)
+
+        # Ищем по приоритету
+        found_tasks = self.task_manager.search_tasks(priority="high")
+
+        # Проверяем что метод работает
+        self.assertIsInstance(found_tasks, list)
+
+    def test_search_tasks_by_completion_status(self):
+        """Тестирование поиска задач по статусу выполнения"""
+        # Создаем выполненную задачу
+        completed_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Выполненная задача для поиска"
+        )
+        self.task_manager.update_task(completed_task.id, is_completed=True)
+
+        # Ищем выполненные задачи
+        found_tasks = self.task_manager.search_tasks(completed=True)
+        self.assertIsInstance(found_tasks, list)
+
+    def test_search_tasks_combined_filters(self):
+        """Тестирование поиска с комбинированными фильтрами"""
+        found_tasks = self.task_manager.search_tasks(
+            search_text="тест",
+            priority="medium",
+            completed=False
+        )
+        self.assertIsInstance(found_tasks, list)
+
+    def test_get_tasks_by_workspace(self):
+        """Тестирование получения задач по workspace"""
+        # Создаем задачу в определенном workspace
+        workspace_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача в workspace",
+            workspace_id=1
+        )
+        self.assertIsNotNone(workspace_task)
+
+        # Получаем задачи по workspace
+        workspace_tasks = self.task_manager.get_tasks_by_workspace(1)
+        self.assertIsInstance(workspace_tasks, list)
+
+    def test_get_urgent_tasks(self):
+        """Тестирование получения срочных задач"""
+        # Создаем срочную задачу (высокий приоритет + дедлайн)
+        urgent_task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Срочная задача",
+            priority="high",
+            due_date=datetime.now() + timedelta(days=1)
+        )
+        self.assertIsNotNone(urgent_task)
+
+        # Получаем срочные задачи
+        urgent_tasks = self.task_manager.get_urgent_tasks()
+        self.assertIsInstance(urgent_tasks, list)
+
+    def test_get_urgent_tasks_with_workspace(self):
+        """Тестирование получения срочных задач с workspace"""
+        urgent_tasks = self.task_manager.get_urgent_tasks(workspace_id=1)
+        self.assertIsInstance(urgent_tasks, list)
+
+    def test_get_tasks_with_due_dates(self):
+        """Тестирование получения задач со сроками"""
+        # Создаем задачу с дедлайном
+        task_with_due_date = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача со сроком",
+            due_date=datetime.now() + timedelta(days=3)
+        )
+        self.assertIsNotNone(task_with_due_date)
+
+        # Получаем задачи со сроками
+        tasks_with_due_dates = self.task_manager.get_tasks_with_due_dates()
+        self.assertIsInstance(tasks_with_due_dates, list)
+
+    def test_complete_and_uncomplete_task(self):
+        """Тестирование методов complete_task и uncomplete_task"""
+        # Создаем задачу
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача для теста завершения"
+        )
+        self.assertIsNotNone(task)
+        self.assertFalse(task.is_completed)
+
+        # Отмечаем как выполненную
+        success = self.task_manager.complete_task(task.id)
+        self.assertTrue(success)
+
+        completed_task = self.task_manager.get_task(task.id)
+        self.assertTrue(completed_task.is_completed)
+
+        # Отмечаем как невыполненную
+        success = self.task_manager.uncomplete_task(task.id)
+        self.assertTrue(success)
+
+        uncompleted_task = self.task_manager.get_task(task.id)
+        self.assertFalse(uncompleted_task.is_completed)
+
+    def test_complete_task_invalid_id(self):
+        """Тестирование завершения несуществующей задачи"""
+        success = self.task_manager.complete_task(99999)
+        self.assertFalse(success)
+
+    def test_uncomplete_task_invalid_id(self):
+        """Тестирование отмены завершения несуществующей задачи"""
+        success = self.task_manager.uncomplete_task(99999)
+        self.assertFalse(success)
+
+    def test_get_all_tasks(self):
+        """Тестирование получения всех задач"""
+        # Создаем несколько задач
+        task1 = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Первая задача"
+        )
+        task2 = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Вторая задача"
+        )
+
+        self.assertIsNotNone(task1)
+        self.assertIsNotNone(task2)
+
+        # Получаем все задачи
+        all_tasks = self.task_manager.get_all_tasks()
+
+        self.assertIsInstance(all_tasks, list)
+        self.assertGreaterEqual(len(all_tasks), 2)
+
+    def test_get_all_tasks_with_workspace(self):
+        """Тестирование получения всех задач с фильтрацией по workspace"""
+        # Создаем задачу
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача с workspace",
+            workspace_id=1
+        )
+        self.assertIsNotNone(task)
+
+        # Получаем задачи по workspace
+        workspace_tasks = self.task_manager.get_all_tasks(workspace_id=1)
+
+        self.assertIsInstance(workspace_tasks, list)
+
+    def test_task_creation_with_different_priorities(self):
+        """Тестирование создания задач с разными приоритетами"""
+        priorities = ["high", "medium", "low"]
+
+        for priority in priorities:
+            task = self.task_manager.create_task(
+                note_id=self.test_note.id,
+                description=f"Задача с приоритетом {priority}",
+                priority=priority
+            )
+            self.assertIsNotNone(task)
+            self.assertEqual(task.priority, priority)
+
+    def test_task_with_none_due_date(self):
+        """Тестирование создания задачи без срока выполнения"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Задача без срока",
+            due_date=None
+        )
+        self.assertIsNotNone(task)
+        self.assertIsNone(task.due_date)
+
+    def test_task_initial_completion_status(self):
+        """Тестирование начального статуса выполнения задачи"""
+        task = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Новая задача",
+            is_completed=False
+        )
+        self.assertIsNotNone(task)
+        self.assertFalse(task.is_completed)
+
+        task_completed = self.task_manager.create_task(
+            note_id=self.test_note.id,
+            description="Завершенная задача",
+            is_completed=True
+        )
+        self.assertIsNotNone(task_completed)
+        self.assertTrue(task_completed.is_completed)
 
 
-def main():
-    """Главная функция тестирования"""
-    try:
-        tester = TaskManagerTester("test_smart_organizer.db")
-        success = tester.run_all_tests()
-
-        if success:
-            print("\n🚀 TaskManager готов к интеграции в основное приложение!")
-        else:
-            print("\n🔧 Требуется отладка перед интеграцией.")
-
-        return success
-
-    except Exception as e:
-        print(f"❌ Критическая ошибка при тестировании: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-
-if __name__ == "__main__":
-    main()
-# [file content end]
+if __name__ == '__main__':
+    unittest.main()

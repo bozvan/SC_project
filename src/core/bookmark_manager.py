@@ -896,6 +896,10 @@ class BookmarkManager:
 
         url = url.strip()
 
+        # Если после удаления пробелов строка пустая, возвращаем как есть
+        if not url:
+            return url
+
         # Если URL уже имеет схему, возвращаем как есть
         if url.startswith(('http://', 'https://')):
             return url

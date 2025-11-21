@@ -43,7 +43,7 @@ class Note:
         self.url = url
         self.page_title = page_title
         self.page_description = page_description
-        self.workspace_id = workspace_id  # ← ДОБАВЛЕНО
+        self.workspace_id = workspace_id
         self.tags: List[Tag] = []  # Список связанных тегов
 
     def __str__(self) -> str:

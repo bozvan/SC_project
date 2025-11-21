@@ -9,7 +9,12 @@ import platform
 class ThemeManager:
     def __init__(self):
         self.settings = QSettings("SmartOrganizer", "SmartOrganizer")
-        self.current_theme = self.settings.value("appearance/theme", "dark", type=str)  # По умолчанию тёмная
+        theme_value = self.settings.value("appearance/theme", "dark", type=str)
+        # Проверяем, что тема валидна
+        if theme_value in ["light", "dark"]:
+            self.current_theme = theme_value
+        else:
+            self.current_theme = "dark"  # Значение по умолчанию
         self.stylesheets = {}
         self.load_themes()
 

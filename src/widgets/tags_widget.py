@@ -308,5 +308,15 @@ class TagsWidget(QWidget):
                 QMessageBox.warning(self, "Ошибка", f"Не удалось удалить тег '{tag_name}'")
 
     def refresh(self):
-        """Обновление списка тегов"""
+        """Обновление списка тегов без потери фокуса"""
+        # Сохраняем текущее состояние фокуса
+        focused_widget = self.parent().focusWidget() if self.parent() else None
+        is_tags_widget_focused = focused_widget == self.tags_list
+
         self.load_tags()
+
+        # Не возвращаем фокус на виджет тегов, если он не был в фокусе изначально
+        if not is_tags_widget_focused:
+            self.tags_list.clearFocus()
+
+        print(f"✅ Виджет тегов обновлен (фокус {'сохранен' if is_tags_widget_focused else 'не возвращен'})")

@@ -6,7 +6,7 @@ from datetime import datetime
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMessageBox, QListWidgetItem, QCheckBox, QLineEdit, QPushButton, QScrollArea, \
-    QWidget, QLabel, QHBoxLayout, QVBoxLayout
+    QWidget, QLabel, QHBoxLayout, QVBoxLayout, QApplication
 
 # Получаем путь к корневой папке SC_project
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -975,8 +975,17 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
     def schedule_tags_update(self):
         """Планирует обновление тегов - теперь обновляем сразу"""
         if hasattr(self, 'tags_widget'):
+            # Сохраняем текущий фокус
+            focused_widget = self.focusWidget()
+
+            # Обновляем виджет
             self.tags_widget.refresh()
-            print("✅ Виджет тегов обновлен")
+
+            # Восстанавливаем фокус, если он был не на виджете тегов
+            if focused_widget != self.tags_widget.tags_list:
+                focused_widget.setFocus()
+
+            print("✅ Виджет тегов обновлен (фокус сохранен)")
 
     def schedule_list_update(self):
         """Планирует обновление списка заметок с задержкой"""
@@ -1202,10 +1211,10 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                 print(f"✅ Автосохранение заметки {self.current_note_id} в workspace {self.workspace_id}")
 
                 # ОБНОВЛЯЕМ ВИДЖЕТ ТЕГОВ С ЗАДЕРЖКОЙ 5 СЕКУНД
-                self.schedule_tags_update()
+                #self.safe_tags_update()
 
                 # Обновляем список предстоящих задач после сохранения заметки
-                self.refresh_upcoming_tasks()
+                #self.refresh_upcoming_tasks()
 
                 return True
             else:
@@ -1215,6 +1224,53 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         except Exception as e:
             print(f"❌ Ошибка при автосохранении: {e}")
             return False
+
+    def safe_tags_update(self):
+        """Безопасное обновление виджета тегов без изменения фокуса"""
+        if not hasattr(self, 'tags_widget'):
+            return
+
+        # Сохраняем текущий фокус и состояние скролла
+        app = QApplication.instance()
+        focused_widget = app.focusWidget() if app else None
+
+        # Проверяем, находится ли фокус в поле ввода тегов или виджете тегов
+        is_in_tags_area = False
+        if focused_widget:
+            # Проверяем все виджеты, связанные с тегами
+            tags_widgets = [
+                self.tags_input,
+                self.tags_widget.tags_list,
+                self.tags_widget.tags_list.viewport() if self.tags_widget.tags_list.viewport() else None
+            ]
+            is_in_tags_area = focused_widget in tags_widgets
+
+        # Получаем текущую позицию скролла
+        scroll_pos = self.tags_widget.tags_list.verticalScrollBar().value()
+
+        # Получаем текущий выделенный тег
+        current_items = self.tags_widget.tags_list.selectedItems()
+        selected_tag_name = current_items[0].text().split(' (')[0] if current_items else None
+
+        # Обновляем виджет
+        self.tags_widget.refresh()
+
+        # Восстанавливаем позицию скролла
+        self.tags_widget.tags_list.verticalScrollBar().setValue(scroll_pos)
+
+        # Восстанавливаем выделение, если был выделен тег
+        if selected_tag_name:
+            self.tags_widget.select_tag_by_name(selected_tag_name)
+
+        # Если фокус был не в области тегов, гарантируем, что он не перейдет туда
+        if not is_in_tags_area:
+            self.tags_widget.tags_list.clearFocus()
+            # Небольшая задержка для стабильности
+            if focused_widget and focused_widget.isEnabled():
+                QTimer.singleShot(50, lambda w=focused_widget: w.setFocus() if w.isEnabled() else None)
+
+        print(
+            f"✅ Виджет тегов обновлен безопасно (фокус {'в области тегов' if is_in_tags_area else 'не в области тегов'})")
 
     def load_notes(self, search_query=""):
         """Загружает заметки с учетом поискового запроса и workspace"""
@@ -1337,7 +1393,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
                     focused_widget != self.tags_input and
                     focused_widget != self.rich_editor):
                 print("🎯 Восстанавливаем фокус в поле тегов")
-                self.tags_input.setFocus()
+                #self.tags_input.setFocus()
 
         except Exception as e:
             print(f"❌ Ошибка восстановления фокуса: {e}")
@@ -1367,7 +1423,7 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         # Если включаем редактор, устанавливаем фокус
         if enabled:
             print("🎯 Устанавливаем фокус в поле тегов")
-            self.tags_input.setFocus()
+            #self.tags_input.setFocus()
 
     def update_window_title(self):
         """Обновляет заголовок окна"""

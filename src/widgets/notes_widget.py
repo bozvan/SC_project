@@ -749,16 +749,19 @@ class NotesWidget(QtWidgets.QWidget, Ui_NotesPage):
         layout.addLayout(due_date_layout)
 
         # Кнопки
-        #button_layout = QHBoxLayout()
-        #save_btn = QPushButton("Сохранить")
-        #cancel_btn = QPushButton("Отмена")
+        button_layout = QHBoxLayout()
+        task_save_btn = QPushButton("Сохранить")
+        task_cancel_btn = QPushButton("Отмена")
 
-        #save_btn.clicked.connect(dialog.accept)
-        #cancel_btn.clicked.connect(dialog.reject)
+        task_save_btn.setObjectName("task_save_btn")
+        task_cancel_btn.setObjectName("task_cancel_btn")
 
-        #button_layout.addWidget(save_btn)
-        #button_layout.addWidget(cancel_btn)
-        #layout.addLayout(button_layout)
+        task_save_btn.clicked.connect(dialog.accept)
+        task_cancel_btn.clicked.connect(dialog.reject)
+
+        button_layout.addWidget(task_save_btn)
+        button_layout.addWidget(task_cancel_btn)
+        layout.addLayout(button_layout)
 
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             # Обновляем задачу

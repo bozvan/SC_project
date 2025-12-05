@@ -2318,6 +2318,61 @@ EditBookmarkDialog QPushButton#cancel_btn:pressed {
     border-color: #495057;
     color: white;
 }
+
+
+/*======================================= EDIT TASK DIALOG BUTTONS =======================================*/
+
+/* Кнопки в диалоге редактирования задачи */
+QPushButton#task_save_btn, QPushButton#task_cancel_btn {
+    border: 2px solid #E16428;
+    border-radius: 5px;
+    padding: 5px 15px;
+    font-weight: bold;
+    background-color: white;
+    color: #333333;
+    min-width: 80px;
+}
+
+QPushButton#task_save_btn:hover, QPushButton#task_cancel_btn:hover {
+    background-color: #ffeedd;
+}
+
+QPushButton#task_save_btn:pressed, QPushButton#task_cancel_btn:pressed {
+    background-color: #ffd8a6;
+}
+
+/* Специфичные стили для кнопки Сохранить */
+QPushButton#task_save_btn {
+    background-color: #E16428;
+    color: white;
+}
+
+QPushButton#task_save_btn:hover {
+    background-color: #f17337;
+    border-color: #f17337;
+}
+
+QPushButton#task_save_btn:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+/* Стили для кнопки Отмена */
+QPushButton#task_cancel_btn {
+    background-color: transparent;
+    color: #E16428;
+}
+
+QPushButton#task_cancel_btn:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+QPushButton#task_cancel_btn:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
+}
         """
 
 
@@ -4491,6 +4546,60 @@ EditBookmarkDialog QPushButton#cancel_btn:pressed {
     background-color: #555555 !important;
     border-color: #555555 !important;
     color: white !important;
+}
+
+/*======================================= EDIT TASK DIALOG BUTTONS =======================================*/
+
+/* Кнопки в диалоге редактирования задачи */
+QPushButton#task_save_btn, QPushButton#task_cancel_btn {
+    border: 2px solid #E16428;
+    border-radius: 5px;
+    padding: 5px 15px;
+    font-weight: bold;
+    background-color: #1a1f29;
+    color: white;
+    min-width: 80px;
+}
+
+QPushButton#task_save_btn:hover, QPushButton#task_cancel_btn:hover {
+    background-color: rgba(225, 100, 40, 0.2);
+}
+
+QPushButton#task_save_btn:pressed, QPushButton#task_cancel_btn:pressed {
+    background-color: rgba(225, 100, 40, 0.3);
+}
+
+/* Специфичные стили для кнопки Сохранить */
+QPushButton#task_save_btn {
+    background-color: #E16428;
+    color: white;
+}
+
+QPushButton#task_save_btn:hover {
+    background-color: #f17337;
+    border-color: #f17337;
+}
+
+QPushButton#task_save_btn:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+}
+
+/* Стили для кнопки Отмена */
+QPushButton#task_cancel_btn {
+    background-color: transparent;
+    color: #E16428;
+}
+
+QPushButton#task_cancel_btn:hover {
+    background-color: #E16428;
+    color: white;
+}
+
+QPushButton#task_cancel_btn:pressed {
+    background-color: #c8531f;
+    border-color: #c8531f;
+    color: white;
 }
         """
 

@@ -1,4 +1,7 @@
 # Умный Органайзер
+![PyQt](https://img.shields.io/badge/PyQt-brightgreen.svg)
+![Python](https://img.shields.io/badge/Python-blue.svg)
+
 
 ```
 Проект выполнен в рамках лабораторных работ предмета "Конструирование программного обеспечения"
